@@ -1,0 +1,17 @@
+machine:
+  python:
+    version: 2.7.9
+  post:
+    - pyenv global 2.7.9
+
+dependencies:
+  override:
+    - pip install -r requirements.txt
+    - pip install pytest
+    - mkdir libs && cd libs && git clone https://github.com/Borda/pyGCO.git
+    - cd pyGCO && pip install -r requirements.txt && python setup.py install
+    - cd .. && rm -r pyGCO
+
+test:
+  override:
+    - pytest --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/junit/pytest.xml

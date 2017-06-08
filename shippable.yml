@@ -1,0 +1,37 @@
+# vim ft=yaml
+
+# After changing this file, check it on:
+#   http://yaml-online-parser.appspot.com/
+
+language: python
+
+sudo: false
+
+python:
+  - 2.7
+
+cache: pip
+
+before_install:
+  - apt-get install freetype*
+  - pip install --upgrade pip
+
+install:
+  - pip install -r requirements.txt
+  - pip install nose codecov coverage pytest
+  - mkdir libs && cd libs && git clone https://github.com/Borda/pyGCO.git
+  - cd pyGCO && pip install -r requirements.txt && python setup.py install
+  - cd .. && rm -r pyGCO
+
+before_script:
+  - mkdir -p shippable/testresults
+  - mkdir -p shippable/codecoverage
+
+script:
+  - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
+  - python experiments/run_generate_dataset.py --nb_samples 50 --nb_patterns 2
+  - nosetests --with-doctest --with-coverage --cover-package=apdl,experiments
+  - coverage xml -o shippable/codecoverage/coverage.xml
+
+after_success:
+  - codecov --token=9507eeee-6a1e-4313-87fa-f73064c539c9
