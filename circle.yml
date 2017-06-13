@@ -5,13 +5,32 @@ machine:
     - pyenv global 2.7.9
 
 dependencies:
+  cache_directories:
+    - "~/.local"
+  pre:
+#    - apt-get install gcc build-essentialgit
+    - sudo apt-get install tk-dev
+    - sudo apt-get install pkg-config
+    - sudo apt-get install python-dev
+    - sudo apt-get install python-tk
+    - mkdir libs
   override:
+    - pip install --upgrade setuptools
     - pip install -r requirements.txt
     - pip install pytest
-    - mkdir libs && cd libs && git clone https://github.com/Borda/pyGCO.git
-    - cd pyGCO && pip install -r requirements.txt && python setup.py install
-    - cd .. && rm -r pyGCO
+#    - pip install matplotlib==1.5.2
+
+#    - here=$PWD
+    - cd libs && git clone https://github.com/Borda/pyGCO.git
+    - cd libs/pyGCO && pip install -r requirements.txt
+    - cd libs/pyGCO && python setup.py install
+    - rm -r -f libs/pyGCO
+#    - cd $here
 
 test:
+  pre:
+    - mkdir data
+    - mkdir results
+    - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
   override:
-    - pytest --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/junit/pytest.xml
+    - pytest apdl experiments --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/junit/pytest.xml

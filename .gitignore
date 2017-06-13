@@ -1,4 +1,5 @@
 data/
 results/
-temp/
+temp*
 .coverage
+.idea

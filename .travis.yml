@@ -16,20 +16,31 @@ python:
 cache: pip
 
 before_install:
-#  - pip install .
   - pip install --upgrade pip
+  - mkdir libs
 
 install:
   - pip install -r requirements.txt
   - pip install nose codecov
-  - mkdir libs && cd libs && git clone https://github.com/Borda/pyGCO.git
-  - cd pyGCO && pip install -r requirements.txt && python setup.py install
-  - cd .. && rm -r pyGCO
+
+  - here=$PWD
+  - cd libs && git clone https://github.com/Borda/pyGCO.git
+  - cd $here/libs/pyGCO && pip install -r requirements.txt
+  - cd $here/libs/pyGCO && python setup.py install
+  - rm -r -f $here/libs/pyGCO
+  - cd $here
+
+before_script:
+  - mkdir data
+  - mkdir results
 
 script:
-  - python experiments/run_generate_dataset.py --nb_samples 50 --nb_patterns 2
-  - nosetests --with-doctest --with-coverage --cover-package=apdl,experiments
+  - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
+  - nosetests apdl --exe --with-doctest --with-coverage --cover-package=apdl
+  - nosetests experiments --exe --with-doctest --with-coverage --cover-package=experiments
 
 after_success:
-  - codecov --token=9507eeee-6a1e-4313-87fa-f73064c539c9
+  #- codecov  # public repository on Travis CI
+  # private repository on Travis CI
+  - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9
   - coverage report
