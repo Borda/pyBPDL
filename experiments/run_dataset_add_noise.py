@@ -1,24 +1,49 @@
 """
 Simple script for adding Gaussian noise to already generated images
 
+>> python run_dataset_add_noise.py -p data -d syntheticDataset_vX
+
+>> python run_dataset_add_noise.py -p ~/Medical-drosophila/synthetic_data \
+    -d atomicPatternDictionary_v0 atomicPatternDictionary_v1 atomicPatternDictionary_v2
+
 Copyright (C) 2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 
+import os
+import sys
 import glob
 import logging
+import argparse
 import multiprocessing as mproc
-import os
 from functools import partial
 
 import tqdm
 
-from apdl import dataset_utils as tl_dataset
+sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import apdl.dataset_utils as tl_dataset
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
 IMAGE_PATTERN = '*.png'
 DIR_POSIX = '_gauss-%.3f'
 NOISE_RANGE = [0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001]
+LIST_DATASETS = [tl_dataset.DIR_MANE_SYNTH_DATASET]
+BASE_IMAGE_SET = 'datasetProb_raw'
+
+
+def args_parser():
+    """ create simple arg parser with default values (input, results, dataset)
+
+    :return: argparse
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-p', '--path', type=str, required=True,
+                        help='path to set of experiments')
+    parser.add_argument('-d', '--datasets', type=str, required=True, nargs='+',
+                        help='result file name', default=LIST_DATASETS)
+    args = vars(parser.parse_args())
+    args['path'] = os.path.abspath(os.path.expanduser(args['path']))
+    return args
 
 
 def add_niose_image(img_name, path_in, path_out, noise_level):
@@ -75,16 +100,21 @@ def dataset_add_noise(path_in, path_out, noise_level,
     logging.info('DONE')
 
 
+def main(base_path='data', datasets=['syntheticDataset_vX'], noise_lvl=NOISE_RANGE):
+    assert os.path.exists(base_path), 'missing: %s' % base_path
+
+    for dataset in datasets:
+        path_out = os.path.join(base_path, dataset)
+        assert os.path.exists(path_out), 'missing: %s' % path_out
+        path_in = os.path.join(path_out, BASE_IMAGE_SET)
+        assert os.path.exists(path_in), 'missing: %s' % path_in
+
+        for lvl in noise_lvl:
+            dataset_add_noise(path_in, path_out, lvl)
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
-    dataset_verisons = ['vX']
-    base_path = os.path.expanduser('../data')
-    assert os.path.exists(base_path)
-
-    for ver in dataset_verisons:
-        path_out = os.path.join(base_path, 'syntheticDataset_%s' % ver)
-        path_in = os.path.join(path_out, 'datasetProb_raw')
-
-        for lvl in NOISE_RANGE:
-            dataset_add_noise(path_in, path_out, lvl)
+    args = args_parser()
+    main(args['path'], args['datasets'])

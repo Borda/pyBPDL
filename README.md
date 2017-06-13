@@ -1,27 +1,22 @@
 # Binary Pattern Dictionary Learning
 
-[![Coverage Badge](https://api.shippable.com/projects/5937c15c3e246207003bc61b/coverageBadge?branch=master)](https://app.shippable.com/github/Borda/pyBPDL)
+[![Build Status](https://travis-ci.com/Borda/pyBPDL.svg?token=HksCAm7DV2pJNEbsGJH2&branch=master)](https://travis-ci.com/Borda/pyBPDL)
 [![Run Status](https://api.shippable.com/projects/5937c15c3e246207003bc61b/badge?branch=master)](https://app.shippable.com/github/Borda/pyBPDL)
 [![Coverage Badge](https://api.shippable.com/projects/5937c15c3e246207003bc61b/coverageBadge?branch=master)](https://app.shippable.com/github/Borda/pyBPDL)
 [![codecov](https://codecov.io/gh/Borda/pyBPDL/branch/master/graph/badge.svg?token=Bgklw7uaB0)](https://codecov.io/gh/Borda/pyBPDL)
-[![CircleCI](https://circleci.com/gh/Borda/pyBPDL.svg?style=svg)](https://circleci.com/gh/Borda/pyBPDL)
+[![CircleCI](https://circleci.com/gh/Borda/pyBPDL.svg?style=svg&circle-token=0b3f34bedf54747d32becd2f13cd0da71fef7548)](https://circleci.com/gh/Borda/pyBPDL)
 
 We present an image processing pipeline which accepts a large number of images, containing spatial expression information for thousands of genes in Drosophila imaginal discs. We assume that the gene activations are binary and can be expressed as a union of a small set of non-overlapping spatial patterns, yielding a compact representation of the spatial activation of each gene. This lends itself well to further automatic analysis, with the hope of discovering new biological relationships. Traditionally, the images were labeled manually, which was very time consuming. The key part of our work is a binary pattern dictionary learning algorithm, that takes a set of binary images and determines a set of patterns, which can be used to represent the input images with a small error. We also describe the preprocessing phase, where input images are segmented to recover the activation images and spatially aligned to a common reference. 
 
 
 # State-of-the-Art Methods
 
-We have our method BPDL and also we comapre it to state-of-the-art, see [Faces dataset decompositions]
-(http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#example-decomposition-plot-faces-decomposition-py):
+We have our method BPDL and also we comapre it to state-of-the-art, see [Faces dataset decompositions](http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#example-decomposition-plot-faces-decomposition-py):
  
- * **FastICA**, [sklearn.decomposition.FastICA]
- (http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html)
- * **SparsePCA**, [sklearn.decomposition.SparsePCA]
- (http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html)
- * **Non-negative Matrix Factorisation**, [sklearn.decomposition.NMF]
- (http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html)
- * **Dictionary Learning** with Matching pursuit, [sklearn.decomposition.DictionaryLearning]
- (http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html)
+ * **FastICA**, [sklearn.decomposition.FastICA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html)
+ * **SparsePCA**, [sklearn.decomposition.SparsePCA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html)
+ * **Non-negative Matrix Factorisation**, [sklearn.decomposition.NMF](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html)
+ * **Dictionary Learning** with Matching pursuit, [sklearn.decomposition.DictionaryLearning](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html)
  * our **Binary Pattern Dictionary Learning**
 
 # Data
@@ -99,3 +94,8 @@ python run_experiment_apd_all.py --type real \
 ## References
 
 1. Borovec, J., & Kybic, J. (2016). Binary pattern dictionary learning for gene expression representation in drosophila imaginal discs. In Mathematical and Computational Methods in Biomedical Imaging and Image Analysis (MCBMIIA) workshop at ACCV (pp. 555–569). https://doi.org/10.1007/978-3-319-54427-4_40
+
+
+## License
+
+The project is using the standard [BSD license](http://opensource.org/licenses/BSD-2-Clause).

@@ -5,29 +5,32 @@ such as the stat of the art and our newly developed
 Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-# to suppress all visu, has to be on the beginning
-# import matplotlib
-# matplotlib.use('Agg')
-
 import os
+import sys
 import argparse
+import logging
+import shutil
+import random
+import time
+import json
+import types
 import copy
 import copy_reg
-import logging
+import traceback
 import multiprocessing as mproc
-import shutil
-import time
-import types
-import json
-import random
+
+# to suppress all visu, has to be on the beginning
+import matplotlib
+matplotlib.use('Agg')
 
 import tqdm
 import numpy as np
 import pandas as pd
 from sklearn import metrics
 
-from apdl import dataset_utils as gen_data
-import apdl.pattern_disctionary as ptn_dict
+sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import apdl.dataset_utils as data_utils
+import apdl.pattern_atlas as ptn_dict
 
 FORMAT_DT = '%Y%m%d-%H%M%S'
 CONFIG_JSON = 'config.json'
@@ -50,17 +53,17 @@ def _reduce_method(m):
 copy_reg.pickle(types.MethodType, _reduce_method)
 
 NB_THREADS = int(mproc.cpu_count() * .9)
-PATH_DATA_SYNTH = 'data'
-PATH_DATA_REAL = 'data'
+PATH_DATA_SYNTH = data_utils.exist_path_bubble_up('data')
+PATH_DATA_REAL = data_utils.exist_path_bubble_up('data')
 PATH_RESULTS = 'results'
 DEFAULT_PARAMS = {
     'computer': os.uname(),
     'nb_samples': None,
     'tol': 1e-3,
-    'init_tp': 'rnd',  # msc, rnd, msc2
+    'init_tp': 'GT-deform   ',  # msc, rnd, msc2, grd
     'max_iter': 250,  # 250, 25
     'gc_regul': 1e-9,
-    'nb_labels': gen_data.NB_BIN_PATTERNS + 1,
+    'nb_labels': data_utils.NB_BIN_PATTERNS + 1,
     'nb_runs': NB_THREADS,  # 500
     'gc_reinit': True,
     'ptn_split': False,
@@ -68,7 +71,7 @@ DEFAULT_PARAMS = {
     'overlap_mj': True,
 }
 
-SYNTH_DATASET_NAME = gen_data.DIR_MANE_SYNTH_DATASET
+SYNTH_DATASET_NAME = data_utils.DIR_MANE_SYNTH_DATASET
 SYNTH_PATH_APD = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME)
 SYNTH_SUB_DATASETS_BINARY = [
     'datasetBinary_raw',
@@ -271,10 +274,10 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
 
 
 def string_dict(d):
-    """
+    """ transform dictionary to a formatted string
 
-    :param d:
-    :return:
+    :param {} d:
+    :return str:
     """
     s = 'DICTIONARY: \n'
     rows = ['{:30s} {}'.format('"{}":'.format(n), d[n]) for n in sorted(d)]
@@ -296,9 +299,9 @@ class ExperimentAPD(object):
             dataset_name = dict_params['dataset']
             if isinstance(dataset_name, list):
                 dataset_name = dataset_name[0]
-            dict_params['name'] = '{}_{}_{}'.format(dict_params['type'],
-                                                    os.path.basename(dict_params['path_in']),
-                                                    dataset_name)
+            dict_params['name'] = '{}_{}_{}'.format(
+                dict_params['type'], os.path.basename(dict_params['path_in']),
+                dataset_name)
         if not os.path.exists(dict_params['path_out']):
             os.mkdir(dict_params['path_out'])
         self.params = copy.deepcopy(dict_params)
@@ -311,8 +314,9 @@ class ExperimentAPD(object):
         self.path_stat = os.path.join(self.params.get('path_exp'), RESULTS_TXT)
         self.list_img_paths = None
         # self.params.export_as(self.path_stat)
-        str_params = 'PARAMETERS: \n' + '\n'.join(['"{}": \t {}'.format(k, v)
-                                                   for k, v in self.params.iteritems()])
+        str_params = 'PARAMETERS: \n' + \
+                     '\n'.join(['"{}": \t {}'.format(k, v)
+                                for k, v in self.params.iteritems()])
         logging.info(str_params)
         with open(self.path_stat, 'w') as fp:
             fp.write(str_params)
@@ -321,17 +325,17 @@ class ExperimentAPD(object):
         for p in [self.params[n] for n in self.params
                   if 'dir' in n.lower() or 'path' in n.lower()]:
             if not os.path.exists(p):
-                raise Exception('given folder "{}" does not exist!'.format(p))
+                raise Exception('given folder "%s" does not exist!' % p)
         for p in [self.params[n] for n in self.params if 'file' in n.lower()]:
             if not os.path.exists(p):
-                raise Exception('given file "{}" does not exist!'.format(p))
+                raise Exception('given folder "%s" does not exist!' % p)
 
     def __create_folder(self):
         """ create the experiment folder and iterate while there is no available
         """
         # create results folder for experiments
         if not os.path.exists(self.params.get('path_out')):
-            logging.error('no results folder "{}"'.format(self.p.get('path_out')))
+            logging.error('no results folder "%s"' % self.p.get('path_out'))
             self.params['path_exp'] = ''
             return
         self.params = create_experiment_folder(self.params,
@@ -342,14 +346,14 @@ class ExperimentAPD(object):
 
         :param params: {str: ...}, parameter settings
         """
-        self.gt_atlas = gen_data.dataset_compose_atlas(self.params.get('path_in'))
+        self.gt_atlas = data_utils.dataset_compose_atlas(self.params.get('path_in'))
         if self.list_img_paths is not None:
             img_names = [os.path.splitext(os.path.basename(p))[0]
                          for p in self.list_img_paths]
-            gt_encoding = gen_data.dataset_load_weights(self.params.get('path_in'),
-                                                        img_names=img_names)
+            gt_encoding = data_utils.dataset_load_weights(self.params.get('path_in'),
+                                                          img_names=img_names)
         else:
-            gt_encoding = gen_data.dataset_load_weights(self.params.get('path_in'))
+            gt_encoding = data_utils.dataset_load_weights(self.params.get('path_in'))
         self.gt_img_rct = ptn_dict.reconstruct_samples(self.gt_atlas, gt_encoding)
 
     def _load_data(self, gt=True):
@@ -378,7 +382,7 @@ class ExperimentAPD(object):
 
     def _load_images(self):
         """ load image data """
-        self.imgs, self._im_names = gen_data.dataset_load_images(
+        self.imgs, self._im_names = data_utils.dataset_load_images(
             self.path_data, path_imgs=self.list_img_paths,
             nb_jobs=self.params.get('nb_jobs', 1))
 
@@ -417,9 +421,9 @@ class ExperimentAPD(object):
             stat['time'] = time.time() - t
             self.l_stat.append(stat)
             logging.info('partial results: %s', repr(stat))
-            tqdm_bar.update(1)
             # just partial export
             self._evaluate()
+            tqdm_bar.update(1)
 
     def _perform_once(self, v):
         """ perform single experiment
@@ -438,7 +442,7 @@ class ExperimentAPD(object):
         """
         assert hasattr(self, 'atlas')
         n_img = 'atlas{}'.format(posix)
-        gen_data.export_image(self.params.get('path_exp'), self.atlas, n_img)
+        data_utils.export_image(self.params.get('path_exp'), self.atlas, n_img)
 
     def _export_coding(self, posix=''):
         """ export estimated atlas
@@ -520,19 +524,24 @@ class ExperimentAPD_parallel(ExperimentAPD):
 
     def _load_images(self):
         """ load image data """
-        self.imgs, self._im_names = gen_data.dataset_load_images(self.path_data,
-                                                     path_imgs=self.list_img_paths,
-                                                     nb_jobs=self.nb_jobs)
+        self.imgs, self._im_names = data_utils.dataset_load_images(self.path_data,
+                                                                   path_imgs=self.list_img_paths,
+                                                                   nb_jobs=self.nb_jobs)
 
     def _warp_perform_once(self, v):
-        self.params[self.iter_var_name] = v
-        logging.debug(' -> set iterable "%s" on %s', self.iter_var_name,
-                     repr(self.params[self.iter_var_name]))
-        t = time.time()
-        # stat = super(ExperimentAPD_mp, self)._perform_once(v)
-        stat = self._perform_once(v)
-        stat['time'] = time.time() - t
-        logging.info('partial results: %s', repr(stat))
+        try:
+            self.params[self.iter_var_name] = v
+            logging.debug(' -> set iterable "%s" on %s', self.iter_var_name,
+                          repr(self.params[self.iter_var_name]))
+            t = time.time()
+            # stat = super(ExperimentAPD_mp, self)._perform_once(v)
+            stat = self._perform_once(v)
+            stat['time'] = time.time() - t
+            logging.info('partial results: %s', repr(stat))
+        except:
+            # fixme, after some time of positive testing remove the try/catch
+            logging.error(traceback.format_exc())
+            exit(1)
         return stat
 
     # def _perform_once(self, v):

@@ -4,14 +4,20 @@ The main script for generating synthetic datasets
 Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
+import os
+import sys
+import logging
 import argparse
 import inspect
 import json
-import logging
 import multiprocessing as mproc
-import os
 from functools import partial
 
+# to suppress all visual, has to be on the beginning
+import matplotlib
+matplotlib.use('Agg')
+
+sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import apdl.dataset_utils as tl_dataset
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
@@ -42,7 +48,7 @@ def aparse_params():
     parser.add_argument('--nb_patterns', type=int, required=False,
                         default=NB_ATM_PATTERNS,
                         help='number of atom. patterns in created dictionary')
-    parser.add_argument('--path_out', type=str, required=False,
+    parser.add_argument('-p', '--path_out', type=str, required=False,
                         default=DEFAULT_PATH_APD,
                         help='path to the datasets ending '
                              'with name of datasets parent folder')
@@ -85,7 +91,9 @@ def generate_all(path_out=DEFAULT_PATH_APD, atlas_size=IMAGE_SIZE[DATASET_TYPE],
     :param str csv_name:
     :param str path_out: path to the results directory
     """
-    assert os.path.exists(os.path.dirname(path_out))
+    assert nb_patterns > 0, 'number of patterns has to be larger then 0'
+    assert os.path.exists(os.path.dirname(path_out)), \
+        'missing: %s' % os.path.dirname(path_out)
     if not os.path.exists(path_out):
         os.mkdir(path_out)
     view_func_params(inspect.currentframe(), path_out)
@@ -93,6 +101,7 @@ def generate_all(path_out=DEFAULT_PATH_APD, atlas_size=IMAGE_SIZE[DATASET_TYPE],
     # im_dict = dictionary_generate_rnd_pattern()
     im_dict = tl_dataset.dictionary_generate_atlas(path_out, im_size=atlas_size,
                                                    nb_ptns=nb_patterns)
+    assert len(im_dict) > 0, 'dictionary has contain at least one pattern'
 
     im_comb, df_weights = tl_dataset.dataset_binary_combine_patterns(im_dict,
                                       path_dir('datasetBinary_raw'), nb_samples)
@@ -117,16 +126,6 @@ def generate_all(path_out=DEFAULT_PATH_APD, atlas_size=IMAGE_SIZE[DATASET_TYPE],
              tl_dataset.add_image_prob_pepper_noise, NOISE_PROB)
 
 
-def convert_dataset_nifti(path_datasets=DEFAULT_PATH_APD):
-    """
-
-    :param str path_datasets:
-    """
-    tl_dataset.dataset_convert_nifti(
-        os.path.join(path_datasets, 'datasetBinary_raw'),
-        os.path.join(path_datasets, 'datasetBinary_raw_nifti'))
-
-
 def main():
     logging.basicConfig(level=logging.INFO)
     logging.info('running...')
@@ -137,8 +136,6 @@ def main():
     generate_all(path_out=params.path_out, atlas_size=params.image_size,
                  nb_patterns=params.nb_patterns, nb_samples=params.nb_samples,
                  nb_jobs=params.nb_jobs)
-
-    # convert_dataset_nifti()
 
     logging.info('DONE')
 

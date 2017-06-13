@@ -27,9 +27,9 @@ Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 import os
 import sys
-import time
-import gc
+import gc, time
 import logging
+import traceback
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
@@ -40,18 +40,22 @@ from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from skimage import segmentation
 import tqdm
 
-sys.path.append(os.path.abspath(os.path.join('..')))  # Add path to root
-import experiment_apd as expt_apd
-import apdl.pattern_disctionary as ptn_dict
+sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import apdl.pattern_atlas as ptn_dict
 import apdl.pattern_weights as ptn_weight
-import run_experiment_apd_apdl as expt_apdl
+import experiments.experiment_apdl as expt_apd
+import experiments.run_experiments_bpdl as run_bpdl
 
 
 SYNTH_PARAMS = expt_apd.SYNTH_PARAMS
 SYNTH_PARAMS.update({
-    'dataset': expt_apd.SYNTH_SUB_DATASETS_PROBA_NOISE + ['datasetProb_raw'],
+    'dataset': expt_apd.SYNTH_SUB_DATASETS_PROBA_NOISE,
 })
 SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_TRUE
+# SYNTH_PARAMS.update({
+#     'dataset': ['datasetProb_raw'],
+# })
+# SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_RANGE
 
 REAL_PARAMS = expt_apd.REAL_PARAMS
 NB_PATTERNS_REAL = expt_apd.NB_PATTERNS_REAL
@@ -77,21 +81,32 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
         :param imgs_vec: np.array<nb_imgs, height*width>
         :return:
         """
-        self._estimate_linear_combination(imgs_vec)
-        logging.debug('fitting parameters: %s', repr(self.estimator.get_params()))
-        logging.debug('number of iteration: %i', self.estimator.n_iter_)
+        try:
+            self._estimate_linear_combination(imgs_vec)
+            logging.debug('fitting parameters: %s',
+                          repr(self.estimator.get_params()))
+            logging.debug('number of iteration: %i', self.estimator.n_iter_)
 
-        atlas_ptns = self.components.reshape((-1, ) + self.imgs[0].shape)
-        rct_vec = np.dot(self.fit_result, self.components)
+            atlas_ptns = self.components.reshape((-1, ) + self.imgs[0].shape)
+            rct_vec = np.dot(self.fit_result, self.components)
+        except:
+            logging.warning('crash in "_perform_linear_combination" in %s',
+                            self.__class__.__name__)
+            logging.warning(traceback.format_exc())
+            atlas_ptns = np.array([np.zeros(self.imgs[0].shape)])
+            rct_vec = np.zeros(imgs_vec.shape)
         return atlas_ptns, rct_vec
 
     def estim_atlas_as_argmax(self, atlas_ptns, bg_threshold=0.1):
-        """
+        """ take max pattern with max value
 
         :param [] atlas_ptns:
         :return: np.array<height, width>
         """
-        # take max pattern with max value
+        # in case the method crash before and the attribute doe not exst
+        if not hasattr(self, 'fit_result'):
+            atlas = np.zeros(atlas_ptns[0].shape)
+            return atlas
         ptn_used = np.sum(np.abs(self.fit_result), axis=0) > 0
         # filter just used patterns
         atlas_ptns = atlas_ptns[ptn_used, :]
@@ -100,7 +115,9 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
         atlas_sum = np.sum(np.abs(atlas_ptns), axis=0)
         # filter small values
         atlas[atlas_sum < bg_threshold] = 0
-        assert atlas.shape == atlas_ptns[0].shape
+        assert atlas.shape == atlas_ptns[0].shape, \
+            'dimension mix - atlas: %s atlas_ptns: %s' \
+            % (atlas.shape, atlas_ptns.shape)
         return atlas
 
     def estim_atlas_as_unique_sum(self, atlas_ptns):
@@ -239,7 +256,7 @@ METHODS = {
     'ICA': ExperimentSparsePCA,
     'DL': ExperimentDictLearn,
     'NMF': ExperimentNMF,
-    'APDL': expt_apdl.ExperimentAPDL,
+    'APDL': run_bpdl.ExperimentAPDL,
 }
 
 # working jut in single thread for pasiisng to image data to prtial jobs
@@ -248,7 +265,7 @@ METHODS_BASE = {
     'ICA': ExperimentSparsePCA_base,
     'DL': ExperimentDictLearn_base,
     'NMF': ExperimentNMF_base,
-    'APDL': expt_apdl.ExperimentAPDL_base,
+    'APDL': run_bpdl.ExperimentAPDL_base,
 }
 
 
@@ -320,8 +337,8 @@ def experiments_real(params=REAL_PARAMS):
 
 def main():
     """ main_real entry point """
-    logging.basicConfig(level=logging.INFO)
-    # logging.basicConfig(level=logging.DEBUG)
+    # logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
     logging.info('running...')
 
     # experiments_test()

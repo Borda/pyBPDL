@@ -26,80 +26,61 @@ import traceback
 from functools import partial
 
 import matplotlib
-
 matplotlib.use('Agg')
-import numpy as np
-import matplotlib.pylab as plt
-import matplotlib.gridspec as gridspec
-import tqdm
 
-sys.path.append(os.path.abspath(os.path.join('..','..')))  # Add path to root
-from apdl import dataset_utils as gen_data
+import tqdm
+import numpy as np
+
+sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import apdl.dataset_utils as gen_data
 import apdl.dictionary_learning as dl
-import apdl.pattern_disctionary as ptn_dict
-import apdl.pattern_weights as ptn_weigth
-import experiment_apd as expt_apd
+import apdl.pattern_atlas as ptn_dict
+import experiments.experiment_apdl as expt_apd
 
 
 NB_THREADS = expt_apd.NB_THREADS
 SYNTH_PARAMS = expt_apd.SYNTH_PARAMS
-SYNTH_SUB_DATASETS = expt_apd.SYNTH_SUB_DATASETS_PROBA
+SYNTH_PARAMS['method'] = 'APDL'
+# SYNTH_SUB_DATASETS = expt_apd.SYNTH_SUB_DATASETS_PROBA
 SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_RANGE
+
+SYNTH_PARAMS.update({'dataset': expt_apd.SYNTH_SUB_DATASETS_PROBA_NOISE,})
+SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_TRUE
+# SYNTH_PARAMS.update({'dataset': ['datasetProb_raw'],})
+# SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_RANGE
+
 REAL_PARAMS = expt_apd.REAL_PARAMS
+REAL_PARAMS['method'] = 'APDL'
 NB_PATTERNS_REAL = expt_apd.NB_PATTERNS_REAL
 
 DICT_ATLAS_INIT = {
-    'msc': ptn_dict.initialise_atlas_mosaic,
-    'msc1': partial(ptn_dict.initialise_atlas_mosaic, coef=1.5),
-    'msc2': partial(ptn_dict.initialise_atlas_mosaic, coef=2),
-    'rnd': ptn_dict.initialise_atlas_random,
-    'OWS': ptn_dict.initialise_atlas_otsu_watershed_2d,
-    'OWSr': partial(ptn_dict.initialise_atlas_otsu_watershed_2d, bg='rand'),
-    'GWS': ptn_dict.initialise_atlas_gauss_watershed_2d,
+    'random-grid': ptn_dict.initialise_atlas_grid,
+    'random-mosaic': ptn_dict.initialise_atlas_mosaic,
+    'random-mosaic-1.5': partial(ptn_dict.initialise_atlas_mosaic, coef=1.5),
+    'random-mosaic-2': partial(ptn_dict.initialise_atlas_mosaic, coef=2),
+    'random': ptn_dict.initialise_atlas_random,
+    'greedy-OtsuWS': ptn_dict.initialise_atlas_otsu_watershed_2d,
+    'greedy-OtsuWS-rand': partial(ptn_dict.initialise_atlas_otsu_watershed_2d, bg='rand'),
+    'greedy-GausWS': ptn_dict.initialise_atlas_gauss_watershed_2d,
     'GT': None,  # init by Ground Truth, require GT atlas
-    'GTd': None,  # init by deformed Ground Truth, require GT atlas
+    'GT-deform': None,  # init by deformed Ground Truth, require GT atlas
+    'soa-init-NFM': partial(ptn_dict.initialise_atlas_nmf, nb_iter=5),
+    'soa-init-ICA': partial(ptn_dict.initialise_atlas_fast_ica, nb_iter=15),
+    'soa-init-PCA': partial(ptn_dict.initialise_atlas_sparse_pca, nb_iter=5),
+    'soa-init-DL': partial(ptn_dict.initialise_atlas_dict_learn, nb_iter=5),
+    'soa-tune-NFM': partial(ptn_dict.initialise_atlas_nmf, nb_iter=150),
+    'soa-tune-ICA': partial(ptn_dict.initialise_atlas_fast_ica, nb_iter=150),
+    'soa-tune-PCA': partial(ptn_dict.initialise_atlas_sparse_pca, nb_iter=150),
+    'soa-tune-DL': partial(ptn_dict.initialise_atlas_dict_learn, nb_iter=150),
 }
 
 # SIMPLE RUN
-INIT_TYPES = ['OWS', 'OWSr', 'GWS']
+# INIT_TYPES = ['OWS', 'OWSr', 'GWS']
+INIT_TYPES = DICT_ATLAS_INIT.keys()
 GRAPHCUT_REGUL = [0., 1e-9, 1e-3]
 # COMPLEX RUN
 # INIT_TYPES = DICT_ATLAS_INIT.keys()
 # GRAPHCUT_REGUL = [0., 0e-12, 1e-9, 1e-6, 1e-3, 1e-1]
-
-
-def test_simple_show_case():
-    """   """
-    # implement simple case just with 2 images and 2/3 classes in atlas
-    atlas = gen_data.create_simple_atlas()
-    # atlas2 = atlas.copy()
-    # atlas2[atlas2>2] = 0
-    imgs = gen_data.create_sample_images(atlas)
-    l_ws = [([1,0,0], [0,1,0], [0,0,1]),
-            ([1,0,1], [0,1,1], [0,0,1])]
-    for j, ws in enumerate(l_ws):
-        plt.figure()
-        plt.title('w: {}'.format(repr(ws)))
-        gs = gridspec.GridSpec(2, len(imgs) + 2)
-        plt.subplot(gs[0, 0]), plt.title('atlas')
-        cm = plt.cm.get_cmap('jet', len(np.unique(atlas)))
-        plt.imshow(atlas, cmap=cm, interpolation='nearest'), plt.colorbar()
-        for i, (img, w) in enumerate(zip(imgs, ws)):
-            plt.subplot(gs[0, i + 1]), plt.title('w:{}'.format(w))
-            plt.imshow(img, cmap='gray', interpolation='nearest')
-        t = time.time()
-        uc = dl.compute_relative_penaly_images_weights(imgs, np.array(ws))
-        logging.debug('elapsed TIME: %s', repr(time.time() - t))
-        res = dl.estimate_atlas_graphcut_general(imgs, np.array(ws), 0.)
-        plt.subplot(gs[0, -1]), plt.title('result')
-        plt.imshow(res, cmap=cm, interpolation='nearest'), plt.colorbar()
-        uc = uc.reshape(atlas.shape+uc.shape[2:])
-        # logging.debug(ws)
-        for i in range(uc.shape[2]):
-            plt.subplot(gs[1, i])
-            plt.imshow(uc[:,:,i], vmin=0, vmax=1, interpolation='nearest')
-            plt.title('cost lb #{}'.format(i)), plt.colorbar()
-        # logging.debug(uc)
 
 
 def experiment_pipeline_alpe_showcase(path_out):
@@ -114,7 +95,7 @@ def experiment_pipeline_alpe_showcase(path_out):
 
     path_in = os.path.join(expt_apd.SYNTH_PATH_APD, gen_data.DEFAULT_NAME_DATASET)
     imgs, _ = gen_data.dataset_load_images(path_in)
-    # imgs = gen_data.dataset_load_images('datasetBinary_defNoise',
+    # imgs = data_utils.dataset_load_images('datasetBinary_defNoise',
     #                                     path_base=SYNTH_PATH_APD)
 
     # init_atlas_org = ptn_dict.initialise_atlas_deform_original(atlas)
@@ -129,11 +110,10 @@ def experiment_pipeline_alpe_showcase(path_out):
 
 
 class ExperimentAPDL_base(expt_apd.ExperimentAPD):
-    """
-    the main_train real experiment or our Atlas Learning Pattern Encoding
+    """ the main_train real experiment or our Atlas Learning Pattern Encoding
     """
 
-    def _init_atlas(self, nb_labels, init_type, imgs):
+    def _init_atlas(self, nb_patterns, init_type, imgs):
         """ init atlas according an param
 
         :param int nb_labels:
@@ -142,26 +122,31 @@ class ExperimentAPDL_base(expt_apd.ExperimentAPD):
         """
         im_size = self.imgs[0].shape
         logging.debug('INIT atlas - nb labels: %s and type: %s',
-                      nb_labels, init_type)
-        if init_type.startswith('OWS') or init_type == 'GWS':
+                      nb_patterns, init_type)
+        if init_type.startswith('greedy'):
             assert init_type in DICT_ATLAS_INIT
             fn_init_atlas = DICT_ATLAS_INIT[init_type]
-            init_atlas = fn_init_atlas(imgs, nb_labels)
-        elif init_type.startswith('msc') or init_type == 'rnd':
+            init_atlas = fn_init_atlas(imgs, nb_patterns)
+        elif init_type.startswith('random'):
             assert init_type in DICT_ATLAS_INIT
             fn_init_atlas = DICT_ATLAS_INIT[init_type]
-            init_atlas = fn_init_atlas(im_size, nb_labels)
-        elif init_type == 'GT':
+            init_atlas = fn_init_atlas(im_size, nb_patterns)
+        elif init_type.startswith('soa'):
+            assert init_type in DICT_ATLAS_INIT
+            fn_init_atlas = DICT_ATLAS_INIT[init_type]
+            init_atlas = fn_init_atlas(imgs, nb_patterns)
+        elif init_type.startswith('GT'):
             assert hasattr(self, 'gt_atlas')
-            init_atlas = np.remainder(self.gt_atlas, nb_labels)
-        elif init_type == 'GTd':
-            assert hasattr(self, 'gt_atlas')
-            init_atlas = np.remainder(self.gt_atlas, nb_labels)
-            init_atlas = ptn_dict.initialise_atlas_deform_original(init_atlas)
+            init_atlas = np.remainder(self.gt_atlas, nb_patterns)
+            if init_type == 'GT-deform':
+                init_atlas = ptn_dict.initialise_atlas_deform_original(init_atlas)
+            init_atlas = init_atlas.astype(int)
+        else:
+            logging.error('not supported atlas init "%s"', init_type)
 
-        assert init_atlas.max() <= nb_labels, \
+        assert init_atlas.max() <= nb_patterns, \
             'init. atlas max=%i and nb labels=%i' % \
-            (int(init_atlas.max()), nb_labels)
+            (int(init_atlas.max()), nb_patterns)
         assert init_atlas.shape == im_size, \
             'init atlas: %s & img size: %s' % \
             (repr(init_atlas.shape) , repr(im_size))
@@ -248,10 +233,10 @@ def experiments_synthetic(params=SYNTH_PARAMS):
     l_params = [params]
     if isinstance(params['dataset'], list):
         l_params = expt_apd.extend_list_params(l_params, 'dataset', params['dataset'])
-    l_params = expt_apd.extend_list_params(l_params, 'init_tp', INIT_TYPES)
-    l_params = expt_apd.extend_list_params(l_params, 'ptn_split', [True, False])
-    l_params = expt_apd.extend_list_params(l_params, 'ptn_compact', [True, False])
-    l_params = expt_apd.extend_list_params(l_params, 'gc_regul', GRAPHCUT_REGUL)
+    # l_params = expt_apd.extend_list_params(l_params, 'init_tp', INIT_TYPES)
+    # l_params = expt_apd.extend_list_params(l_params, 'ptn_split', [True, False])
+    # l_params = expt_apd.extend_list_params(l_params, 'ptn_compact', [True, False])
+    # l_params = expt_apd.extend_list_params(l_params, 'gc_regul', GRAPHCUT_REGUL)
     ptn_range = SYNTH_PTN_RANGE[os.path.basename(params['path_in'])]
     l_params = expt_apd.extend_list_params(l_params, 'nb_labels', ptn_range)
 
@@ -264,8 +249,8 @@ def experiments_synthetic(params=SYNTH_PARAMS):
                 expt = ExperimentAPDL(params, params['nb_jobs'])
             else:
                 expt = ExperimentAPDL_base(params)
-            expt.run(iter_var='case', iter_vals=range(params['nb_runs']))
-            # exp.run(iter_var='nb_labels', iter_vals=ptn_range)
+            expt.run(iter_var='init_tp', iter_vals=INIT_TYPES)
+            # expt.run(iter_var='nb_labels', iter_vals=ptn_range)
         except:
             logging.error(traceback.format_exc())
         del expt
