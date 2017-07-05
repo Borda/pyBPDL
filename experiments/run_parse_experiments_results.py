@@ -11,11 +11,7 @@ EXAMPLES:
     -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --fname_results results_NEW.csv --fname_config config.json --func_stat none
 
->> python run_parse_experiments_results.py \
-    -p /datagrid/temporary/Medical/expSegm_langerIslands \
-    --fname_results resultStat_partial.csv resultStat_new.csv \
-    --res_cols fScore precision recall P RE RIA Se Sp
-
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -42,8 +38,7 @@ DICT_STATISTIC_FUNC = {
     'median': np.median,
     'min': np.min,
     'max': np.max,
-    'std': np.std,
-    'none': None
+    'std': np.std
 }
 
 
@@ -55,14 +50,14 @@ def create_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--path', type=str, required=True,
                         help='path to set of experiments')
-    parser.add_argument('--fname_config', type=str, required=True,
+    parser.add_argument('--fname_config', type=str, required=False,
                         help='config file name', default=NAME_INPUT_CONFIG)
-    parser.add_argument('--fname_results', type=str, required=True, nargs='*',
+    parser.add_argument('--fname_results', type=str, required=False, nargs='*',
                         help='result file name', default=[NAME_INPUT_RESULT])
+    # parser.add_argument('-t', '--type', type=str, required=False, default='synth',
+    #                     help='type of experiment data', choices=['synth', 'real'])
     parser.add_argument('--res_cols', type=str, required=False, default=None,
                         nargs='*', help='important columns from results')
-    parser.add_argument('-t', '--type', type=str, required=False, default='synth',
-                        help='type of experiment data', choices=['synth', 'real'])
     parser.add_argument('--func_stat', type=str, required=False,
                         help='type od stat over results', default='none')
     parser.add_argument('--nb_jobs', type=int, required=False,
@@ -110,7 +105,8 @@ def parse_results_csv_summary(path_result, cols_sel, func_stat):
     if df_res is None:
         return dict_result
     for col in df_res.columns:
-        dict_result[col] = np.round(func_stat(df_res[col]), 9)
+        if df_res[col].dtype == int or df_res[col].dtype == float:
+            dict_result[col] = np.round(func_stat(df_res[col]), 6)
     dict_result['nb_res'] = len(df_res)
     return dict_result
 
@@ -168,11 +164,15 @@ def parse_experiment_folder(path_expt, params):
 
     dict_info.update(count_folders_subfolders(path_expt))
     df_info = pd.DataFrame().from_dict(dict_info, orient='index').T
-    if params['type'] == 'synth':
-        func_stat = DICT_STATISTIC_FUNC[params['func_stat']]
+    try:
+        func_stat = DICT_STATISTIC_FUNC.get(params['func_stat'], None)
         df_results = load_multiple_results(path_expt, func_stat, params)
-    else:
-        df_results = pd.DataFrame
+    except:
+        logging.error(traceback.format_exc())
+        df_results = pd.DataFrame()
+
+    if len(df_results) == 0:
+        return df_results
 
     logging.debug('  -> results params: %s', repr(df_results.columns.tolist()))
     list_cols = [c for c in df_info.columns if c not in df_results.columns]
@@ -204,8 +204,8 @@ def parse_experiments(params, nb_jobs=NB_THREADS):
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')
-    logging.info('ARGUMENTS: \n%s', '\n'.join('"{}": \t {}'.format(k, v)
-                                              for k, v in params.iteritems()))
+    logging.info('ARGUMENTS: \n%s', '\n'.join('"{}": \t {}'.format(k, params[k])
+                                              for k in params))
     assert os.path.exists(params['path']), 'path to expt "%s"' % params['path']
 
     df_all = pd.DataFrame()
@@ -269,7 +269,9 @@ def count_folders_subfolders(path_expt):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     logging.info('running...')
+
     parser = create_args_parser()
     params = parse_arg_params(parser)
     parse_experiments(params, nb_jobs=params['nb_jobs'])
+
     logging.info('DONE')

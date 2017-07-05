@@ -8,29 +8,38 @@ dependencies:
   cache_directories:
     - "~/.local"
   pre:
-#    - apt-get install gcc build-essentialgit
+    - sudo apt-get update
     - sudo apt-get install tk-dev
     - sudo apt-get install pkg-config
     - sudo apt-get install python-dev
     - sudo apt-get install python-tk
     - mkdir libs
-  override:
-    - pip install --upgrade setuptools
-    - pip install -r requirements.txt
-    - pip install pytest
-#    - pip install matplotlib==1.5.2
 
-#    - here=$PWD
-    - cd libs && git clone https://github.com/Borda/pyGCO.git
-    - cd libs/pyGCO && pip install -r requirements.txt
-    - cd libs/pyGCO && python setup.py install
-    - rm -r -f libs/pyGCO
-#    - cd $here
+  override:
+    # - cd libs && git clone https://github.com/Borda/pyGCO.git
+    # - cd libs/pyGCO && pip install -r requirements.txt && python setup.py install
+    # - rm -r -f libs/pyGCO
+    # - pip install --upgrade setuptools
+    - pip install -r requirements.txt
+    - pip install nose coverage pytest pytest-cov
 
 test:
   pre:
-    - mkdir data
-    - mkdir results
-    - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
+    - mkdir data && mkdir results
+#    - python setup.py build_ext --inplace
+    - mkdir -p $CIRCLE_TEST_REPORTS
+    - unset DISPLAY && python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
+
   override:
-    - pytest apdl experiments --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/junit/pytest.xml
+    - unset DISPLAY && coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/pytest_junit.xml
+
+    - unset DISPLAY && python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
+    - unset DISPLAY && python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset segm_gene_small
+
+    - unset DISPLAY && python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
+    - unset DISPLAY && python experiments/run_experiments_all.py --type real -in images -out results --dataset segm_gene_small
+
+    - unset DISPLAY && python experiments/run_parse_experiments_results.py -p results
+
+  post:
+    - coverage report && coverage xml -o $CIRCLE_TEST_REPORTS/coverage.xml

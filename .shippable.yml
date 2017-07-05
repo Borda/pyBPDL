@@ -1,0 +1,63 @@
+# vim ft=yaml
+
+# After changing this file, check it on:
+#   http://yaml-online-parser.appspot.com/
+
+language: python
+
+sudo: true
+
+python:
+  - 2.7
+  - 3.4
+
+cache: pip
+
+env:
+  - CI_REPORTS=shippable/testresults COVERAGE_REPORTS=shippable/codecoverage
+
+build:
+  ci:
+    - echo $CI_REPORTS && mkdir -p $CI_REPORTS
+    - echo $COVERAGE_REPORTS && mkdir -p $COVERAGE_REPORTS
+
+before_install:
+  - apt-get update # --fix-missing
+  - apt-get install freetype*
+  - apt-get install python-dev python-tk
+  - apt-get install pkg-config
+  - pip install --upgrade pip
+
+install:
+  - root=$PWD
+  - gcc --version
+  - mkdir libs
+#  - cd $root/libs && git clone https://github.com/Borda/pyGCO.git
+#  - cd $root/libs/pyGCO && pip install -r requirements.txt
+#  - cd $root/libs/pyGCO && python setup.py install
+#  - rm -r -f $here/libs/pyGCO
+  - cd $root
+
+  - pip install -r requirements.txt
+  - pip install nose>=1.3.7 coverage codecov pytest>=3.0.5
+
+script:
+  - mkdir data && mkdir results
+  - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
+  - nosetests bpdl -v --exe --with-doctest --with-coverage --cover-package=bpdl
+  - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
+  - nosetests experiments -v --exe --with-doctest --with-xunit
+
+  - python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
+  - python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset segm_gene_small
+
+  - python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
+  - python experiments/run_experiments_all.py --type real -in images -out results --dataset segm_gene_small
+
+  - python experiments/run_parse_experiments_results.py -p results
+#  - codecov
+
+after_success:
+  - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9
+  - coverage xml -o $COVERAGE_REPORTS/coverage.xml
+  - coverage report

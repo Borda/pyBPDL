@@ -1,4 +1,4 @@
-import os, glob
+import os, sys, glob
 import logging
 
 import numpy as np
@@ -12,27 +12,31 @@ from IPython.html.widgets import ToggleButtonsWidget as w_tb
 from IPython.html.widgets import IntSliderWidget as w_is
 from IPython.html.widgets import DropdownWidget as w_s
 
-# PATH_DATA_SYNTH = 'data'
-# SYNTH_DATASET = 'syntheticDataset_vX'
+sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.dataset_utils as tl_data
+
+PATH_DATA_SYNTH = tl_data.update_path('images')
+SYNTH_DATASET = 'syntheticDataset_vX'
 PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
 SYNTH_DATASET = 'atomicPatternDictionary_v0'
 DEFAULT_PATH = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET)
-DATSETS_BINARY = ['datasetBinary_raw',
-                  'datasetBinary_deform',
-                  'datasetBinary_noise',
-                  'datasetBinary_defNoise']
-DATSETS_PROB = ['datasetProb_raw',
-                'datasetProb_deform',
-                'datasetProb_noise',
-                'datasetProb_defNoise']
+SYNTH_DATASETS_BINARY = ['datasetBinary_raw',
+                         'datasetBinary_deform',
+                         'datasetBinary_noise',
+                         'datasetBinary_defNoise']
+SYNTH_DATASETS_PROB = ['datasetProb_raw',
+                       'datasetProb_deform',
+                       'datasetProb_noise',
+                       'datasetProb_defNoise']
 DEFAULT_IMG_POSIX = '.png'
 TEMP_ATLAS_NAME = 'APDL_expt_msc_atlas_iter_'
+DEFAULT_APDL_GRAPHS = ('atlas_ARS', 'reconstruct_diff', 'time')
 
 
 def load_dataset(path_dataset):
     list_imgs = []
     paths_imgs = glob.glob(os.path.join(path_dataset, '*' + DEFAULT_IMG_POSIX))
-    reporting = [int((i+1) * len(paths_imgs) / 5.) for i in range(5)]
+    reporting = [int((i + 1) * len(paths_imgs) / 5.) for i in range(5)]
     for path_im in paths_imgs:
         im = io.imread(path_im)
         list_imgs.append(im / float(np.max(im)))
@@ -46,7 +50,7 @@ def show_sample_data_as_imgs(imgs, im_shape, nb_rows=5, nb_cols=3, bool_clr=Fals
     plt.figure(figsize=(3 * nb_cols, 2.5 * nb_rows))
     nb_spls = min(nb_rows * nb_cols, len(imgs))
     for i in range(int(nb_spls)):
-        im = imgs[i,:].reshape(im_shape)
+        im = imgs[i, :].reshape(im_shape)
         # u_px = Counter(im)
         unique_px = sorted(np.unique(im), reverse=True)
         plt.subplot(nb_rows, nb_cols, i + 1)
@@ -60,7 +64,7 @@ def show_sample_data_as_imgs(imgs, im_shape, nb_rows=5, nb_cols=3, bool_clr=Fals
     # plt.tight_layout()
 
 
-def apdl_w_update_range(w_params, uq_range):
+def bpdl_w_update_range(w_params, uq_range):
     for n in w_params:
         if n not in uq_range or len(uq_range[n]) == 0:
             w_params[n].visible = False
@@ -76,7 +80,7 @@ def apdl_w_update_range(w_params, uq_range):
                 w_params[n].max = len(uq_range[n]) - 1
 
 
-def apdl_w_update_param(w_params, uq_params):
+def bpdl_w_update_param(w_params, uq_params):
     for n in w_params:
         if n not in uq_params or len(uq_params[n]) == 0:
             w_params[n].visible = False
@@ -103,7 +107,7 @@ def round_range_val(df_data, params, name):
     return params
 
 
-def apdl_interact_results_iter_samples(df_data, dist_vars, tp):
+def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
     w_source = {n: w_s(options=dist_vars[n], description=n, )
               for n in ['dataset', 'sub_dataset']}
     w_param = {n: w_tb(options=dist_vars[n], description=n)
@@ -122,14 +126,14 @@ def apdl_interact_results_iter_samples(df_data, dist_vars, tp):
         # disable options with single value
         dict_source = {n: w_source[n].value for n in w_source}
         uq_param = filter_df_unique(df_data, dict_source, w_param)
-        apdl_w_update_param(w_param, uq_param)
+        bpdl_w_update_param(w_param, uq_param)
         # collect all data from interact
         uq_range = filter_df_unique(df_data, params, ['nb_lbs'])
         # find desired experiment results
         filter_param = {n: params[n] for n in params if n not in ['samples']}
         df_filter, uq_range['samples'] = find_experiment(df_data, filter_param)
-        apdl_w_update_range(w_range, uq_range)
-        apdl_show_results(df_filter, uq_range['samples'], params['samples'], tp)
+        bpdl_w_update_range(w_range, uq_range)
+        bpdl_show_results(df_filter, uq_range['samples'], params['samples'], tp)
     # show the interact
     widgets.interact(show_results, w=w_source['dataset'])
     widgets.interact(show_results, w=w_source['sub_dataset'])
@@ -138,7 +142,7 @@ def apdl_interact_results_iter_samples(df_data, dist_vars, tp):
     widgets.interact(show_results, w=w_range['samples'])
 
 
-def apdl_show_results(df_sel, path_imgs, idx=0, tp='gt', fig_size=(10, 5)):
+def bpdl_show_results(df_sel, path_imgs, idx=0, tp='gt', fig_size=(10, 5)):
     if len(df_sel) == 0:
         return
     res = df_sel.iloc[0]
@@ -211,10 +215,7 @@ def aggregate_encoding(df_encode, column='gene_id', func=np.mean):
     return df_result
 
 
-DEFAULT_APDL_GRAPHS = ('atlas_ARS', 'reconstruct_diff', 'time')
-
-
-def plot_apdl_graph_results(df_res, n_group, n_curve, iter_var='nb_labels',
+def plot_bpdl_graph_results(df_res, n_group, n_curve, iter_var='nb_labels',
                             l_graphs=DEFAULT_APDL_GRAPHS, figsize=(8, 3)):
     for v, df_group in df_res.groupby(n_group):
         clrs = plt.cm.jet(np.linspace(0, 1, len(df_group)))
