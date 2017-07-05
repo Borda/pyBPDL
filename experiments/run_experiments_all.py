@@ -22,7 +22,7 @@ Example run:
     -out /datagrid/Medical/microscopy/drosophila/TEMPORARY/experiments_APD_real \
     --dataset gene_ssmall
 
-Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -33,7 +33,9 @@ import traceback
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 import numpy as np
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF

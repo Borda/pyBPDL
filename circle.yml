@@ -8,18 +8,13 @@ dependencies:
   cache_directories:
     - "~/.local"
   pre:
-#    - apt-get install gcc build-essentialgit
     - sudo apt-get install tk-dev
     - sudo apt-get install pkg-config
     - sudo apt-get install python-dev
     - sudo apt-get install python-tk
     - mkdir libs
-  override:
-    - pip install --upgrade setuptools
-    - pip install -r requirements.txt
-    - pip install pytest
-#    - pip install matplotlib==1.5.2
 
+  override:
 #    - here=$PWD
     - cd libs && git clone https://github.com/Borda/pyGCO.git
     - cd libs/pyGCO && pip install -r requirements.txt
@@ -27,10 +22,15 @@ dependencies:
     - rm -r -f libs/pyGCO
 #    - cd $here
 
+    - pip install --upgrade setuptools
+    - pip install -r requirements.txt
+    - pip install pytest
+
 test:
   pre:
     - mkdir data
     - mkdir results
-    - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
+    - unset DISPLAY && python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
+
   override:
-    - pytest apdl experiments --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/junit/pytest.xml
+    - unset DISPLAY && pytest apdl experiments -v --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/junit/pytest.xml

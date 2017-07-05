@@ -2,7 +2,7 @@
 The base class for all Atomic Pattern Dictionary methods
 such as the stat of the art and our newly developed
 
-Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -13,15 +13,15 @@ import shutil
 import random
 import time
 import json
-import types
 import copy
-import copy_reg
 import traceback
 import multiprocessing as mproc
 
 # to suppress all visu, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 import tqdm
 import numpy as np
@@ -38,23 +38,27 @@ RESULTS_TXT = 'resultStat.txt'
 RESULTS_CSV = 'results.csv'
 FILE_LOGS = 'logging.txt'
 
+# fixing ImportError: No module named 'copy_reg' for Python3
+if sys.version_info.major == 2:
+    import types
+    import copy_reg
 
-def _reduce_method(m):
-    """ REQURED FOR MPROC POOL
-    ISSUE: cPickle.PicklingError:
-      Can't pickle <type 'instancemethod'>: attribute lookup __builtin__.instancemethod failed
-    http://stackoverflow.com/questions/25156768/cant-pickle-type-instancemethod-using-pythons-multiprocessing-pool-apply-a
-    """
-    if m.im_self is None:
-        return getattr, (m.im_class, m.im_func.func_name)
-    else:
-        return getattr, (m.im_self, m.im_func.func_name)
+    def _reduce_method(m):
+        """ REQURED FOR MPROC POOL
+        ISSUE: cPickle.PicklingError:
+          Can't pickle <type 'instancemethod'>: attribute lookup __builtin__.instancemethod failed
+        http://stackoverflow.com/questions/25156768/cant-pickle-type-instancemethod-using-pythons-multiprocessing-pool-apply-a
+        """
+        if m.im_self is None:
+            return getattr, (m.im_class, m.im_func.func_name)
+        else:
+            return getattr, (m.im_self, m.im_func.func_name)
 
-copy_reg.pickle(types.MethodType, _reduce_method)
+    copy_reg.pickle(types.MethodType, _reduce_method)
 
-NB_THREADS = int(mproc.cpu_count() * .9)
-PATH_DATA_SYNTH = data_utils.exist_path_bubble_up('data')
-PATH_DATA_REAL = data_utils.exist_path_bubble_up('data')
+NB_THREADS = int(mproc.cpu_count() * .75)
+PATH_DATA_SYNTH = data_utils.update_path('data')
+PATH_DATA_REAL = data_utils.update_path('data')
 PATH_RESULTS = 'results'
 DEFAULT_PARAMS = {
     'computer': os.uname(),
@@ -105,7 +109,7 @@ SYNTH_PTN_RANGE = {
     'atomicPatternDictionary_00': range(2, 5, 1),
     'atomicPatternDictionary_v0': range(3, 10, 1),
     'atomicPatternDictionary_v1': range(5, 20, 1),
-    'atomicPatternDictionary_v2': range(10, 40, 2) + [23],
+    'atomicPatternDictionary_v2': list(range(10, 40, 2)) + [23],
     'atomicPatternDictionary_v3': range(10, 40, 2),
     'atomicPatternDictionary3D_v0': range(2, 14, 1),
     'atomicPatternDictionary3D_v1': range(6, 30, 2),
@@ -182,7 +186,7 @@ def parse_arg_params(parser):
 
 
 def parse_params(default_params):
-    """
+    """ parse arguments from command line
 
     :param {str: ...} default_params:
     :return: {str: ...}
@@ -203,7 +207,8 @@ def load_list_img_names(name_csv, path_in=''):
     """
     # in case it is just name assume that it is in the input folder
     if not os.path.exists(name_csv):
-        name_csv = os.path.abspath(os.path.join(path_in, os.path.expanduser(name_csv)))
+        name_csv = os.path.abspath(os.path.join(path_in,
+                                                os.path.expanduser(name_csv)))
     assert os.path.exists(name_csv), '%s' % name_csv
     df = pd.DataFrame.from_csv(name_csv, index_col=False, header=None)
     assert len(df.columns) == 1  # assume just single column
@@ -218,11 +223,19 @@ def load_list_img_names(name_csv, path_in=''):
 def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True):
     """ create the experiment folder and iterate while there is no available
 
-    :param params:
-    :param dir_name:
-    :param stamp_unique:
-    :param skip_load:
-    :return:
+    :param {str: any} params:
+    :param str dir_name:
+    :param bool stamp_unique:
+    :param bool skip_load:
+    :return {str: any}:
+
+    >>> p = {'path_out': '.'}
+    >>> p = create_experiment_folder(p, 'my_test', False, skip_load=True)
+    >>> 'computer' in p
+    True
+    >>> p['path_exp']
+    './my_test_EXAMPLE'
+    >>> shutil.rmtree(p['path_exp'])
     """
     date = time.gmtime()
     name = params.get('name', 'EXAMPLE')
@@ -273,16 +286,20 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
     log.addHandler(fh)
 
 
-def string_dict(d):
+def string_dict(d, offset=30):
     """ transform dictionary to a formatted string
 
     :param {} d:
     :return str:
+
+    >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
+    \'DICTIONARY: \\n"abc": 123\'
     """
     s = 'DICTIONARY: \n'
-    rows = ['{:30s} {}'.format('"{}":'.format(n), d[n]) for n in sorted(d)]
+    tmp_name = '{:' + str(offset) + 's} {}'
+    rows = [tmp_name.format('"{}":'.format(n), d[n]) for n in sorted(d)]
     s += '\n'.join(rows)
-    return s
+    return str(s)
 
 
 class ExperimentAPD(object):
@@ -315,8 +332,8 @@ class ExperimentAPD(object):
         self.list_img_paths = None
         # self.params.export_as(self.path_stat)
         str_params = 'PARAMETERS: \n' + \
-                     '\n'.join(['"{}": \t {}'.format(k, v)
-                                for k, v in self.params.iteritems()])
+                     '\n'.join(['"{}": \t {}'.format(k, self.params[k])
+                                for k in self.params])
         logging.info(str_params)
         with open(self.path_stat, 'w') as fp:
             fp.write(str_params)
@@ -524,9 +541,8 @@ class ExperimentAPD_parallel(ExperimentAPD):
 
     def _load_images(self):
         """ load image data """
-        self.imgs, self._im_names = data_utils.dataset_load_images(self.path_data,
-                                                                   path_imgs=self.list_img_paths,
-                                                                   nb_jobs=self.nb_jobs)
+        self.imgs, self._im_names = data_utils.dataset_load_images(
+            self.path_data, path_imgs=self.list_img_paths, nb_jobs=self.nb_jobs)
 
     def _warp_perform_once(self, v):
         try:
@@ -539,7 +555,7 @@ class ExperimentAPD_parallel(ExperimentAPD):
             stat['time'] = time.time() - t
             logging.info('partial results: %s', repr(stat))
         except:
-            # fixme, after some time of positive testing remove the try/catch
+            # fixme, optionally remove the try/catch
             logging.error(traceback.format_exc())
             exit(1)
         return stat
@@ -586,13 +602,21 @@ def extend_list_params(list_params, name_param, list_options):
     :param str name_param:
     :param [] list_options:
     :return [{str: ...}]:
+
+    >>> params = extend_list_params([{'a': 1}], 'a', [3, 4])
+    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+       a param_idx
+    0  3     a_1/2
+    1  4     a_2/2
     """
     if not isinstance(list_options, list):
         list_options = [list_options]
     list_params_new = []
-    for param in list_params:
-        for v in list_options:
-            param_new = param.copy()
-            param_new.update({name_param: v})
-            list_params_new.append(param_new)
+    for p in list_params:
+        for i, v in enumerate(list_options):
+            p_new = p.copy()
+            p_new.update({name_param: v})
+            p_new['param_idx'] = \
+                '%s_%i/%i' % (name_param, i + 1, len(list_options))
+            list_params_new.append(p_new)
     return list_params_new

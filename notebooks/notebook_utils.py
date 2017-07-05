@@ -1,4 +1,4 @@
-import os, glob
+import os, sys, glob
 import logging
 
 import numpy as np
@@ -12,8 +12,11 @@ from IPython.html.widgets import ToggleButtonsWidget as w_tb
 from IPython.html.widgets import IntSliderWidget as w_is
 from IPython.html.widgets import DropdownWidget as w_s
 
-# PATH_DATA_SYNTH = 'data'
-# SYNTH_DATASET = 'syntheticDataset_vX'
+sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import apdl.dataset_utils as tl_data
+
+PATH_DATA_SYNTH = tl_data.update_path('data')
+SYNTH_DATASET = 'syntheticDataset_vX'
 PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
 SYNTH_DATASET = 'atomicPatternDictionary_v0'
 DEFAULT_PATH = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET)
@@ -27,12 +30,13 @@ DATSETS_PROB = ['datasetProb_raw',
                 'datasetProb_defNoise']
 DEFAULT_IMG_POSIX = '.png'
 TEMP_ATLAS_NAME = 'APDL_expt_msc_atlas_iter_'
+DEFAULT_APDL_GRAPHS = ('atlas_ARS', 'reconstruct_diff', 'time')
 
 
 def load_dataset(path_dataset):
     list_imgs = []
     paths_imgs = glob.glob(os.path.join(path_dataset, '*' + DEFAULT_IMG_POSIX))
-    reporting = [int((i+1) * len(paths_imgs) / 5.) for i in range(5)]
+    reporting = [int((i + 1) * len(paths_imgs) / 5.) for i in range(5)]
     for path_im in paths_imgs:
         im = io.imread(path_im)
         list_imgs.append(im / float(np.max(im)))

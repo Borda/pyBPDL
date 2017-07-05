@@ -11,6 +11,7 @@ sudo: false
 
 python:
   - 2.7
+  - 3.5
 
 # See http://docs.travis-ci.com/user/caching/#pip-cache
 cache: pip
@@ -20,9 +21,6 @@ before_install:
   - mkdir libs
 
 install:
-  - pip install -r requirements.txt
-  - pip install nose codecov
-
   - here=$PWD
   - cd libs && git clone https://github.com/Borda/pyGCO.git
   - cd $here/libs/pyGCO && pip install -r requirements.txt
@@ -30,17 +28,21 @@ install:
   - rm -r -f $here/libs/pyGCO
   - cd $here
 
+  - pip install -r requirements.txt
+  - pip install nose codecov
+
 before_script:
   - mkdir data
   - mkdir results
+  - unset DISPLAY
 
 script:
   - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
-  - nosetests apdl --exe --with-doctest --with-coverage --cover-package=apdl
-  - nosetests experiments --exe --with-doctest --with-coverage --cover-package=experiments
+  - nosetests apdl -v --exe --with-doctest --with-coverage --cover-package=apdl
+  - nosetests experiments -v --exe --with-doctest --with-xunit
 
 after_success:
-  #- codecov  # public repository on Travis CI
+#  - codecov  # public repository on Travis CI
   # private repository on Travis CI
   - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9
   - coverage report

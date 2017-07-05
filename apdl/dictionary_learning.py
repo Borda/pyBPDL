@@ -2,9 +2,9 @@
 The main module for Atomic pattern dictionary, jjoiningthe atlas estimation
 and computing the encoding / weights
 
-Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-
+from __future__ import absolute_import
 import os
 import time
 import logging
@@ -12,7 +12,9 @@ import traceback
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,10 +22,10 @@ import skimage.segmentation as sk_image
 # using https://github.com/Borda/pyGCO
 from pygco import cut_general_graph, cut_grid_graph_simple
 
-import pattern_atlas as ptn_dict
-import pattern_weights as ptn_weight
-import metric_similarity as sim_metric
-import dataset_utils as gen_data
+import apdl.pattern_atlas as ptn_dict
+import apdl.pattern_weights as ptn_weight
+import apdl.metric_similarity as sim_metric
+import apdl.dataset_utils as gen_data
 
 UNARY_BACKGROUND = 1
 NB_GRAPH_CUT_ITER = 5

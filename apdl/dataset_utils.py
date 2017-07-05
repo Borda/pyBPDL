@@ -1,11 +1,10 @@
 """
 The basic module for generating synthetic images and also loading / exporting
 
-Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-
+from __future__ import absolute_import
 import os
-import random
 import glob
 import logging
 import itertools
@@ -15,7 +14,9 @@ import shutil
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 import tqdm
 import numpy as np
@@ -42,23 +43,30 @@ DEFAULT_NAME_DATASET = 'datasetBinary_raw'
 COLUMN_NAME = 'ptn_{:02d}'
 
 
-def exist_path_bubble_up(path_file, lim_deph=5, absolute=True):
+def update_path(path_file, lim_depth=5, absolute=True):
     """ bubble in the folder tree up intil it found desired file
     otherwise return original one
 
     :param path_file: str
-    :param lim_deph: int
+    :param lim_depth: int
     :return str
+
+    >>> path = 'sample_file.test'
+    >>> f = open(path, 'w')
+    >>> update_path(path, absolute=False)
+    'sample_file.test'
+    >>> os.remove(path)
     """
-    if path_file[0] == '/':
+    if path_file.startswith('/'):
         return path_file
-    path_file_new = path_file
-    for deplth in range(lim_deph):
-        if os.path.exists(path_file_new):
-            if absolute:
-                path_file_new = os.path.abspath(path_file_new)
-            return path_file_new
-        path_file_new = os.path.join('..', path_file_new)
+    elif path_file.startswith('~'):
+        path_file = os.path.expanduser(path_file)
+    else:
+        for depth in range(lim_depth):
+            if os.path.exists(path_file): break
+            path_file = os.path.join('..', path_file)
+    if absolute:
+        path_file = os.path.abspath(path_file)
     return path_file
 
 
@@ -143,16 +151,16 @@ def generate_rand_center_radius(img, ratio, rand_seed=None):
     :return (int, ), (float, ):
 
     >>> generate_rand_center_radius(np.zeros((50, 50)), 0.2, rand_seed=0)
-    ([32, 23], [9.5, 5.5])
+    ([27, 15], [8.5, 6.5])
     """
-    random.seed(rand_seed)
+    np.random.seed(rand_seed)
     center, radius = [0] * img.ndim, [0] * img.ndim
     for i in range(img.ndim):
         size = img.shape[i]
-        center[i] = random.randint(int(1.5 * ratio * size),
-                              int((1. - 1.5 * ratio) * size))
-        radius[i] = random.randint(int(0.25 * ratio * size),
-                              int(1. * ratio * size))
+        center[i] = np.random.randint(int(1.5 * ratio * size),
+                                      int((1. - 1.5 * ratio) * size) + 1)
+        radius[i] = np.random.randint(int(0.25 * ratio * size),
+                                      int(1. * ratio * size) + 1)
         radius[i] += 0.03 * size
     return center, radius
 
@@ -166,18 +174,17 @@ def draw_ellipse(img, ratio=0.1, color=255, rand_seed=None):
     :param int color: value (0, 255) of an image intensity
     :return: np.array<height, width>
 
-    >>> random.seed(0)
     >>> img = draw_ellipse(np.zeros((10, 15)), ratio=0.3, color=1, rand_seed=0)
     >>> img.astype(int)
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     logging.debug('draw an ellipse to an image with value %i', color)
@@ -377,11 +384,11 @@ def dictionary_generate_rnd_pattern(path_out=None, dir_name=DIR_NAME_DICTIONARY,
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0, 255,   0],
+           [  0,   0,   0,   0,   0,   0, 255,   0],
+           [  0,   0,   0,   0,   0,   0, 255,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
-           [  0,   0,   0, 255,   0,   0,   0,   0],
-           [  0,   0,   0, 255,   0,   0,   0,   0],
-           [  0,   0,   0, 255,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0]], dtype=uint8)
     """
     logging.info('generate Dict. composed from %i patterns and img. size %s',

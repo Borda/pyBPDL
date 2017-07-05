@@ -1,7 +1,7 @@
 """
 run experiments tests
 
-Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -12,7 +12,9 @@ import glob
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import apdl.dataset_utils as tl_datset
@@ -38,9 +40,9 @@ def test_experiments_soa(params=r_all.SYNTH_PARAMS):
         'nb_samples': 0.5,
     })
 
-    for n, cls_expt in r_all.METHODS.iteritems():
-        logging.info('testing %s by %s', n, cls_expt.__class__)
-        expt = cls_expt(params)
+    for n in r_all.METHODS:
+        logging.info('testing %s by %s', n, r_all.METHODS[n].__class__)
+        expt = r_all.METHODS[n](params)
         expt.run(iter_var='case', iter_vals=range(params['nb_runs']))
         del expt
 
@@ -107,7 +109,7 @@ def test_experiments_postprocessing():
     params = {'res_cols': None, 'func_stat': 'none', 'type': 'synth',
               'fname_results': [expt_apdl.RESULTS_CSV],
               'fname_config': expt_apdl.CONFIG_JSON,
-              'path': tl_datset.exist_path_bubble_up('results')}
+              'path': tl_datset.update_path('results')}
 
     dir_expts = glob.glob(os.path.join(params['path'], '*'))
     # in case the the posporcesing is called before experiment themselves

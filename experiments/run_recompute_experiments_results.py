@@ -5,6 +5,7 @@ EXAMPLES:
 >> python run_recompute_experiments_results.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth
 
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -20,7 +21,9 @@ from functools import partial
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 import tqdm
 import numpy as np
@@ -32,8 +35,7 @@ from skimage.segmentation import relabel_sequential
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import apdl.metric_similarity as sim_measure
 import apdl.dataset_utils as gen_data
-import run_generate_dataset as r_data
-import run_parse_experiments_results as r_parse
+import experiments.run_generate_dataset as r_data
 
 NAME_INPUT_CONFIG = r_data.NAME_CONFIG
 NAME_INPUT_RESULT = 'results.csv'
@@ -193,8 +195,8 @@ def parse_experiments(params, nb_jobs=NB_THREADS):
     :param params: {str: ...}
     """
     logging.info('running recompute Experiments results')
-    logging.info('ARGUMENTS:\n%s', '\n'.join('"{}":\t {}'.format(k, v)
-                                             for k, v in params.iteritems()))
+    logging.info('ARGUMENTS:\n%s', '\n'.join('"{}":\t {}'.format(k, params[k])
+                                             for k in params))
     assert os.path.exists(params['path']), 'path to expt "%s"' % params['path']
 
     df = pd.DataFrame()

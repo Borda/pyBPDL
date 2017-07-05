@@ -1,28 +1,31 @@
 """
 Estimating the pattern dictionary module
 
-Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-
+from __future__ import absolute_import
+import os
 import logging
 import traceback
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
 import numpy as np
 
-import dataset_utils as data
-import pattern_weights as ptn_weight
+import apdl.dataset_utils as data
+import apdl.pattern_weights as ptn_weight
 
 REINIT_PATTERN_COMPACT = True
 
-# TODO: init: Otsu threshold on sum over all input images -> WaterShade on distance
-# TODO: init: sum over all input images and use it negative as distance for WaterShade
+# TRY: init: Otsu threshold on sum over all input images -> WaterShade on dist
+# TRY: init: sum over all in images and use it negative as dist for WaterShade
 
 
 def initialise_atlas_random(im_size, nb_patterns, rnd_seed=None):
@@ -115,7 +118,7 @@ def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rnd_seed=None):
     np.random.seed(rnd_seed)
     block_size = np.ceil(np.array(im_size) / float(max_label))
     block = np.ones(block_size.astype(np.int))
-    vec = range(1, max_label + 1) * int(np.ceil(coef))
+    vec = list(range(1, max_label + 1)) * int(np.ceil(coef))
     logging.debug('block size is %s', repr(block.shape))
     for label in range(max_label):
         idx = np.random.permutation(vec)[:max_label]

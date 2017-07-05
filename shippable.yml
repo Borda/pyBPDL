@@ -9,6 +9,7 @@ sudo: true
 
 python:
   - 2.7
+  - 3.4
 
 cache: pip
 
@@ -28,11 +29,8 @@ before_install:
   - pip install --upgrade pip
 
 install:
-  - gcc --version
-  - pip install -r requirements.txt
-  - pip install nose codecov coverage pytest
-
   - here=$PWD
+  - gcc --version
   - mkdir libs
   - cd libs && git clone https://github.com/Borda/pyGCO.git
   - cd $here/libs/pyGCO && pip install -r requirements.txt
@@ -40,13 +38,17 @@ install:
   - rm -r -f $here/libs/pyGCO
   - cd $here
 
+  - pip install -r requirements.txt
+  - pip install nose codecov coverage pytest
+
 script:
   - mkdir data
   - mkdir results
+  - unset DISPLAY
   - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
   - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
-  - nosetests apdl --exe --with-doctest --with-coverage --cover-package=apdl
-  - nosetests experiments --exe --with-doctest --with-coverage --cover-package=experiments
+  - nosetests apdl -v --exe --with-doctest --with-coverage --cover-package=apdl
+  - nosetests experiments -v --exe --with-doctest --with-xunit
   - coverage xml -o shippable/codecoverage/coverage.xml
 #  - codecov
 

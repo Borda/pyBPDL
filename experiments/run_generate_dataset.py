@@ -1,7 +1,7 @@
 """
 The main script for generating synthetic datasets
 
-Copyright (C) 2015-2016 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -15,7 +15,9 @@ from functools import partial
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-matplotlib.use('Agg')
+if os.environ.get('DISPLAY','') == '':
+    logging.warning('No display found. Using non-interactive Agg backend')
+    matplotlib.use('Agg')
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import apdl.dataset_utils as tl_dataset
@@ -72,7 +74,7 @@ def view_func_params(frame=inspect.currentframe(), path_out=''):
     """
     args, _, _, values = inspect.getargvalues(frame)
     logging.info('PARAMETERS: \n%s',
-                '\n'.join('"{}": \t {}'.format(k, v) for k, v in values.iteritems()))
+                '\n'.join('"{}": \t {}'.format(k, values[k]) for k in values))
     if os.path.exists(path_out):
         path_json = os.path.join(path_out, NAME_CONFIG)
         with open(path_json, 'w') as fp:
