@@ -19,8 +19,8 @@ from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
 import numpy as np
 
-import apdl.dataset_utils as data
-import apdl.pattern_weights as ptn_weight
+import bpdl.dataset_utils as data
+import bpdl.pattern_weights as ptn_weight
 
 REINIT_PATTERN_COMPACT = True
 

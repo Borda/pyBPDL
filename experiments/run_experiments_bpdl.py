@@ -2,11 +2,11 @@
 run experiments with Atomic Learning Pattern Encoding
 
 Example run:
->> python run_experiment_apd_apdl.py \
+>> python run_experiment_apd_bpdl.py \
     -in /datagrid/Medical/microscopy/drosophila/synthetic_data/atomicPatternDictionary_v1 \
     -out /datagrid/Medical/microscopy/drosophila/TEMPORARY/experiments_APDL_synth
 
->> python run_experiment_apd_apdl.py --type real \
+>> python run_experiment_apd_bpdl.py --type real \
     -in /datagrid/Medical/microscopy/drosophila/TEMPORARY/type_1_segm_reg_binary \
     -out /datagrid/Medical/microscopy/drosophila/TEMPORARY/experiments_APDL_real \
     --dataset gene_ssmall
@@ -34,9 +34,9 @@ import tqdm
 import numpy as np
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import apdl.dataset_utils as gen_data
-import apdl.dictionary_learning as dl
-import apdl.pattern_atlas as ptn_dict
+import bpdl.dataset_utils as gen_data
+import bpdl.dictionary_learning as dl
+import bpdl.pattern_atlas as ptn_dict
 import experiments.experiment_apdl as expt_apd
 
 
@@ -44,16 +44,12 @@ NB_THREADS = expt_apd.NB_THREADS
 SYNTH_PARAMS = expt_apd.SYNTH_PARAMS
 SYNTH_PARAMS['method'] = 'APDL'
 # SYNTH_SUB_DATASETS = expt_apd.SYNTH_SUB_DATASETS_PROBA
-SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_RANGE
 
 SYNTH_PARAMS.update({'dataset': expt_apd.SYNTH_SUB_DATASETS_PROBA_NOISE,})
-SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_TRUE
 # SYNTH_PARAMS.update({'dataset': ['datasetProb_raw'],})
-# SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_RANGE
 
 REAL_PARAMS = expt_apd.REAL_PARAMS
 REAL_PARAMS['method'] = 'APDL'
-NB_PATTERNS_REAL = expt_apd.NB_PATTERNS_REAL
 
 DICT_ATLAS_INIT = {
     'random-grid': ptn_dict.initialise_atlas_grid,
@@ -105,7 +101,7 @@ def experiment_pipeline_alpe_showcase(path_out):
     init_atlas_msc = ptn_dict.initialise_atlas_mosaic(atlas.shape, np.max(atlas))
     # init_encode_rnd = ptn_weigth.initialise_weights_random(len(imgs), np.max(atlas))
 
-    atlas, w_bins = dl.apdl_pipe_atlas_learning_ptn_weights(
+    atlas, w_bins = dl.bpdl_pipe_atlas_learning_ptn_weights(
                         imgs, out_prefix='mosaic', init_atlas=init_atlas_msc,
                         max_iter=9, out_dir=path_out)
     return atlas, w_bins
@@ -172,7 +168,7 @@ class ExperimentAPDL_base(expt_apd.ExperimentAPD):
         if isinstance(self.params['nb_samples'], float):
             self.params['nb_samples'] = int(len(self.imgs) * self.params['nb_samples'])
         try:
-            atlas, w_bins = dl.apdl_pipe_atlas_learning_ptn_weights(
+            atlas, w_bins = dl.bpdl_pipe_atlas_learning_ptn_weights(
                                         self.imgs[:self.params['nb_samples']],
                                         init_atlas=init_atlas,
                                         tol=self.params['tol'],
@@ -232,20 +228,20 @@ def experiments_synthetic(params=SYNTH_PARAMS):
     params.update(arg_params)
     params.update({'max_iter': 25})
 
-    l_params = [params]
+    list_configs = [params]
     if isinstance(params['dataset'], list):
-        l_params = expt_apd.extend_list_params(l_params, 'dataset', params['dataset'])
+        list_configs = expt_apd.extend_list_params(list_configs, 'dataset', params['dataset'])
     # l_params = expt_apd.extend_list_params(l_params, 'init_tp', INIT_TYPES)
     # l_params = expt_apd.extend_list_params(l_params, 'ptn_split', [True, False])
     # l_params = expt_apd.extend_list_params(l_params, 'ptn_compact', [True, False])
     # l_params = expt_apd.extend_list_params(l_params, 'gc_regul', GRAPHCUT_REGUL)
-    ptn_range = SYNTH_PTN_RANGE[os.path.basename(params['path_in'])]
-    l_params = expt_apd.extend_list_params(l_params, 'nb_labels', ptn_range)
+    ptn_range = params['nb_patterns']
+    list_configs = expt_apd.extend_list_params(list_configs, 'nb_labels', ptn_range)
 
-    logging.debug('list params: %i', len(l_params))
+    logging.debug('list params: %i', len(list_configs))
 
-    tqdm_bar = tqdm.tqdm(total=len(l_params))
-    for params in l_params:
+    tqdm_bar = tqdm.tqdm(total=len(list_configs))
+    for params in list_configs:
         try:
             if params['nb_jobs'] > 1:
                 expt = ExperimentAPDL(params, params['nb_jobs'])
@@ -270,25 +266,30 @@ def experiments_real(params=REAL_PARAMS):
                                             for k, v in arg_params.iteritems()]))
     params.update(arg_params)
 
-    l_params = [copy.deepcopy(params)]
+    list_configs = [copy.deepcopy(params)]
     if isinstance(params['dataset'], list):
-        l_params = expt_apd.extend_list_params(l_params, 'dataset', params['dataset'])
-    l_params = expt_apd.extend_list_params(l_params, 'init_tp', INIT_TYPES)
+        list_configs = expt_apd.extend_list_params(list_configs, 'dataset',
+                                                   params['dataset'])
+    list_configs = expt_apd.extend_list_params(list_configs, 'init_tp',
+                                               INIT_TYPES)
     # l_params = expt_apd.extend_list_params(l_params, 'ptn_split', [True, False])
-    l_params = expt_apd.extend_list_params(l_params, 'ptn_compact', [True, False])
-    l_params = expt_apd.extend_list_params(l_params, 'gc_regul', GRAPHCUT_REGUL)
+    list_configs = expt_apd.extend_list_params(list_configs, 'ptn_compact',
+                                               [True, False])
+    list_configs = expt_apd.extend_list_params(list_configs, 'gc_regul',
+                                               GRAPHCUT_REGUL)
     # l_params = expt_apd.extend_list_params(l_params, 'nb_labels',
     #                                           [5, 9, 12, 15, 20, 25, 30, 40])
-    logging.debug('list params: %i', len(l_params))
+    logging.debug('list params: %i', len(list_configs))
+    ptn_range = params['nb_patterns']
 
-    tqdm_bar = tqdm.tqdm(total=len(l_params))
-    for params in l_params:
+    tqdm_bar = tqdm.tqdm(total=len(list_configs))
+    for params in list_configs:
         if params['nb_jobs'] > 1:
             expt = ExperimentAPDL(params, params['nb_jobs'])
         else:
             expt = ExperimentAPDL_base(params)
         # exp.run(gt=False, iter_var='case', iter_values=range(params['nb_runs']))
-        expt.run(gt=False, iter_var='nb_labels', iter_vals=NB_PATTERNS_REAL)
+        expt.run(gt=False, iter_var='nb_labels', iter_vals=ptn_range)
         del expt
         tqdm_bar.update(1)
         gc.collect(), time.sleep(1)

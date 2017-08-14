@@ -17,8 +17,8 @@ if os.environ.get('DISPLAY','') == '':
     matplotlib.use('Agg')
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import apdl.dataset_utils as tl_datset
-import experiments.experiment_apdl as expt_apdl
+import bpdl.dataset_utils as tl_datset
+import experiments.experiment_apdl as expt_bpdl
 import experiments.run_experiments_all as r_all
 import experiments.run_experiments_bpdl as r_bpdl
 import experiments.run_parse_experiments_results as r_parse
@@ -107,8 +107,8 @@ def test_experiments_bpdl(dict_params=r_bpdl.SYNTH_PARAMS):
 
 def test_experiments_postprocessing():
     params = {'res_cols': None, 'func_stat': 'none', 'type': 'synth',
-              'fname_results': [expt_apdl.RESULTS_CSV],
-              'fname_config': expt_apdl.CONFIG_JSON,
+              'fname_results': [expt_bpdl.RESULTS_CSV],
+              'fname_config': expt_bpdl.CONFIG_JSON,
               'path': tl_datset.update_path('results')}
 
     dir_expts = glob.glob(os.path.join(params['path'], '*'))
@@ -118,10 +118,10 @@ def test_experiments_postprocessing():
 
     r_parse.parse_experiments(params)
 
-    params.update({'fname_results': expt_apdl.RESULTS_CSV})
+    params.update({'fname_results': expt_bpdl.RESULTS_CSV})
     r_recomp.parse_experiments(params, nb_jobs=2)
 
-    name_res = os.path.splitext(expt_apdl.RESULTS_CSV)[0]
+    name_res = os.path.splitext(expt_bpdl.RESULTS_CSV)[0]
     params.update({'fname_results': [name_res + '_NEW.csv']})
     r_parse.parse_experiments(params, nb_jobs=2)
 

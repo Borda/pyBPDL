@@ -29,8 +29,8 @@ import pandas as pd
 from sklearn import metrics
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import apdl.dataset_utils as data_utils
-import apdl.pattern_atlas as ptn_dict
+import bpdl.dataset_utils as data_utils
+import bpdl.pattern_atlas as ptn_dict
 
 FORMAT_DT = '%Y%m%d-%H%M%S'
 CONFIG_JSON = 'config.json'
@@ -105,35 +105,12 @@ SYNTH_PARAMS.update({
     'path_out': PATH_RESULTS,
     'type': 'synth',
 })
-SYNTH_PTN_RANGE = {
-    'atomicPatternDictionary_00': range(2, 5, 1),
-    'atomicPatternDictionary_v0': range(3, 10, 1),
-    'atomicPatternDictionary_v1': range(5, 20, 1),
-    'atomicPatternDictionary_v2': list(range(10, 40, 2)) + [23],
-    'atomicPatternDictionary_v3': range(10, 40, 2),
-    'atomicPatternDictionary3D_v0': range(2, 14, 1),
-    'atomicPatternDictionary3D_v1': range(6, 30, 2),
-}
-SYNTH_PTN_TRUE = {
-    'atomicPatternDictionary_00': [3],
-    'atomicPatternDictionary_v0': [6, 7],
-    'atomicPatternDictionary_v1': [13, 14],
-    'atomicPatternDictionary_v2': [23, 24],
-}
 # SYNTH_RESULTS_NAME = 'experiments_APD'
 
-REAL_DATASET_NAME = '1000_images_improved_binary'
-# REAL_SUB_DATASETS = ['binary-fix', 'binary-otsu', 'binary-adapt']
-NB_PATTERNS_REAL = [5, 8, 10, 12, 14, 16, 18, 20, 25, 30, 40, 60]
-REAL_SUB_DATASETS = [
-    # 'gene',
-    # 'gene_small',
-    'gene_ssmall',
-]
 REAL_PARAMS = DEFAULT_PARAMS.copy()
 REAL_PARAMS.update({
-    'path_in': os.path.join(PATH_DATA_REAL, REAL_DATASET_NAME),
-    'dataset': REAL_SUB_DATASETS,
+    'path_in': os.path.join(PATH_DATA_REAL, ''),
+    'dataset': [],
     'path_out': PATH_RESULTS,
     'max_iter': 50,
     'nb_runs': 10})
@@ -153,19 +130,26 @@ def create_args_parser(dict_params):
     parser.add_argument('-out', '--path_out', type=str, required=True,
                         help='path to the output with experiment results',
                         default=dict_params['path_out'])
-    parser.add_argument('-tp', '--type', type=str, required=False,
+    parser.add_argument('-t', '--type', type=str, required=False,
                         help='switch between real and synth. images',
                         default='synth', choices=['real', 'synth'])
-    parser.add_argument('-total', '--name', type=str, required=False,
+    parser.add_argument('-n', '--name', type=str, required=False,
                         help='specific name', default=None)
-    parser.add_argument('--dataset', type=str, required=False, nargs='+', default=None,
+    parser.add_argument('--dataset', type=str, required=False,
+                        nargs='+', default=None,
                         help='name of dataset to be used')
-    parser.add_argument('--nb_jobs', type=int, required=False, default=NB_THREADS,
+    parser.add_argument('-ptn', '--nb_patterns', type=int, required=False,
+                        default=[2], nargs='+',
+                        help='number of patterns to be estimated')
+    parser.add_argument('--nb_jobs', type=int, required=False,
+                        default=NB_THREADS,
                         help='number of processes running in parallel')
-    parser.add_argument('--method', type=str, required=False, nargs='+', default=None,
+    parser.add_argument('--method', type=str, required=False, nargs='+',
+                        default=None,
                         help='possible APD methods',
                         choices=['PCA', 'ICA', 'DL', 'NMF', 'APDL'])
-    parser.add_argument('-list', '--list_images', type=str, required=False, default=None,
+    parser.add_argument('-imgs', '--list_images', type=str, required=False,
+                        default=None,
                         help='csv file with list of selected images')
     return parser
 
@@ -179,9 +163,11 @@ def parse_arg_params(parser):
     args = vars(parser.parse_args())
     # remove not filled parameters
     args = {k: args[k] for k in args if args[k] is not None}
-    for n in (k for k in args if 'path' in k and args[k] is not None):
-        args[n] = os.path.abspath(os.path.expanduser(args[n]))
+    for n in (k for k in args if k.startswith('path_') and args[k] is not None):
+        args[n] = data_utils.update_path(args[n])
         assert os.path.exists(args[n]), '%s' % args[n]
+    if not isinstance(args['nb_patterns'], list):
+        args['nb_patterns'] = [args['nb_patterns']]
     return args
 
 
@@ -286,16 +272,18 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
     log.addHandler(fh)
 
 
-def string_dict(d, offset=30):
+def string_dict(d, offset=30, desc='DICTIONARY'):
     """ transform dictionary to a formatted string
 
     :param {} d:
+    :param int offset: length between name and value
+    :param str desc: dictionary title
     :return str:
 
     >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
     \'DICTIONARY: \\n"abc": 123\'
     """
-    s = 'DICTIONARY: \n'
+    s = desc + ': \n'
     tmp_name = '{:' + str(offset) + 's} {}'
     rows = [tmp_name.format('"{}":'.format(n), d[n]) for n in sorted(d)]
     s += '\n'.join(rows)

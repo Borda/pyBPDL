@@ -33,8 +33,8 @@ from PIL import Image
 from skimage.segmentation import relabel_sequential
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import apdl.metric_similarity as sim_measure
-import apdl.dataset_utils as gen_data
+import bpdl.metric_similarity as sim_measure
+import bpdl.dataset_utils as gen_data
 import experiments.run_generate_dataset as r_data
 
 NAME_INPUT_CONFIG = r_data.NAME_CONFIG

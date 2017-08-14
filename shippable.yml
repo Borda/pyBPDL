@@ -29,29 +29,27 @@ before_install:
   - pip install --upgrade pip
 
 install:
-  - here=$PWD
+  - root=$PWD
   - gcc --version
   - mkdir libs
-  - cd libs && git clone https://github.com/Borda/pyGCO.git
-  - cd $here/libs/pyGCO && pip install -r requirements.txt
-  - cd $here/libs/pyGCO && python setup.py install
-  - rm -r -f $here/libs/pyGCO
-  - cd $here
+  - cd $root/libs && git clone https://github.com/Borda/pyGCO.git
+  - cd $root/libs/pyGCO && pip install -r requirements.txt
+  - cd $root/libs/pyGCO && python setup.py install
+#  - rm -r -f $here/libs/pyGCO
+  - cd $root
 
   - pip install -r requirements.txt
-  - pip install nose codecov coverage pytest
+  - pip install nose>=1.3.7 coverage codecov pytest>=3.0.5
 
 script:
-  - mkdir data
-  - mkdir results
-  - unset DISPLAY
+  - mkdir data && mkdir results
   - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
   - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
-  - nosetests apdl -v --exe --with-doctest --with-coverage --cover-package=apdl
+  - nosetests bpdl -v --exe --with-doctest --with-coverage --cover-package=bpdl
   - nosetests experiments -v --exe --with-doctest --with-xunit
-  - coverage xml -o shippable/codecoverage/coverage.xml
 #  - codecov
 
 after_success:
   - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9
+  - coverage xml -o shippable/codecoverage/coverage.xml
   - coverage report

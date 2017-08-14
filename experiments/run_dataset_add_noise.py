@@ -21,7 +21,7 @@ from functools import partial
 import tqdm
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import apdl.dataset_utils as tl_dataset
+import bpdl.dataset_utils as tl_dataset
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
 IMAGE_PATTERN = '*.png'

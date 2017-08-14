@@ -47,9 +47,9 @@ def update_path(path_file, lim_depth=5, absolute=True):
     """ bubble in the folder tree up intil it found desired file
     otherwise return original one
 
-    :param path_file: str
-    :param lim_depth: int
-    :return str
+    :param str path_file:
+    :param int lim_depth:
+    :return str:
 
     >>> path = 'sample_file.test'
     >>> f = open(path, 'w')

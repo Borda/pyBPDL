@@ -43,8 +43,8 @@ from skimage import segmentation
 import tqdm
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import apdl.pattern_atlas as ptn_dict
-import apdl.pattern_weights as ptn_weight
+import bpdl.pattern_atlas as ptn_dict
+import bpdl.pattern_weights as ptn_weight
 import experiments.experiment_apdl as expt_apd
 import experiments.run_experiments_bpdl as run_bpdl
 
@@ -53,14 +53,11 @@ SYNTH_PARAMS = expt_apd.SYNTH_PARAMS
 SYNTH_PARAMS.update({
     'dataset': expt_apd.SYNTH_SUB_DATASETS_PROBA_NOISE,
 })
-SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_TRUE
 # SYNTH_PARAMS.update({
 #     'dataset': ['datasetProb_raw'],
 # })
-# SYNTH_PTN_RANGE = expt_apd.SYNTH_PTN_RANGE
 
 REAL_PARAMS = expt_apd.REAL_PARAMS
-NB_PATTERNS_REAL = expt_apd.NB_PATTERNS_REAL
 
 
 class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
@@ -277,26 +274,25 @@ def experiments_synthetic(params=SYNTH_PARAMS):
     :param {str: value} params:
     """
     arg_params = expt_apd.parse_params(params)
-    logging.info('PARAMS: \n%s', '\n'.join(['"{}": \n\t {}'.format(k, v)
-                                            for k, v in arg_params.iteritems()]))
+    logging.info(expt_apd.string_dict(vars(arg_params), desc='PARAMETERS'))
     params.update(arg_params)
     if not 'method' in params:
         params['method'] = METHODS.keys()
 
-    l_params = [params]
+    list_configs = [params]
     if isinstance(params['dataset'], list):
-        l_params = expt_apd.extend_list_params(l_params, 'dataset', params['dataset'])
+        list_configs = expt_apd.extend_list_params(list_configs, 'dataset',
+                                                   params['dataset'])
     # l_params = expt_apd.extend_list_params(l_params, 'nb_samples',
     #                                        np.linspace(0.1, 1, 10).tolist())
-
-    ptn_range = SYNTH_PTN_RANGE[os.path.basename(params['path_in'])]
+    ptn_range = params['nb_patterns']
 
     for m in params['method']:
         cls_expt = METHODS[m]
         if params['nb_jobs'] <= 1:
             cls_expt = METHODS_BASE[m]
-        tqdm_bar = tqdm.tqdm(total=len(l_params))
-        for param in l_params:
+        tqdm_bar = tqdm.tqdm(total=len(list_configs))
+        for param in list_configs:
             param['method'] = m
             expt = cls_expt(param)
             expt.run(iter_var='nb_labels', iter_vals=ptn_range)
@@ -311,27 +307,29 @@ def experiments_real(params=REAL_PARAMS):
     :param {str: value} params:
     """
     arg_params = expt_apd.parse_params(params)
-    logging.info('PARAMS: \n%s', '\n'.join(['"{}": \n\t {}'.format(k, v)
-                                            for k, v in arg_params.iteritems()]))
+    logging.info(expt_apd.string_dict(vars(arg_params), desc='PARAMETERS'))
+
     params.update(arg_params)
     if not 'method' in params:
         params['method'] = METHODS.keys()
+    ptn_range = params['nb_patterns']
 
-    l_params = [params]
+    list_configs = [params]
     if isinstance(params['dataset'], list):
-        l_params = expt_apd.extend_list_params(l_params, 'dataset', params['dataset'])
-    logging.debug('list params: %i', len(l_params))
+        list_configs = expt_apd.extend_list_params(list_configs, 'dataset',
+                                               params['dataset'])
+    logging.debug('list params: %i', len(list_configs))
 
     # tqdm_bar = tqdm.tqdm(total=len(l_params))
     for m in params['method']:
         cls_expt = METHODS[m]
         if params['nb_jobs'] <= 1:
             cls_expt = METHODS_BASE[m]
-        tqdm_bar = tqdm.tqdm(total=len(l_params))
-        for param in l_params:
+        tqdm_bar = tqdm.tqdm(total=len(list_configs))
+        for param in list_configs:
             param['method'] = m
             expt = cls_expt(param)
-            expt.run(gt=False, iter_var='nb_labels', iter_vals=NB_PATTERNS_REAL)
+            expt.run(gt=False, iter_var='nb_labels', iter_vals=ptn_range)
             tqdm_bar.update(1)
             del expt
             gc.collect(), time.sleep(1)

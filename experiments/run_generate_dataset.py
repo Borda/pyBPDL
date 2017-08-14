@@ -20,7 +20,7 @@ if os.environ.get('DISPLAY','') == '':
     matplotlib.use('Agg')
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import apdl.dataset_utils as tl_dataset
+import bpdl.dataset_utils as tl_dataset
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
 DEFAULT_PATH_DATA = 'data/'

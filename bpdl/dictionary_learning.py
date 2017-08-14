@@ -20,12 +20,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import skimage.segmentation as sk_image
 # using https://github.com/Borda/pyGCO
-from pygco import cut_general_graph, cut_grid_graph_simple
+from gco import cut_general_graph, cut_grid_graph_simple
 
-import apdl.pattern_atlas as ptn_dict
-import apdl.pattern_weights as ptn_weight
-import apdl.metric_similarity as sim_metric
-import apdl.dataset_utils as gen_data
+import bpdl.pattern_atlas as ptn_dict
+import bpdl.pattern_weights as ptn_weight
+import bpdl.metric_similarity as sim_metric
+import bpdl.dataset_utils as gen_data
 
 UNARY_BACKGROUND = 1
 NB_GRAPH_CUT_ITER = 5
@@ -366,7 +366,7 @@ def export_visual_atlas(i, out_dir, atlas=None, prefix='debug'):
     #                                'auto', ['patterns', 'images'])
 
 
-def apdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
+def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
                         rnd_seed=None):
     """ more complex initialisation depending on inputs
 
@@ -383,7 +383,7 @@ def apdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
     >>> imgs = [lut[atlas] for lut in luts]
     >>> w_bins = luts[:, 1:]
-    >>> init_atlas, init_w_bins = apdl_initialisation(imgs, init_atlas=None,
+    >>> init_atlas, init_w_bins = bpdl_initialisation(imgs, init_atlas=None,
     ...        init_weights=None, out_dir=None, out_prefix='', rnd_seed=0)
     >>> init_atlas
     array([[3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1],
@@ -416,7 +416,7 @@ def apdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     return atlas, w_bins
 
 
-def apdl_update_weights(imgs, atlas, overlap_major=False):
+def bpdl_update_weights(imgs, atlas, overlap_major=False):
     """ single iteration of the block coordinate descent algo
 
     :param [np.array<height, width>] imgs:
@@ -428,7 +428,7 @@ def apdl_update_weights(imgs, atlas, overlap_major=False):
     >>> atlas[3:7, 6:12] = 2
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
     >>> imgs = [lut[atlas] for lut in luts]
-    >>> apdl_update_weights(imgs, atlas)
+    >>> bpdl_update_weights(imgs, atlas)
     array([[1, 0],
            [1, 0],
            [1, 0],
@@ -452,7 +452,7 @@ def apdl_update_weights(imgs, atlas, overlap_major=False):
     return np.array(w_bins)
 
 
-def apdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_split):
+def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_split):
     """ single iteration of the block coordinate descent algo
 
     :param [np.array<height, width>] imgs:
@@ -469,7 +469,7 @@ def apdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_sp
     >>> atlas[3:7, 6:12] = 2
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
     >>> imgs = [lut[atlas] for lut in luts]
-    >>> apdl_update_atlas(imgs, atlas, luts[:, 1:], 2, gc_coef=0.,
+    >>> bpdl_update_atlas(imgs, atlas, luts[:, 1:], 2, gc_coef=0.,
     ...                   gc_reinit=False, ptn_split=False)
     array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -497,7 +497,7 @@ def apdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_sp
     return atlas_new
 
 
-def apdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=None,
+def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=None,
                                          gc_coef=0.0, tol=1e-3, max_iter=25,
                                          gc_reinit=True, ptn_split=True,
                                          overlap_major=False, ptn_compact=True,
@@ -534,8 +534,8 @@ def apdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
            [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
            [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
            [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2]])
-    >>> apdl_atlas, apdl_w_bins = apdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas)
-    >>> apdl_atlas
+    >>> bpdl_atlas, bpdl_w_bins = bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas)
+    >>> bpdl_atlas
     array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -544,7 +544,7 @@ def apdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
            [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
            [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-    >>> apdl_w_bins
+    >>> bpdl_w_bins
     array([[1, 0],
            [1, 0],
            [1, 0],
@@ -564,7 +564,7 @@ def apdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
     # initialise
     label_max = np.max(init_atlas)
     logging.debug('max nb labels set: %i', label_max)
-    atlas, w_bins = apdl_initialisation(imgs, init_atlas, init_weights,
+    atlas, w_bins = bpdl_initialisation(imgs, init_atlas, init_weights,
                                         out_dir, out_prefix)
     list_crit = []
 
@@ -572,10 +572,10 @@ def apdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
         if len(np.unique(atlas)) == 1:
             logging.warning('.. iter: %i, no labels in the atlas %s', iter,
                             repr(np.unique(atlas).tolist()))
-        w_bins = apdl_update_weights(imgs, atlas, overlap_major)
+        w_bins = bpdl_update_weights(imgs, atlas, overlap_major)
         atlas_reinit, w_bins = ptn_dict.reinit_atlas_likely_patterns(
                                     imgs, w_bins, atlas, label_max, ptn_compact)
-        atlas_new = apdl_update_atlas(imgs, atlas_reinit, w_bins, label_max,
+        atlas_new = bpdl_update_atlas(imgs, atlas_reinit, w_bins, label_max,
                                       gc_coef, gc_reinit, ptn_split)
 
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
