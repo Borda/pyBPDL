@@ -28,9 +28,9 @@ before_install:
 
 install:
   - root=$PWD
-  - cd $root/libs && git clone https://github.com/Borda/pyGCO.git
-  - cd $root/libs/pyGCO && pip install -r requirements.txt
-  - cd $root/libs/pyGCO && python setup.py install
+#  - cd $root/libs && git clone https://github.com/Borda/pyGCO.git
+#  - cd $root/libs/pyGCO && pip install -r requirements.txt
+#  - cd $root/libs/pyGCO && python setup.py install
 #  - rm -r -f $here/libs/pyGCO
   - cd $root
 
@@ -38,12 +38,12 @@ install:
   - pip install nose>=1.3.7 coverage codecov pytest>=3.0.5 codacy-coverage
 
 before_script:
-  - mkdir data && mkdir results
+  - mkdir results
 #  - python setup.py build_ext --inplace
 
 script:
-  - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
   - nosetests bpdl -v --exe --with-doctest --with-coverage --cover-package=bpdl
+  - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
   - nosetests experiments -v --exe --with-doctest --with-xunit
 
 after_success:

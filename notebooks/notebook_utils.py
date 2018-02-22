@@ -15,19 +15,19 @@ from IPython.html.widgets import DropdownWidget as w_s
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
 
-PATH_DATA_SYNTH = tl_data.update_path('data')
+PATH_DATA_SYNTH = tl_data.update_path('images')
 SYNTH_DATASET = 'syntheticDataset_vX'
 PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
 SYNTH_DATASET = 'atomicPatternDictionary_v0'
 DEFAULT_PATH = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET)
-DATSETS_BINARY = ['datasetBinary_raw',
-                  'datasetBinary_deform',
-                  'datasetBinary_noise',
-                  'datasetBinary_defNoise']
-DATSETS_PROB = ['datasetProb_raw',
-                'datasetProb_deform',
-                'datasetProb_noise',
-                'datasetProb_defNoise']
+SYNTH_DATASETS_BINARY = ['datasetBinary_raw',
+                         'datasetBinary_deform',
+                         'datasetBinary_noise',
+                         'datasetBinary_defNoise']
+SYNTH_DATASETS_PROB = ['datasetProb_raw',
+                       'datasetProb_deform',
+                       'datasetProb_noise',
+                       'datasetProb_defNoise']
 DEFAULT_IMG_POSIX = '.png'
 TEMP_ATLAS_NAME = 'APDL_expt_msc_atlas_iter_'
 DEFAULT_APDL_GRAPHS = ('atlas_ARS', 'reconstruct_diff', 'time')
@@ -50,7 +50,7 @@ def show_sample_data_as_imgs(imgs, im_shape, nb_rows=5, nb_cols=3, bool_clr=Fals
     plt.figure(figsize=(3 * nb_cols, 2.5 * nb_rows))
     nb_spls = min(nb_rows * nb_cols, len(imgs))
     for i in range(int(nb_spls)):
-        im = imgs[i,:].reshape(im_shape)
+        im = imgs[i, :].reshape(im_shape)
         # u_px = Counter(im)
         unique_px = sorted(np.unique(im), reverse=True)
         plt.subplot(nb_rows, nb_cols, i + 1)

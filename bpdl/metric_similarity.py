@@ -1,7 +1,7 @@
 """
 Introducing some used similarity measures fro atlases and etc.
 
-Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 import logging
@@ -13,7 +13,7 @@ from sklearn import metrics
 METRIC_AVERAGES = ['macro', 'weighted']
 
 
-def compare_atlas_rnd_pairs(a1, a2, rnd_seed=None):
+def compare_atlas_rnd_pairs(a1, a2, rand_seed=None):
     """ compare two atlases as taking random pixels pairs from both
     and evaluate that the are labeled equally of differently
 
@@ -29,7 +29,7 @@ def compare_atlas_rnd_pairs(a1, a2, rnd_seed=None):
     >>> atlas2[4:7, 7:14] = 2
     >>> compare_atlas_rnd_pairs(atlas1, atlas1)
     0.0
-    >>> round(compare_atlas_rnd_pairs(atlas1, atlas2, rnd_seed=0), 5)
+    >>> round(compare_atlas_rnd_pairs(atlas1, atlas2, rand_seed=0), 5)
     0.37143
     """
     logging.debug('comparing two atlases of shapes %s <-> %s',
@@ -37,7 +37,7 @@ def compare_atlas_rnd_pairs(a1, a2, rnd_seed=None):
     assert a1.shape == a2.shape, \
         'shapes: %s and %s' % (repr(a1.shape), repr(a2.shape))
     # assert A1.shape[0]==A2.shape[0] and A1.shape[1]==A2.shape[1]
-    np.random.seed(rnd_seed)
+    np.random.seed(rand_seed)
     logging.debug('unique labels are %s and %s', repr(np.unique(a1).tolist()),
                   repr(np.unique(a2).tolist()))
     matrix_x, matrix_y = np.meshgrid(range(a1.shape[0]), range(a1.shape[1]))
@@ -147,6 +147,11 @@ def compare_weights(c1, c2):
     :param c1: np.array<height, width>
     :param c2: np.array<height, width>
     :return float:
+
+    >>> np.random.seed(0)
+    >>> compare_weights(np.random.randint(0, 2, (10, 5)),
+    ...                 np.random.randint(0, 2, (10, 5)))
+    0.44
     """
     return compare_matrices(c1, c2)
 
@@ -156,9 +161,9 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
     for each pattern (object), the relation among patterns is 1-1
     NOTE: it skips background class - 0
 
-    :param seg1:
-    :param seg2:
-    :return:
+    :param ndarray seg_ref: segmentation
+    :param ndarray seg_relabel: segmentation
+    :return ndarray:
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
     >>> atlas1[1:4, 5:10] = 1
@@ -228,9 +233,9 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
     composed from multiple patterns in relabel atlas, it merge them
     NOTE: it skips background class - 0
 
-    :param seg1:
-    :param seg2:
-    :return:
+    :param ndarray seg_ref: segmentation
+    :param ndarray seg_relabel: segmentation
+    :return ndarray:
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
     >>> atlas1[1:4, 5:10] = 1
@@ -292,6 +297,18 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     :param [int] y_pred:
     :return: {str: float}
 
+    >>> y_true = np.array([0] * 3 + [1] * 5)
+    >>> y_pred = np.array([0] * 5 + [1] * 3)
+    >>> dist_sm = compute_classif_metrics(y_true, y_pred)
+    >>> pair_sm = [(n, dist_sm[n]) for n in sorted(dist_sm.keys())]
+    >>> pair_sm #doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
+    [('ARS', 0.138...),
+     ('accuracy', 0.75),
+     ('confusion', [[3, 0], [2, 3]]),
+     ('f1_macro', 0.800...), ('f1_weighted', 0.849...),
+     ('precision_macro', 0.800...), ('precision_weighted', 0.75),
+     ('recall_macro', 0.749...), ('recall_weighted', 0.749...),
+     ('support_macro', None), ('support_weighted', None)]
     >>> y_true = np.array([0] * 5 + [1] * 5 + [2] * 5)
     >>> y_pred = np.array([0] * 5 + [1] * 3 + [2] * 7)
     >>> dist_sm = compute_classif_metrics(y_true, y_pred)
@@ -300,14 +317,10 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     [('ARS', 0.641...),
      ('accuracy', 0.866...),
      ('confusion', [[5, 0, 0], [0, 3, 2], [0, 0, 5]]),
-     ('f1_macro', 0.904...),
-     ('f1_weighted', 0.904...),
-     ('precision_macro', 0.866...),
-     ('precision_weighted', 0.866...),
-     ('recall_macro', 0.861...),
-     ('recall_weighted', 0.861...),
-     ('support_macro', None),
-     ('support_weighted', None)]
+     ('f1_macro', 0.904...), ('f1_weighted', 0.904...),
+     ('precision_macro', 0.866...), ('precision_weighted', 0.866...),
+     ('recall_macro', 0.861...), ('recall_weighted', 0.861...),
+     ('support_macro', None), ('support_weighted', None)]
     """
     y_pred = np.array(y_pred)
     assert y_true.shape == y_pred.shape, \

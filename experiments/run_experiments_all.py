@@ -4,25 +4,25 @@ run experiments with Stat-of-the-art methods
 Example run:
 
 >> python run_experiment_apd_all.py \
-    -in /mnt/F464B42264B3E590/TEMP/atomicPatternDictionary_00 \
+    -in /mnt/F464B42264B3E590/TEMP/apdDataset_00 \
     -out /mnt/F464B42264B3E590/TEMP/experiments_APD \
     --nb_jobs 1 
 
 >> python run_experiment_apd_all.py \
-    -in /datagrid/Medical/microscopy/drosophila/synthetic_data/atomicPatternDictionary_v1 \
-    -out /datagrid/Medical/microscopy/drosophila/TEMPORARY/experiments_APD
+    -in ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
+    -out ~/Medical-drosophila/TEMPORARY/experiments_APD
 
 >> python run_experiment_apd_all.py \
-    -in /datagrid/Medical/microscopy/drosophila/synthetic_data/atomicPatternDictionary_v1 \
-    -out /datagrid/Medical/microscopy/drosophila/TEMPORARY/experiments_APDL_synth2
-    --method APDL
+    -in ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
+    -out ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth2 \
+    --method BPDL
 
 >> python run_experiment_apd_all.py --type real \
-    -in /datagrid/Medical/microscopy/drosophila/TEMPORARY/type_1_segm_reg_binary \
-    -out /datagrid/Medical/microscopy/drosophila/TEMPORARY/experiments_APD_real \
+    -in ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
+    -out ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
     --dataset gene_ssmall
 
-Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -30,12 +30,6 @@ import sys
 import gc, time
 import logging
 import traceback
-
-# to suppress all visual, has to be on the beginning
-import matplotlib
-if os.environ.get('DISPLAY','') == '':
-    logging.warning('No display found. Using non-interactive Agg backend')
-    matplotlib.use('Agg')
 
 import numpy as np
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
@@ -47,17 +41,6 @@ import bpdl.pattern_atlas as ptn_dict
 import bpdl.pattern_weights as ptn_weight
 import experiments.experiment_apdl as expt_apd
 import experiments.run_experiments_bpdl as run_bpdl
-
-
-SYNTH_PARAMS = expt_apd.SYNTH_PARAMS
-SYNTH_PARAMS.update({
-    'dataset': expt_apd.SYNTH_SUB_DATASETS_PROBA_NOISE,
-})
-# SYNTH_PARAMS.update({
-#     'dataset': ['datasetProb_raw'],
-# })
-
-REAL_PARAMS = expt_apd.REAL_PARAMS
 
 
 class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
@@ -96,27 +79,27 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
             rct_vec = np.zeros(imgs_vec.shape)
         return atlas_ptns, rct_vec
 
-    def estim_atlas_as_argmax(self, atlas_ptns, bg_threshold=0.1):
+    def estim_atlas_as_argmax(self, atlas_components, bg_threshold=0.1):
         """ take max pattern with max value
 
-        :param [] atlas_ptns:
+        :param [] atlas_components:
         :return: np.array<height, width>
         """
         # in case the method crash before and the attribute doe not exst
         if not hasattr(self, 'fit_result'):
-            atlas = np.zeros(atlas_ptns[0].shape)
+            atlas = np.zeros(atlas_components[0].shape)
             return atlas
         ptn_used = np.sum(np.abs(self.fit_result), axis=0) > 0
         # filter just used patterns
-        atlas_ptns = atlas_ptns[ptn_used, :]
+        atlas_components = atlas_components[ptn_used, :]
         # take the maximal component
-        atlas = np.argmax(atlas_ptns, axis=0) + 1
-        atlas_sum = np.sum(np.abs(atlas_ptns), axis=0)
+        atlas_mean = np.mean(np.abs(atlas_components), axis=0)
+        atlas = np.argmax(atlas_components, axis=0) # + 1
         # filter small values
-        atlas[atlas_sum < bg_threshold] = 0
-        assert atlas.shape == atlas_ptns[0].shape, \
+        atlas[atlas_mean < bg_threshold] = 0
+        assert atlas.shape == atlas_components[0].shape, \
             'dimension mix - atlas: %s atlas_ptns: %s' \
-            % (atlas.shape, atlas_ptns.shape)
+            % (atlas.shape, atlas_components.shape)
         return atlas
 
     def estim_atlas_as_unique_sum(self, atlas_ptns):
@@ -152,14 +135,15 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
             img_rct_bin[i] = np.array(np.asarray(im) > thr, dtype=np.int)
         return img_rct_bin
 
-    def _perform_once(self, v):
+    def _perform_once(self, d_params):
         """ perform one experiment
 
-        :param v: value
+        :param dict d_params: update of used parameters
         :return:
         """
-        self.params[self.iter_var_name] = v
-        name_posix = '_{}_{}'.format(self.iter_var_name, v)
+        self.params.update(d_params)
+        name_posix = '_' + '_'.join('{}={}'.format(k, d_params[k])
+                                    for k in sorted(d_params) if k != 'param_idx')
         if isinstance(self.params['nb_samples'], float):
             self.params['nb_samples'] = int(len(self.imgs) * self.params['nb_samples'])
         imgs_vec = np.array([np.ravel(im) for im in self.imgs[:self.params['nb_samples']]])
@@ -173,7 +157,7 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
         self._export_coding(name_posix)
         img_rct = ptn_dict.reconstruct_samples(self.atlas, self.w_bins)
         stat = self._compute_statistic_gt(img_rct)
-        stat[self.iter_var_name] = v
+        stat.update(d_params)
         return stat
 
 
@@ -210,11 +194,11 @@ class ExperimentDictLearn_base(ExperimentLinearCombineBase):
     """
 
     def _estimate_linear_combination(self, imgs_vec):
-        self.estimator = DictionaryLearning(fit_algorithm='lars',
+        self.estimator = DictionaryLearning(n_components=self.params.get('nb_labels'),
+                                            max_iter=self.params.get('max_iter'),
+                                            fit_algorithm='lars',
                                             transform_algorithm='omp',
                                             split_sign=False,
-                                            n_components=self.params.get('nb_labels'),
-                                            max_iter=self.params.get('max_iter'),
                                             n_jobs=1)
         self.fit_result = self.estimator.fit_transform(imgs_vec)
         self.components = self.estimator.components_
@@ -255,7 +239,7 @@ METHODS = {
     'ICA': ExperimentSparsePCA,
     'DL': ExperimentDictLearn,
     'NMF': ExperimentNMF,
-    'APDL': run_bpdl.ExperimentAPDL,
+    'BPDL': run_bpdl.ExperimentBPDL,
 }
 
 # working jut in single thread for pasiisng to image data to prtial jobs
@@ -264,8 +248,42 @@ METHODS_BASE = {
     'ICA': ExperimentSparsePCA_base,
     'DL': ExperimentDictLearn_base,
     'NMF': ExperimentNMF_base,
-    'APDL': run_bpdl.ExperimentAPDL_base,
+    'BPDL': run_bpdl.ExperimentBPDL_base,
 }
+
+SYNTH_PARAMS = expt_apd.SYNTH_PARAMS
+SYNTH_PARAMS.update({
+    'dataset': ['datasetProb_raw'],
+    'method': list(METHODS.keys()),
+    'max_iter': 25,  # 250, 25
+})
+
+REAL_PARAMS = expt_apd.REAL_PARAMS
+REAL_PARAMS.update({
+    'method': list(METHODS.keys()),
+    'max_iter': 25,  # 250, 25
+})
+
+
+def experiment_iterate(params, iter_params, user_gt):
+    if not expt_apd.is_list_like(params['dataset']):
+        params['dataset'] = [params['dataset']]
+
+    # tqdm_bar = tqdm.tqdm(total=len(l_params))
+    for method, data in [(m, d) for m in params['method']
+                         for d in params['dataset']]:
+        params['dataset'] = data
+        params['method'] = method
+        if params['nb_jobs'] <= 1:
+            cls_expt = METHODS_BASE.get(method, None)
+        else:
+            cls_expt = METHODS.get(method, None)
+        assert cls_expt is not None
+
+        expt = cls_expt(params)
+        expt.run(gt=user_gt, iter_params=iter_params)
+        del expt
+        gc.collect(), time.sleep(1)
 
 
 def experiments_synthetic(params=SYNTH_PARAMS):
@@ -273,32 +291,14 @@ def experiments_synthetic(params=SYNTH_PARAMS):
 
     :param {str: value} params:
     """
-    arg_params = expt_apd.parse_params(params)
-    logging.info(expt_apd.string_dict(vars(arg_params), desc='PARAMETERS'))
-    params.update(arg_params)
-    if not 'method' in params:
-        params['method'] = METHODS.keys()
+    params = expt_apd.parse_params(params)
+    logging.info(expt_apd.string_dict(params, desc='PARAMETERS'))
 
-    list_configs = [params]
-    if isinstance(params['dataset'], list):
-        list_configs = expt_apd.extend_list_params(list_configs, 'dataset',
-                                                   params['dataset'])
-    # l_params = expt_apd.extend_list_params(l_params, 'nb_samples',
-    #                                        np.linspace(0.1, 1, 10).tolist())
-    ptn_range = params['nb_patterns']
+    iter_params = {
+        'nb_labels': params['nb_labels']
+    }
 
-    for m in params['method']:
-        cls_expt = METHODS[m]
-        if params['nb_jobs'] <= 1:
-            cls_expt = METHODS_BASE[m]
-        tqdm_bar = tqdm.tqdm(total=len(list_configs))
-        for param in list_configs:
-            param['method'] = m
-            expt = cls_expt(param)
-            expt.run(iter_var='nb_labels', iter_vals=ptn_range)
-            tqdm_bar.update(1)
-            del expt
-            gc.collect(), time.sleep(1)
+    experiment_iterate(params, iter_params, user_gt=True)
 
 
 def experiments_real(params=REAL_PARAMS):
@@ -306,53 +306,31 @@ def experiments_real(params=REAL_PARAMS):
 
     :param {str: value} params:
     """
-    arg_params = expt_apd.parse_params(params)
-    logging.info(expt_apd.string_dict(vars(arg_params), desc='PARAMETERS'))
+    params = expt_apd.parse_params(params)
+    logging.info(expt_apd.string_dict(params, desc='PARAMETERS'))
 
-    params.update(arg_params)
-    if not 'method' in params:
-        params['method'] = METHODS.keys()
-    ptn_range = params['nb_patterns']
+    iter_params = {
+        'nb_labels': params['nb_labels']
+    }
 
-    list_configs = [params]
-    if isinstance(params['dataset'], list):
-        list_configs = expt_apd.extend_list_params(list_configs, 'dataset',
-                                               params['dataset'])
-    logging.debug('list params: %i', len(list_configs))
-
-    # tqdm_bar = tqdm.tqdm(total=len(l_params))
-    for m in params['method']:
-        cls_expt = METHODS[m]
-        if params['nb_jobs'] <= 1:
-            cls_expt = METHODS_BASE[m]
-        tqdm_bar = tqdm.tqdm(total=len(list_configs))
-        for param in list_configs:
-            param['method'] = m
-            expt = cls_expt(param)
-            expt.run(gt=False, iter_var='nb_labels', iter_vals=ptn_range)
-            tqdm_bar.update(1)
-            del expt
-            gc.collect(), time.sleep(1)
+    experiment_iterate(params, iter_params, user_gt=False)
 
 
-def main():
-    """ main_real entry point """
-    # logging.basicConfig(level=logging.INFO)
-    logging.basicConfig(level=logging.DEBUG)
-    logging.info('running...')
-
-    # experiments_test()
-
-    arg_params = expt_apd.parse_params(SYNTH_PARAMS)
+def main(arg_params):
+    # swap according dataset type
     if arg_params['type'] == 'synth':
         experiments_synthetic()
     elif arg_params['type'] == 'real':
         experiments_real()
-
-    logging.info('DONE')
     # plt.show()
 
 
 if __name__ == "__main__":
-    main()
+    """ main entry point """
+    # logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
+    arg_params = expt_apd.parse_params({})
+    main(arg_params)
+
+    logging.info('DONE')

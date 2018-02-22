@@ -1,11 +1,11 @@
-numpy>=1.10.2
+numpy>=1.8.2
 scipy>=0.10.0
-pandas>=0.14.1
+pandas>=0.17.1
 six>=1.7.3
 pillow>=2.1.0
-matplotlib==2.0.2
+matplotlib>=2.0.2
 scikit-learn>=0.18.1
-scikit-image>=0.12.3
+scikit-image>=0.12.1
 tqdm>=4.7.4
-ipython==3.2.1
-gco-wrapper>=3.0.2
+ipython==4.2.0
+gco-wrapper>=3.0.2c

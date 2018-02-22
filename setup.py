@@ -1,16 +1,19 @@
 """
 The build/compilations setup
 
->> python setup.py build_ext --inplace
+>>> pip install -r requirements.txt
+>>> python setup.py build_ext --inplace
+>>> python setup.py install
 
 Copyright (C) 2014-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-from distutils.core import setup
-from distutils.extension import Extension
-from Cython.Distutils import build_ext
-from Cython.Build import cythonize
-import numpy as np
+try:
+    from setuptools import setup
+    from setuptools.command.build_ext import build_ext
+except ImportError:
+    from distutils.core import setup
+    from distutils.command.build_ext import build_ext
 
 
 setup(
@@ -18,14 +21,16 @@ setup(
     version='0.1',
     author='Jiri Borovec',
     author_email='jiri.borovec@fel.cvut.cz',
-    url='https://github.com/Borda/pyBPDL',
+    url='https://borda.github.com/pyBPDL',
     license='BSD 3-clause',
+
     description='Binary Pattern Dictionary Learning',
+    packages=["bpdl"],
+    cmdclass = {'build_ext': build_ext},
+
     long_description="""
 Image processing package for unsupervised pattern extraction.
 """,
-    cmdclass = {'build_ext': build_ext},
-    packages=["bpdl"],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",

@@ -2,7 +2,7 @@
 The main module for Atomic pattern dictionary, jjoiningthe atlas estimation
 and computing the encoding / weights
 
-Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 import os
@@ -25,7 +25,7 @@ from gco import cut_general_graph, cut_grid_graph_simple
 import bpdl.pattern_atlas as ptn_dict
 import bpdl.pattern_weights as ptn_weight
 import bpdl.metric_similarity as sim_metric
-import bpdl.dataset_utils as gen_data
+import bpdl.dataset_utils as tl_data
 
 UNARY_BACKGROUND = 1
 NB_GRAPH_CUT_ITER = 5
@@ -99,8 +99,8 @@ def compute_relative_penalty_images_weights(imgs, weights):
 
 def compute_positive_cost_images_weights(imgs, ptn_weights):
     """
-    :param [np.array<height, width>] imgs: list of input images
-    :param np.array<nb_imgs, nb_lbs> weights: matrix composed from wight vectors
+    :param [ndarray] imgs: list of np.array<height, width> input images
+    :param ndarray ptn_weights: matrix np.array<nb_imgs, nb_lbs> composed from wight vectors
     :return: np.array<height, width, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -211,6 +211,8 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> np.sum(abs(estimate_atlas_graphcut_simple(imgs, luts[:, :1]).astype(int)))
+    0
     """
     logging.debug('estimate atlas via GraphCut from Potts model')
     if ptn_weights.shape[1] <= 1:
@@ -243,10 +245,10 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
     """ run the graphcut on the unary costs with specific pairwise cost
     source: https://github.com/yujiali/pyGCO
 
-    :param [np.array<height, width>] imgs: list of input binary images
-    :param np.array<nb_imgs, nb_lbs> encoding: binary ptn selection
+    :param [ndarray] imgs: list of np.array<height, width> input binary images
+    :param ndarray ptn_weights: np.array<nb_imgs, nb_lbs> binary ptn selection
     :param float coef: coefficient for graphcut
-    :param np.array<nb_seg, 1> init_labels: init labeling
+    :param ndarray init_atlas: init labeling  np.array<nb_seg, 1>
         while None it take the arg ming of the unary costs
     :return np.array<nb_seg, 1>:
 
@@ -264,6 +266,8 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
            [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
            [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> np.sum(abs(estimate_atlas_graphcut_general(imgs, luts[:, :1]).astype(int)))
+    0
     """
     logging.debug('estimate atlas via GraphCut from Potts model')
     if ptn_weights.shape[1] <= 1:
@@ -321,14 +325,14 @@ def export_visualization_image(img, idx, out_dir, prefix='debug', name='',
     :param str ration: mainly for  weights to ne stretched
     :param [str, str] labels: labels for axis
 
-    # CRASH: TclError: no display name and no $DISPLAY environment variable
-    # >>> img = np.random.random((50, 50))
-    # >>> path_fig = export_visualization_image(img, 0, '.')
-    # >>> os.path.exists(path_fig)
-    # True
-    # >>> os.remove(path_fig)
+    CRASH: TclError: no display name and no $DISPLAY environment variable
+    >>> img = np.random.random((50, 50))
+    >>> path_fig = export_visualization_image(img, 0, '.')
+    >>> os.path.exists(path_fig)
+    True
+    >>> os.remove(path_fig)
     """
-    plt.ioff()
+    # plt.ioff()
     fig, ax = plt.subplots()
     ax.imshow(img, interpolation='none', aspect=ration)
     ax.set_xlabel(labels[0])
@@ -346,10 +350,14 @@ def export_visual_atlas(i, out_dir, atlas=None, prefix='debug'):
 
     :param int i: iteration to be shown in the img name
     :param str out_dir: path to the resulting folder
-    :param np.array<height, width> atlas:
-    :param np.array<nb_imgs, nb_lbs> weights:
+    :param ndarray atlas: np.array<height, width>
     :param str prefix:
 
+    >>> import shutil
+    >>> dir_name = 'sample_dir'
+    >>> os.mkdir(dir_name)
+    >>> export_visual_atlas(0, dir_name, np.random.randint(0, 5, (10, 5)))
+    >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
     if logging.getLogger().getEffectiveLevel() < logging.DEBUG:
         return
@@ -360,21 +368,22 @@ def export_visual_atlas(i, out_dir, atlas=None, prefix='debug'):
         # export_visualization_image(atlas, i, out_dir, prefix, 'atlas',
         #                            labels=['X', 'Y'])
         n_img = 'APDL_{}_atlas_iter_{:04d}'.format(prefix, i)
-        gen_data.export_image(out_dir, atlas, n_img)
+        tl_data.export_image(out_dir, atlas, n_img)
     # if weights is not None:
     #     export_visualization_image(weights, i, out_dir, prefix, 'weights',
     #                                'auto', ['patterns', 'images'])
 
 
 def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
-                        rnd_seed=None):
+                        rand_seed=None):
     """ more complex initialisation depending on inputs
 
-    :param [np.array<height, width>] imgs:
-    :param np.array<height, width> init_atlas:
-    :param np.array<nb_imgs, nb_lbs> init_weights:
+    :param [ndarray] imgs: list of np.array<height, width>
+    :param ndarray init_atlas: np.array<height, width>
+    :param ndarray init_weights: np.array<nb_imgs, nb_lbs>
     :param str out_prefix:
     :param str out_dir: path to the results directory
+    :param rnd_seed: random initialization
     :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -384,7 +393,28 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     >>> imgs = [lut[atlas] for lut in luts]
     >>> w_bins = luts[:, 1:]
     >>> init_atlas, init_w_bins = bpdl_initialisation(imgs, init_atlas=None,
-    ...        init_weights=None, out_dir=None, out_prefix='', rnd_seed=0)
+    ...        init_weights=w_bins, out_dir=None, out_prefix='', rand_seed=0)
+    >>> init_atlas.astype(int)
+    array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> init_w_bins
+    array([[1, 0],
+           [1, 0],
+           [1, 0],
+           [0, 1],
+           [0, 1],
+           [0, 1],
+           [1, 1],
+           [1, 1],
+           [1, 1]])
+    >>> init_atlas, init_w_bins = bpdl_initialisation(imgs, init_atlas=None,
+    ...        init_weights=None, out_dir=None, out_prefix='', rand_seed=0)
     >>> init_atlas
     array([[3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1],
            [3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1],
@@ -394,6 +424,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
            [3, 3, 3, 3, 1, 1, 1, 1, 2, 2, 2, 2],
            [1, 1, 1, 1, 3, 3, 3, 3, 2, 2, 2, 2],
            [1, 1, 1, 1, 3, 3, 3, 3, 2, 2, 2, 2]])
+    >>> init_w_bins
     """
     if init_weights is not None and init_atlas is None:
         logging.debug('... initialise Atlas from w_bins')
@@ -404,7 +435,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
         logging.debug('... initialise Atlas with ')
         # IDEA: find better way of initialisation
         init_atlas = ptn_dict.initialise_atlas_mosaic(
-            imgs[0].shape, nb_patterns, rnd_seed=rnd_seed)
+            imgs[0].shape, nb_patterns, rand_seed=rand_seed)
         export_visual_atlas(0, out_dir, init_atlas, out_prefix)
 
     atlas = init_atlas
@@ -419,8 +450,8 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
 def bpdl_update_weights(imgs, atlas, overlap_major=False):
     """ single iteration of the block coordinate descent algo
 
-    :param [np.array<height, width>] imgs:
-    :param np.array<height, width> atlas:
+    :param [ndarray] imgs: list of images np.array<height, width>
+    :param ndarray atlas: used atlas of np.array<height, width>
     :return: np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -429,6 +460,16 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
     >>> imgs = [lut[atlas] for lut in luts]
     >>> bpdl_update_weights(imgs, atlas)
+    array([[1, 0],
+           [1, 0],
+           [1, 0],
+           [0, 1],
+           [0, 1],
+           [0, 1],
+           [1, 1],
+           [1, 1],
+           [1, 1]])
+    >>> bpdl_update_weights(imgs, atlas, overlap_major=True)
     array([[1, 0],
            [1, 0],
            [1, 0],
@@ -455,9 +496,9 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
 def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_split):
     """ single iteration of the block coordinate descent algo
 
-    :param [np.array<height, width>] imgs:
-    :param np.array<height, width> atlas:
-    :param np.array<nb_imgs, nb_lbs> w_bins:
+    :param [ndarray] imgs: list of images np.array<height, width>
+    :param ndarray atlas: used atlas of np.array<height, width>
+    :param ndarray w_bins: weights np.array<nb_imgs, nb_lbs>
     :param int label_max:
     :param float gc_coef: graph cut regularisation
     :param bool gc_reinit: weather use atlas from previous step as init for act.
@@ -505,9 +546,9 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
     """ the experiments_synthetic pipeline for block coordinate descent
     algo with graphcut...
 
-    :param [np.array<height, width>] imgs:
-    :param np.array<height, width> init_atlas:
-    :param np.array<nb_imgs, nb_lbs> init_weights:
+    :param [ndarray] imgs: list of images np.array<height, width>
+    :param ndarray init_atlas: used atlas of np.array<height, width>
+    :param ndarray init_weights: weights np.array<nb_imgs, nb_lbs>
     :param float gc_coef: graph cut regularisation
     :param float tol: stop if the diff between two conseq steps
         is less then this given threshold. eg for -1 never until max nb iters
@@ -524,7 +565,7 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
     >>> imgs = [lut[atlas] for lut in luts]
     >>> w_bins = luts[:, 1:]
     >>> init_atlas = ptn_dict.initialise_atlas_mosaic(atlas.shape,
-    ...                                               nb_patterns=2, rnd_seed=0)
+    ...                                               nb_patterns=2, rand_seed=0)
     >>> init_atlas
     array([[2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
            [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
@@ -557,7 +598,7 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
     """
     logging.debug('compute an Atlas and weights for %i images...', len(imgs))
     assert len(imgs) >= 0
-    if logging.getLogger().getEffectiveLevel()==logging.DEBUG:
+    if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
     # assert initAtlas is not None or type(max_nb_lbs)==int
@@ -602,8 +643,8 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
 def test_simple_show_case(atlas, imgs, ws):
     """ simple experiment
 
-    >>> atlas = gen_data.create_simple_atlas()
-    >>> imgs = gen_data.create_sample_images(atlas)
+    >>> atlas = tl_data.create_simple_atlas()
+    >>> imgs = tl_data.create_sample_images(atlas)
     >>> ws=([1, 0, 0], [0, 1, 1], [0, 0, 1])
     >>> res, fig = test_simple_show_case(atlas, imgs, ws)
     >>> res.astype(int)
@@ -628,7 +669,7 @@ def test_simple_show_case(atlas, imgs, ws):
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     >>> fig  # doctest: +ELLIPSIS
-    <matplotlib.figure.Figure object at ...>
+    <...>
     """
     # implement simple case just with 2 images and 2/3 classes in atlas
     fig, axarr = plt.subplots(2, len(imgs) + 2)

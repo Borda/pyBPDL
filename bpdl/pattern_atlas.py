@@ -1,7 +1,7 @@
 """
 Estimating the pattern dictionary module
 
-Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 import os
@@ -28,14 +28,14 @@ REINIT_PATTERN_COMPACT = True
 # TRY: init: sum over all in images and use it negative as dist for WaterShade
 
 
-def initialise_atlas_random(im_size, nb_patterns, rnd_seed=None):
+def initialise_atlas_random(im_size, nb_patterns, rand_seed=None):
     """ initialise atlas with random labels
 
     :param (int, int) im_size: size of image
     :param int label_max: number of labels
     :return: np.array<height, width>
 
-    >>> initialise_atlas_random((6, 12), 4, rnd_seed=0)
+    >>> initialise_atlas_random((6, 12), 4, rand_seed=0)
     array([[1, 4, 2, 1, 4, 4, 4, 4, 2, 4, 2, 3],
            [1, 4, 3, 1, 1, 1, 3, 2, 3, 4, 4, 3],
            [1, 2, 2, 2, 2, 1, 2, 1, 4, 1, 4, 2],
@@ -46,26 +46,26 @@ def initialise_atlas_random(im_size, nb_patterns, rnd_seed=None):
     logging.debug('initialise atlas %s as random labeling', repr(im_size))
     nb_labels = nb_patterns + 1
     # reinit seed to have random samples even in the same time
-    np.random.seed(rnd_seed)
+    np.random.seed(rand_seed)
     img_init = np.random.randint(1, nb_labels, im_size)
     return np.array(img_init, dtype=np.int)
 
 
-def initialise_atlas_grid(im_size, nb_patterns, rnd_seed=None):
-    """
+def initialise_atlas_grid(im_size, nb_patterns, rand_seed=None):
+    """ initialise atlas with a grid schema
 
     :param (int, int) im_size: size of image
-    :param int nb_labels: number of labels
+    :param int nb_patterns: number of labels
     :return: np.array<height, width>
 
-    >>> initialise_atlas_grid((6, 12), 4, rnd_seed=0)
+    >>> initialise_atlas_grid((6, 12), 4, rand_seed=0)
     array([[3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4],
            [3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4],
            [3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4],
            [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
            [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
            [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1]])
-    >>> initialise_atlas_grid((6, 17), 5, rnd_seed=0)
+    >>> initialise_atlas_grid((6, 17), 5, rand_seed=0)
     array([[3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 2],
            [3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 2],
            [3, 3, 3, 3, 3, 3, 3, 3, 1, 1, 1, 1, 1, 1, 1, 1, 2],
@@ -74,7 +74,7 @@ def initialise_atlas_grid(im_size, nb_patterns, rnd_seed=None):
            [4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 0]])
     """
     # reinit seed to have random samples even in the same time
-    np.random.seed(rnd_seed)
+    np.random.seed(rand_seed)
     labels = np.random.permutation(range(1, nb_patterns + 1)).tolist()
     block_size = np.ceil(np.array(im_size) / np.sqrt(nb_patterns)).astype(int)
     img = np.zeros((im_size), dtype=int)
@@ -85,15 +85,17 @@ def initialise_atlas_grid(im_size, nb_patterns, rnd_seed=None):
     return img
 
 
-def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rnd_seed=None):
+def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     """ generate grids texture and into each rectangle plase a label,
     each row contains all labels (permutation)
 
     :param (int, int) im_size: size of image
-    :param int nb_labels: number of labels
+    :param int nb_patterns: number of patters, labels - 1
+    :param float coef:
+    :param rand_seed: random initialization
     :return: np.array<height, width>
 
-    >>> initialise_atlas_mosaic((8, 12), 4, rnd_seed=0)
+    >>> initialise_atlas_mosaic((8, 12), 4, rand_seed=0)
     array([[3, 3, 3, 4, 4, 4, 2, 2, 2, 1, 1, 1],
            [3, 3, 3, 4, 4, 4, 2, 2, 2, 1, 1, 1],
            [1, 1, 1, 3, 3, 3, 2, 2, 2, 4, 4, 4],
@@ -102,7 +104,7 @@ def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rnd_seed=None):
            [4, 4, 4, 1, 1, 1, 3, 3, 3, 2, 2, 2],
            [2, 2, 2, 1, 1, 1, 3, 3, 3, 4, 4, 4],
            [2, 2, 2, 1, 1, 1, 3, 3, 3, 4, 4, 4]])
-    >>> initialise_atlas_mosaic((8, 12), 4, coef=2., rnd_seed=0)
+    >>> initialise_atlas_mosaic((8, 12), 4, coef=2., rand_seed=0)
     array([[2, 2, 2, 2, 1, 1, 2, 2, 1, 1, 0, 0],
            [3, 3, 2, 2, 0, 0, 2, 2, 1, 1, 4, 4],
            [1, 1, 1, 1, 3, 3, 0, 0, 3, 3, 2, 2],
@@ -115,7 +117,7 @@ def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rnd_seed=None):
     logging.debug('initialise atlas %s as grid labeling', repr(im_size))
     max_label = int(nb_patterns * coef)
     # reinit seed to have random samples even in the same time
-    np.random.seed(rnd_seed)
+    np.random.seed(rand_seed)
     block_size = np.ceil(np.array(im_size) / float(max_label))
     block = np.ones(block_size.astype(np.int))
     vec = list(range(1, max_label + 1)) * int(np.ceil(coef))
@@ -137,13 +139,15 @@ def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rnd_seed=None):
     return np.array(img_init, dtype=np.int)
 
 
-def initialise_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshhold=0.5, bg='none'):
+def initialise_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
+                                       bg_type='none'):
     """ do some simple operations to get better initialisation
     1] sum over all images, 2] Otsu thresholding, 3] watershed
 
-    :param [np.array<height, width>] imgs:
-    :param int nb_labels: number of labels
-    :param str bg: set weather the Otsu backround sould be filled randomly
+    :param [ndarray] imgs: list of images np.array<height, width>
+    :param int nb_patterns: number of labels
+    :param str bg_type: set weather the Otsu backround sould be filled randomly
+    :param float bg_threshhold:
     :return: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -160,11 +164,21 @@ def initialise_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshhold=0.5
            [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> np.random.seed(0)
+    >>> initialise_atlas_otsu_watershed_2d(imgs, 5, bg_type='rand')
+    array([[5, 0, 1, 1, 0, 2, 4, 3, 5, 1, 1, 5],
+           [3, 0, 1, 1, 0, 1, 2, 5, 4, 1, 4, 1],
+           [3, 0, 0, 0, 0, 4, 4, 1, 2, 2, 2, 1],
+           [3, 5, 4, 4, 3, 5, 0, 0, 0, 0, 0, 0],
+           [2, 5, 2, 3, 3, 1, 0, 2, 2, 2, 2, 2],
+           [3, 4, 1, 4, 5, 2, 0, 2, 2, 2, 2, 2],
+           [4, 5, 5, 5, 1, 5, 0, 0, 0, 0, 0, 0],
+           [1, 1, 2, 3, 5, 3, 1, 4, 3, 3, 1, 2]])
     """
     logging.debug('initialise atlas for %i labels from %i images of shape %s '
                   'with Otsu-Watershed', nb_patterns, len(imgs), repr(imgs[0].shape))
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian_filter(img_sum, 1)
+    img_gauss = filters.gaussian(img_sum, 1)
     # http://scikit-image.org/docs/dev/auto_examples/plot_otsu.html
     thresh = filters.threshold_otsu(img_gauss)
     img_otsu = (img_gauss >= thresh)
@@ -172,10 +186,10 @@ def initialise_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshhold=0.5
     img_dist = ndi.distance_transform_edt(img_otsu)
     seeds = detect_peaks(img_otsu)
     labels = morphology.watershed(-img_dist, seeds)
-    labels[img_gauss < bg_threshhold] = 0
+    labels[img_gauss < bg_threshold] = 0
     if nb_patterns is not None:
         labels = np.remainder(labels, nb_patterns + 1)
-    if bg == 'rand':
+    if bg_type == 'rand':
         # add random labels on the potential backgound
         img_rand = np.random.randint(1, nb_patterns + 1, img_sum.shape)
         labels[img_otsu == 0] = img_rand[img_otsu == 0]
@@ -187,6 +201,9 @@ def detect_peaks(image, struct=(2, 2)):
     Takes an image and detect the peaks usingthe local maximum filter.
     Returns a boolean mask of the peaks (i.e. 1 when
     the pixel's value is the neighborhood maximum, 0 otherwise)
+
+    :param ndarray image:
+    :param (int, int) struct:
 
     >>> img = [[0.46, 0.62, 0.62, 0.46, 0.2,  0.04, 0.01, 0.0,  0.0,  0.0],
     ...        [0.44, 0.59, 0.59, 0.44, 0.2,  0.06, 0.04, 0.04, 0.04, 0.04],
@@ -234,14 +251,14 @@ def initialise_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
     """ do some simple operations to get better initialisation
     1] sum over all images, 2]watershed
 
-    :param [np.array<height, width>] imgs: list of input images
+    :param [ndarray] imgs: list of input images np.array<height, width>
     :param int nb_labels:
     :return: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
-    >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
+    >>> luts = np.array([[0, 1, 0]] * 9 + [[0, 0, 1]] * 9 + [[0, 1, 1]] * 9)
     >>> imgs = [lut[atlas].astype(float) for lut in luts]
     >>> initialise_atlas_gauss_watershed_2d(imgs, 5)
     array([[0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -256,7 +273,7 @@ def initialise_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
     logging.debug('initialise atlas for %i labels from %i images of shape %s '
                   'with Gauss-Watershed', nb_patterns, len(imgs), repr(imgs[0].shape))
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian_filter(img_sum, 1)
+    img_gauss = filters.gaussian(img_sum, 1)
     seeds = detect_peaks(img_gauss)
     # http://scikit-image.org/docs/dev/auto_examples/plot_watershed.html
     labels = morphology.watershed(-img_gauss, seeds)
@@ -266,33 +283,45 @@ def initialise_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
     return labels.astype(np.int)
 
 
-def convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used, bg_threshold=0.01):
-    atlas_ptns = np.abs(atlas_ptns)
-    atlas_ptns = atlas_ptns[ptn_used, :]
+def convert_lin_comb_patterns_2_atlas(atlas_components, used_components,
+                                      bg_threshold=0.01):
+    """ conver components rom linear decompostion into an atlass
+
+    :param [ndarray] atlas_components:
+    :param [bool] used_components:
+    :param float bg_threshold:
+    :return ndarray:
+    """
+    atlas_components = np.abs(atlas_components)
+    atlas_components = atlas_components[used_components, :]
     # take the maximal component
-    atlas = np.argmax(atlas_ptns, axis=0) + 1
-    atlas_sum = np.sum(atlas_ptns, axis=0)
+    atlas_mean = np.mean(atlas_components, axis=0)
+    component_sum = [np.sum(atlas_components[i, ...])
+                     for i in range(atlas_components.shape[0])]
+    idxs = np.argsort(component_sum)[::-1]
+    atlas = np.argmax(atlas_components[idxs, ...], axis=0) + 1
     # filter small values
-    atlas[atlas_sum < bg_threshold] = 0
+    atlas[atlas_mean < bg_threshold] = 0
     # atlas = self.estim_atlas_as_unique_sum(atlas_ptns)
     atlas = segmentation.relabel_sequential(atlas)[0]
-    atlas = np.remainder(atlas, len(atlas_ptns) + 1)
+    atlas = np.remainder(atlas, len(used_components))
     return atlas
 
 
-def initialise_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.01):
+def initialise_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
     :param int nb_patterns: max number of estimated atlases
     :param int nb_iter: max number of iterations
+    :param float bg_threshold:
     :return np.array: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
-    >>> luts = np.array([[0, 1, 0]] * 9 + [[0, 0, 1]] * 9 + [[0, 1, 1]] * 9)
+    >>> luts = np.array([[0, 1, 0]] * 99 + [[0, 0, 1]] * 99 + [[0, 1, 1]] * 99)
     >>> imgs = [lut[atlas] for lut in luts]
     >>> initialise_atlas_nmf(imgs, 2)
     array([[0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
@@ -307,7 +336,7 @@ def initialise_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.01):
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = NMF(n_components=nb_patterns,
+        estimator = NMF(n_components=nb_patterns + 1,
                         max_iter=nb_iter,
                         init='random')
         fit_result = estimator.fit_transform(imgs_vec)
@@ -319,27 +348,28 @@ def initialise_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.01):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except:
-        logging.warning('CRASH - initialise_atlas_nmf')
+        # logging.warning('CRASH: %s' % initialise_atlas_nmf.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
 
-def initialise_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.01):
+def initialise_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
     :param int nb_patterns: max number of estimated atlases
     :param int nb_iter: max number of iterations
+    :param float bg_threshold:
     :return np.array: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
-    >>> luts = np.array([[0, 1, 0]] * 9 + [[0, 0, 1]] * 9 + [[0, 1, 1]] * 9)
+    >>> luts = np.array([[0, 1, 0]] * 99 + [[0, 0, 1]] * 99 + [[0, 1, 1]] * 999)
     >>> imgs = [lut[atlas] for lut in luts]
-    >>> initialise_atlas_fast_ica(imgs, 2)
+    >>> initialise_atlas_fast_ica(imgs, 2, bg_threshold=0.6)
     array([[0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
            [0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
            [0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
@@ -352,7 +382,7 @@ def initialise_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.01):
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = FastICA(n_components=nb_patterns,
+        estimator = FastICA(n_components=nb_patterns + 1,
                             max_iter=nb_iter,
                             algorithm='deflation',
                             whiten=True)
@@ -365,25 +395,26 @@ def initialise_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.01):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except:
-        logging.warning('CRASH - initialise_atlas_fast_ica')
+        # logging.warning('CRASH: %s' % initialise_atlas_fast_ica.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
 
-def initialise_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.01):
+def initialise_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
     :param int nb_patterns: max number of estimated atlases
     :param int nb_iter: max number of iterations
+    :param float bg_threshold:
     :return np.array: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
-    >>> luts = np.array([[0, 1, 0]] * 9 + [[0, 0, 1]] * 9 + [[0, 1, 1]] * 9)
+    >>> luts = np.array([[0, 1, 0]] * 99 + [[0, 0, 1]] * 99 + [[0, 1, 1]] * 99)
     >>> imgs = [lut[atlas] for lut in luts]
     >>> initialise_atlas_sparse_pca(imgs, 2)
     array([[0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
@@ -398,7 +429,7 @@ def initialise_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.01)
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = SparsePCA(n_components=nb_patterns,
+        estimator = SparsePCA(n_components=nb_patterns + 1,
                               max_iter=nb_iter)
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
@@ -409,27 +440,28 @@ def initialise_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.01)
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except:
-        logging.warning('CRASH - initialise_atlas_sparse_pca')
+        # logging.warning('CRASH: %s' % initialise_atlas_sparse_pca.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
 
-def initialise_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.01):
+def initialise_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
     :param int nb_patterns: max number of estimated atlases
     :param int nb_iter: max number of iterations
+    :param float bg_threshold:
     :return np.array: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
-    >>> luts = np.array([[0, 1, 0]] * 9 + [[0, 0, 1]] * 9 + [[0, 1, 1]] * 9)
+    >>> luts = np.array([[0, 1, 0]] * 99 + [[0, 0, 1]] * 99 + [[0, 1, 1]] * 99)
     >>> imgs = [lut[atlas] for lut in luts]
-    >>> initialise_atlas_sparse_pca(imgs, 2)
+    >>> initialise_atlas_dict_learn(imgs, 2)
     array([[0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
            [0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
            [0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
@@ -442,7 +474,7 @@ def initialise_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.01)
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = DictionaryLearning(n_components=nb_patterns,
+        estimator = DictionaryLearning(n_components=nb_patterns + 1,
                                        fit_algorithm='lars',
                                        transform_algorithm='omp',
                                        split_sign=False,
@@ -456,24 +488,27 @@ def initialise_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.01)
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except:
-        logging.warning('CRASH - initialise_atlas_dict_learn')
+        logging.warning('CRASH: %s' % initialise_atlas_dict_learn.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
 
 def initialise_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
-                                     rnd_seed=None):
+                                     rand_seed=None):
     """ take the orginal atlas and use geometrical deformation
     to generate new deformed atlas
 
-    :param np.array<height, width> atlas:
+    :param ndarray atlas: np.array<height, width>
+    :param float coef:
+    :param (int, int) grid_size:
+    :param rand_seed: random initialization
     :return: np.array<height, width>
 
     >>> img = np.zeros((8, 12))
     >>> img[:3, 1:5] = 1
     >>> img[3:7, 6:12] = 2
-    >>> initialise_atlas_deform_original(img, 0.1, (5, 5), rnd_seed=0)
+    >>> initialise_atlas_deform_original(img, 0.1, (5, 5), rand_seed=0)
     array([[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -484,15 +519,15 @@ def initialise_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     logging.debug('initialise atlas by deforming original one')
-    res = data.image_deform_elastic(atlas, coef, grid_size, rand_seed=rnd_seed)
+    res = data.image_deform_elastic(atlas, coef, grid_size, rand_seed=rand_seed)
     return np.array(res, dtype=np.int)
 
 
 def reconstruct_samples(atlas, w_bins):
     """ create reconstruction of binary images according given atlas and weights
 
-    :param np.array<height, width> atlas: input atlas
-    :param np.array<nb_imgs, nb_lbs> w_bins:
+    :param ndarray atlas: input atlas np.array<height, width>
+    :param ndarray w_bins: np.array<nb_imgs, nb_lbs>
     :return: [np.array<height, width>]
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -536,9 +571,9 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     """ estimate new pattern that occurs in input images and is not cover
     by any label in actual atlas, remove collision with actual atlas
 
-    :param [np.array<height, width>] imgs: list of input images
-    :param np.array<height, width> atlas:
-    :param diffs: [int] list of differences among input and reconstruct images
+    :param [ndarray] imgs: list of input images np.array<height, width>
+    :param ndarray atlas: np.array<height, width>
+    :param [int] diffs: list of differences among input and reconstruct images
     :return: np.array<height, width> binary single pattern
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -559,6 +594,20 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> atlas[atlas == 2] = 0
+    >>> imgs_reconst = [lut[atlas] for lut in luts]
+    >>> diffs = [np.sum(np.abs(im - imR)) for im, imR in zip(imgs, imgs_reconst)]
+    >>> img_ptn = prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
+    ...                                 ptn_compact=False)
+    >>> img_ptn.astype(int)
+    array([[1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+           [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]])
     """
     id_max = np.argmax(diffs)
     # im_diff = np.logical_and(imgs[id_max] == True, imgs_reconst[id_max] == False)
@@ -594,9 +643,9 @@ def insert_new_pattern(imgs, imgs_reconst, atlas, label,
                        ptn_compact=REINIT_PATTERN_COMPACT):
     """ with respect to atlas empty spots inset new patterns
 
-    :param [np.array<height, width>] imgs: list of input images
-    :param [np.array<height, width>] imgs_reconst:
-    :param np.array<height, width> atlas:
+    :param [ndarray] imgs: list of input images np.array<height, width>
+    :param [ndarray] imgs_reconst: list of reconstructed images np.array<height, width>
+    :param ndarray atlas: np.array<height, width>
     :param int label:
     :return: np.array<height, width> updated atlas
 
@@ -632,10 +681,10 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
                                  ptn_compact=REINIT_PATTERN_COMPACT):
     """ walk and find all all free labels and try to reinit them by new patterns
 
+    :param [ndarray] imgs: list of input images np.array<height, width>
+    :param ndarray w_bins: binary weigths np.array<nb_imgs, nb_lbs>
+    :param ndarray atlas: image np.array<height, width>
     :param int label_max:
-    :param [np.array<height, width>] imgs: list of input images
-    :param np.array<nb_imgs, nb_lbs> w_bins:
-    :param np.array<height, width> atlas:
     :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -666,6 +715,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
            [1, 1],
            [1, 1],
            [1, 1]])
+    >>> _ = reinit_atlas_likely_patterns(imgs, w_bins, atlas, (np.max(atlas) + 5))
     """
     # find empty patterns
     # assert len(imgs) == w_bins.shape[1], \
@@ -704,7 +754,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
 def atlas_split_indep_ptn(atlas, label_max):
     """ split  independent patterns labeled equally
 
-    :param np.array<height, width> atlas:
+    :param ndarray atlas: image np.array<height, width>
     :param int label_max:
     :return: np.array<height, width>
 

@@ -11,7 +11,7 @@ EXAMPLES:
     -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --fname_results results_NEW.csv --fname_config config.json --func_stat none
 
-Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -50,14 +50,14 @@ def create_args_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--path', type=str, required=True,
                         help='path to set of experiments')
-    parser.add_argument('--fname_config', type=str, required=True,
+    parser.add_argument('--fname_config', type=str, required=False,
                         help='config file name', default=NAME_INPUT_CONFIG)
-    parser.add_argument('--fname_results', type=str, required=True, nargs='*',
+    parser.add_argument('--fname_results', type=str, required=False, nargs='*',
                         help='result file name', default=[NAME_INPUT_RESULT])
+    # parser.add_argument('-t', '--type', type=str, required=False, default='synth',
+    #                     help='type of experiment data', choices=['synth', 'real'])
     parser.add_argument('--res_cols', type=str, required=False, default=None,
                         nargs='*', help='important columns from results')
-    parser.add_argument('-t', '--type', type=str, required=False, default='synth',
-                        help='type of experiment data', choices=['synth', 'real'])
     parser.add_argument('--func_stat', type=str, required=False,
                         help='type od stat over results', default='none')
     parser.add_argument('--nb_jobs', type=int, required=False,
@@ -164,10 +164,11 @@ def parse_experiment_folder(path_expt, params):
 
     dict_info.update(count_folders_subfolders(path_expt))
     df_info = pd.DataFrame().from_dict(dict_info, orient='index').T
-    if params['type'] == 'synth':
+    try:
         func_stat = DICT_STATISTIC_FUNC.get(params['func_stat'], None)
         df_results = load_multiple_results(path_expt, func_stat, params)
-    else:
+    except:
+        logging.error(traceback.format_exc())
         df_results = pd.DataFrame()
 
     if len(df_results) == 0:
@@ -268,7 +269,9 @@ def count_folders_subfolders(path_expt):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     logging.info('running...')
+
     parser = create_args_parser()
     params = parse_arg_params(parser)
     parse_experiments(params, nb_jobs=params['nb_jobs'])
+
     logging.info('DONE')

@@ -4,7 +4,7 @@ Simple script for adding Gaussian noise to already generated images
 >> python run_dataset_add_noise.py -p data -d syntheticDataset_vX
 
 >> python run_dataset_add_noise.py -p ~/Medical-drosophila/synthetic_data \
-    -d atomicPatternDictionary_v0 atomicPatternDictionary_v1 atomicPatternDictionary_v2
+    -d apdDataset_v0 apdDataset_v1 apdDataset_v2
 
 Copyright (C) 2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -41,6 +41,9 @@ def args_parser():
                         help='path to set of experiments')
     parser.add_argument('-d', '--datasets', type=str, required=True, nargs='+',
                         help='result file name', default=LIST_DATASETS)
+    parser.add_argument('-s', '--sigmas', type=str, required=False, nargs='+',
+                        help='Gaussian sigma of additive noise',
+                        default=NOISE_RANGE)
     args = vars(parser.parse_args())
     args['path'] = os.path.abspath(os.path.expanduser(args['path']))
     return args
@@ -100,7 +103,7 @@ def dataset_add_noise(path_in, path_out, noise_level,
     logging.info('DONE')
 
 
-def main(base_path='data', datasets=['syntheticDataset_vX'], noise_lvl=NOISE_RANGE):
+def main(base_path, datasets=['apdDataset_vX'], noise_lvl=NOISE_RANGE):
     assert os.path.exists(base_path), 'missing: %s' % base_path
 
     for dataset in datasets:
@@ -117,4 +120,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     args = args_parser()
-    main(args['path'], args['datasets'])
+    main(args['path'], args['datasets'], args['sigmas'])

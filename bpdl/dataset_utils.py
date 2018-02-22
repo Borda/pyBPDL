@@ -1,7 +1,7 @@
 """
 The basic module for generating synthetic images and also loading / exporting
 
-Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 import os
@@ -32,7 +32,7 @@ IMAGE_SIZE_3D = (16, 128, 128)
 NB_BIN_PATTERNS = 9
 NB_SAMPLES = 50
 RND_PATTERN_OCCLUSION = 0.25
-IMAGE_POSIXS = ['.png', '.tif', '.tiff']
+IMAGE_EXTENSIONS = ['.png', '.tif', '.tiff']
 IMAGE_PATTERN = 'pattern_{:03d}'
 SEGM_PATTERN = 'sample_{:05d}'
 BLOCK_NB_LOAD_IMAGES = 50
@@ -47,8 +47,9 @@ def update_path(path_file, lim_depth=5, absolute=True):
     """ bubble in the folder tree up intil it found desired file
     otherwise return original one
 
-    :param str path_file:
-    :param int lim_depth:
+    :param str path_file: path
+    :param int lim_depth: length of bubble attempted
+    :param bool absolute: absolute path
     :return str:
 
     >>> path = 'sample_file.test'
@@ -71,11 +72,11 @@ def update_path(path_file, lim_depth=5, absolute=True):
 
 
 def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=None):
-    """
+    """ create deformation
 
-    :param (int, int) im_size:
-    :param float coef:
-    :param (int, int) grid_size:
+    :param (int, int) im_size: image size 2D or 3D
+    :param float coef: deformation
+    :param (int, int) grid_size: size of deformation frid
     :return:
 
     >>> tf = create_elastic_deform_2d((100, 100))
@@ -91,7 +92,7 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
     for i in range(2):
         rnd = np.random.random((mesh_src.shape[0], 1)) - 0.5
         mesh_dst[:, i] += rnd[:, 0] * (im_size[i] / grid_size[i] * coef)
-    mesh_dst = filters.gaussian_filter(mesh_dst, 0.1)
+    mesh_dst = filters.gaussian(mesh_dst, 0.1)
     # logging.debug(dst)
     tform = transform.PiecewiseAffineTransform()
     tform.estimate(mesh_src, mesh_dst)
@@ -101,10 +102,10 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
 def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     """ deform an image bu elastic transform in size of specific regular grid
 
-    :param np.array<height, width> im: image
+    :param ndarray im: image np.array<height, width>
     :param float coef: a param describing the how much it is deformed (0 = None)
     :param (int, int) grid_size: is size of elastic grid for deformation
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> img = np.zeros((10, 15), dtype=int)
     >>> img[2:8, 3:7] = 1
@@ -120,6 +121,22 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2]], dtype=uint8)
+    >>> img = np.zeros((10, 15, 5), dtype=int)
+    >>> img[2:8, 3:7, :] = 1
+    >>> im = image_deform_elastic(img, coef=0.2, grid_size=(4, 5), rand_seed=0)
+    >>> im.shape
+    (10, 15, 5)
+    >>> im[..., 1]
+    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
     """
     logging.debug('deform image plane by elastic transform with grid %s',
                  repr(grid_size))
@@ -146,7 +163,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
 def generate_rand_center_radius(img, ratio, rand_seed=None):
     """
 
-    :param np.array<height, width> img:
+    :param ndarray img: np.array<height, width>
     :param float ratio:
     :return (int, ), (float, ):
 
@@ -165,16 +182,16 @@ def generate_rand_center_radius(img, ratio, rand_seed=None):
     return center, radius
 
 
-def draw_ellipse(img, ratio=0.1, color=255, rand_seed=None):
+def draw_rand_ellipse(img, ratio=0.1, color=255, rand_seed=None):
     """ draw an ellipse to image plane with specific value
     SEE: https://en.wikipedia.org/wiki/Ellipse
 
-    :param np.array<height, width> img: while None, create empty one
+    :param ndarray img: np.array<height, width> while None, create empty one
     :param float ratio: defining size of the ellipse to the image plane
     :param int color: value (0, 255) of an image intensity
     :return: np.array<height, width>
 
-    >>> img = draw_ellipse(np.zeros((10, 15)), ratio=0.3, color=1, rand_seed=0)
+    >>> img = draw_rand_ellipse(np.zeros((10, 15)), ratio=0.3, color=1, rand_seed=0)
     >>> img.astype(int)
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -194,16 +211,27 @@ def draw_ellipse(img, ratio=0.1, color=255, rand_seed=None):
     return img
 
 
-def draw_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
+def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     """ draw an ellipsoid to image plane with specific value
     SEE: https://en.wikipedia.org/wiki/Ellipsoid
 
     :param float ratio: defining size of the ellipse to the image plane
-    :param np.array<depth, height, width> img: image / volume
+    :param ndarray img: np.array<depth, height, width> image / volume
     :param int clr: value (0, 255) of an image intensity
     :return: np.array<depth, height, width>
 
-    >>> img = draw_ellipsoid(np.zeros((20, 10, 15)), clr=255, rand_seed=0)
+    >>> img = draw_rand_ellipsoid(np.zeros((10, 10, 5)), clr=255, rand_seed=0)
+    >>> img[..., 3].astype(int)
+    array([[  0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0, 255,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0, 255,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0, 255,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0],
+           [  0,   0,   0,   0,   0,   0,   0,   0,   0,   0]])
     """
     logging.debug('draw an ellipse to an image with value %i', clr)
     center, radius = generate_rand_center_radius(img, ratio, rand_seed)
@@ -225,13 +253,13 @@ def create_clean_folder(path_dir):
     >>> path_dir = create_clean_folder(path_dir)
     >>> os.path.exists(path_dir)
     True
-    >>> shutil.rmtree(path_dir)
+    >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
-    assert os.path.exists(os.path.dirname(path_dir)), \
-        'missing: %s' % os.path.dirname(path_dir)
+    if os.path.isdir(os.path.dirname(path_dir)):
+        logging.warning('existing folder will be cleaned: %s', path_dir)
     logging.info('create clean folder "%s"', path_dir)
     if os.path.exists(path_dir):
-        shutil.rmtree(path_dir)
+        shutil.rmtree(path_dir, ignore_errors=True)
     os.mkdir(path_dir)
     return path_dir
 
@@ -240,7 +268,7 @@ def extract_image_largest_element(img_binary, labeled=None):
     """ take a binary image and find all independent segments,
     then keep just the largest segment and rest set as 0
 
-    :param np.array<height, width> img_binary: image of values {0, 1}
+    :param ndarray img_binary: np.array<height, width> image of values {0, 1}
     :return: np.array<height, width> of values {0, 1}
 
     >>> img = np.zeros((7, 15), dtype=int)
@@ -279,7 +307,7 @@ def extract_image_largest_element(img_binary, labeled=None):
 def atlas_filter_larges_components(atlas):
     """
 
-    :param np.array<height, width> atlas:
+    :param ndarray atlas: np.array<height, width> image
     :return: np.array<height, width>, [np.array<height, width>]
 
     >>> atlas = np.zeros((7, 15), dtype=int)
@@ -322,31 +350,34 @@ def atlas_filter_larges_components(atlas):
 
 
 def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
-                              nb_ptns=NB_BIN_PATTERNS, im_size=IMAGE_SIZE_2D,
+                              nb_patterns=NB_BIN_PATTERNS,
+                              im_size=IMAGE_SIZE_2D,
                               temp_img_name=IMAGE_PATTERN):
     """ generate pattern dictionary as atlas, no overlapping
 
     :param str path_out: path to the results directory
-    :param int nb_ptns: number of patterns / labels
+    :param str dir_name: name of the folder
+    :param str temp_img_name: use template for pattern names
+    :param int nb_patterns: number of patterns / labels
     :param (int, int) im_size: image size
     :return: [np.array<height, width>] independent patters in the dictionary
 
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> path_dir = create_clean_folder(path_dir)
     >>> imgs_patterns = dictionary_generate_atlas(path_dir)
-    >>> shutil.rmtree(path_dir)
+    >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
     logging.info('generate an Atlas composed from %i patterns and image size %s',
-                 nb_ptns, repr(im_size))
+                 nb_patterns, repr(im_size))
     out_dir = os.path.join(path_out, dir_name)
     create_clean_folder(out_dir)
     atlas = np.zeros(im_size, dtype=np.uint8)
-    for i in range(nb_ptns):
+    for i in range(nb_patterns):
         label = (i + 1)
         if len(im_size) == 2:
-            atlas = draw_ellipse(atlas, color=label)
+            atlas = draw_rand_ellipse(atlas, color=label)
         elif len(im_size) == 3:
-            atlas = draw_ellipsoid(atlas, clr=label)
+            atlas = draw_rand_ellipsoid(atlas, clr=label)
     # logging.debug(type(atlas))
     atlas_def = image_deform_elastic(atlas)
     # logging.debug(np.unique(atlas))
@@ -360,23 +391,30 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
             plt.imshow(atlas_def[int(atlas_def.shape[0] / 2)])
         plt.show()
     atlas_new, imgs_patterns = atlas_filter_larges_components(atlas_def)
+    plt.imsave(os.path.join(path_out, 'atlas_rgb.png'), atlas_new, cmap=plt.cm.jet)
     export_image(out_dir, atlas_new, 'atlas')
     for i, img in enumerate(imgs_patterns):
         export_image(out_dir, img, i, temp_img_name)
     return imgs_patterns
 
 
-def dictionary_generate_rnd_pattern(path_out=None, dir_name=DIR_NAME_DICTIONARY,
-                                    nb_ptns=NB_BIN_PATTERNS, im_size=IMAGE_SIZE_2D,
-                                    temp_img_name=IMAGE_PATTERN, rand_seed=None):
+def dictionary_generate_rnd_pattern(path_out=None,
+                                    dir_name=DIR_NAME_DICTIONARY,
+                                    nb_patterns=NB_BIN_PATTERNS,
+                                    im_size=IMAGE_SIZE_2D,
+                                    temp_img_name=IMAGE_PATTERN,
+                                    rand_seed=None):
     """ generate pattern dictionary and allow overlapping
 
     :param str path_out: path to the results directory
-    :param int nb_ptns: number of patterns / labels
+    :param str dir_name: name of the folder
+    :param str temp_img_name: use template for pattern names
+    :param int nb_patterns: number of patterns / labels
     :param (int, int) im_size: image size
-    :return: [np.array<height, width>] list of independent patters in the dictionary
+    :param rand_seed: random initialization
+    :return: [np.array<height, width>] list of independent patters in the dict.
 
-    >>> list_imgs = dictionary_generate_rnd_pattern(nb_ptns=3, im_size=(10, 8), rand_seed=0)
+    >>> list_imgs = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8), rand_seed=0)
     >>> len(list_imgs)
     3
     >>> list_imgs[1]
@@ -392,13 +430,13 @@ def dictionary_generate_rnd_pattern(path_out=None, dir_name=DIR_NAME_DICTIONARY,
            [  0,   0,   0,   0,   0,   0,   0,   0]], dtype=uint8)
     """
     logging.info('generate Dict. composed from %i patterns and img. size %s',
-                 nb_ptns, repr(im_size))
+                 nb_patterns, repr(im_size))
     if path_out is not None:
         out_dir = os.path.join(path_out, dir_name)
         create_clean_folder(out_dir)
     list_imgs = []
-    for i in range(nb_ptns):
-        im = draw_ellipse(np.zeros(im_size, dtype=np.uint8), rand_seed=rand_seed)
+    for i in range(nb_patterns):
+        im = draw_rand_ellipse(np.zeros(im_size, dtype=np.uint8), rand_seed=rand_seed)
         im = image_deform_elastic(im, rand_seed=rand_seed)
         list_imgs.append(im)
         if path_out is not None:
@@ -407,13 +445,15 @@ def dictionary_generate_rnd_pattern(path_out=None, dir_name=DIR_NAME_DICTIONARY,
 
 
 def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
-                                     ptn_ration=RND_PATTERN_OCCLUSION, rand_seed=None):
+                                     ptn_ration=RND_PATTERN_OCCLUSION,
+                                     rand_seed=None):
     """ generate the new sample from list of pattern with specific ration
 
     :param int idx: index
     :param [np.array] im_ptns: images with patterns
     :param str out_dir: name of directory
     :param float ptn_ration: number in range (0, 1)
+    :param rand_seed: random initialization
     :return: int, np.array, str, [int]
 
     >>> img1 = np.zeros((6, 15), dtype=int)
@@ -460,12 +500,13 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     """ generate a Binary dataset composed from N samples and given ration
     of pattern occlusion
 
-    :param int nb_jobs: number of running jobs
-    :param [np.array<height, width>] im_ptns: list of ind. patters in the dictionary
+    :param [ndarray] im_ptns: [np.array<height, width>] list of ind. patters in the dictionary
     :param str out_dir: path to the results directory
     :param int nb_samples: number of samples in dataset
     :param float ptn_ration: ration of how many patterns are used to create
         an input observation / image
+    :param int nb_jobs: number of running jobs
+    :param rand_seed: random initialization
     :return: [np.array<height, width>], df<nb_imgs, nb_lbs>
 
     >>> img1 = np.zeros((6, 15), dtype=int)
@@ -524,8 +565,9 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
 def add_image_binary_noise(im, ration=0.1, rand_seed=None):
     """ generate and add a binary noise to an image
 
-    :param np.array<height, width> im: input binary image
+    :param ndarray im: np.array<height, width> input binary image
     :param float ration: number (0, 1) means 0 = no noise
+    :param rand_seed: random initialization
     :return: np.array<height, width> binary image
 
     >>> img = np.zeros((5, 15), dtype=int)
@@ -559,6 +601,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     :param str name_template: str, while the name is not string generate image according
         specific pattern, like format fn
     :return str: path to the image
+    :param bool stretch_range: whether stretch intensity values
 
     Image - PNG
     >>> np.random.seed(0)
@@ -618,7 +661,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
 
 
 def wrapper_apply_function(i_img, func, coef, out_dir):
-    """
+    """ apply an image by a specific function
 
     :param (int, np.array<height, width>) i_img:
     :param func:
@@ -632,16 +675,34 @@ def wrapper_apply_function(i_img, func, coef, out_dir):
     return i, img_def
 
 
-def dataset_apply_image_function(imgs, out_dir, func, coef=0.5, nb_jobs=NB_THREADS):
+def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
+                                 nb_jobs=NB_THREADS):
     """ having list if input images create an dataset with randomly deform set
     of these images and export them to the results folder
 
-    :param int nb_jobs:
     :param func:
     :param [np.array<height, width>] imgs: raw input images
     :param str out_dir: path to the results directory
     :param float coef: a param describing the how much it is deformed (0 = None)
+    :param int nb_jobs: number of jobs running in parallel
     :return: [np.array<height, width>]
+
+    >>> img = np.zeros((10, 5))
+    >>> dir_name = 'sample_dataset_dir'
+    >>> dataset_apply_image_function([img], dir_name, image_deform_elastic)
+    [array([[0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0]], dtype=uint8)]
+    >>> os.path.isdir(dir_name)
+    True
+    >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
     logging.info('apply costume function "%s" on %i samples with coef. %f',
                  func.__name__, len(imgs), coef)
@@ -652,8 +713,9 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5, nb_jobs=NB_THREA
     logging.debug('running in %i threads...', nb_jobs)
     tqdm_bar = tqdm.tqdm(total=len(imgs))
     for i, im in mproc_pool.imap_unordered(partial(wrapper_apply_function,
-                                        func=func, coef=coef, out_dir=out_dir),
-                                enumerate(imgs)):
+                                                   func=func, coef=coef,
+                                                   out_dir=out_dir),
+                                           enumerate(imgs)):
         imgs_new[i] = im
         tqdm_bar.update(1)
     mproc_pool.close()
@@ -666,7 +728,7 @@ def image_transform_binary2prob(im, coef=0.1):
     """ convert a binary image to probability while computing distance function
     on the binary function (contours)
 
-    :param np.array<height, width> im: input binary image
+    :param ndarray im: np.array<height, width> input binary image
     :param float coef: float, influence hoe strict the boundary between F-B is
     :return: np.array<height, width> float image
 
@@ -697,8 +759,9 @@ def image_transform_binary2prob(im, coef=0.1):
 def add_image_prob_pepper_noise(im, ration=0.1, rand_seed=None):
     """ generate and add a continues noise to an image
 
-    :param np.array<height, width> im: input float image
+    :param ndarray im: np.array<height, width> input float image
     :param float ration: number means 0 = no noise
+    :param rand_seed: random initialization
     :return: np.array<height, width> float image
 
     >>> img = np.zeros((5, 9), dtype=int)
@@ -726,8 +789,9 @@ def add_image_prob_pepper_noise(im, ration=0.1, rand_seed=None):
 def add_image_prob_gauss_noise(im, sigma=0.1, rand_seed=None):
     """ generate and add a continues noise to an image
 
-    :param np.array<height, width> im: input float image
-    :param float ration: float (0, 1) means 0 = no noise
+    :param ndarray im: np.array<height, width> input float image
+    :param float sigma: float where 0 = no noise
+    :param rand_seed: random initialization
     :return: np.array<height, width> float image
 
     >>> img = np.zeros((5, 9), dtype=int)
@@ -750,7 +814,7 @@ def add_image_prob_gauss_noise(im, sigma=0.1, rand_seed=None):
 
 
 def wrapper_load_images(list_path_img):
-    """
+    """ wrapper for multiprocessing loading
 
     :param [str] list_path_img:
     :return: [(str, np.array<height, width>)]
@@ -760,12 +824,12 @@ def wrapper_load_images(list_path_img):
     return list_names_imgs
 
 
-def find_images(path_dir, im_pattern='*', img_posixs=IMAGE_POSIXS):
+def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     """ in given folder find largest group of equal images types
 
     :param str path_dir:
     :param str im_pattern:
-    :param [str] img_posixs:
+    :param [str] img_extensions:
     :return [str]:
 
     >>> np.random.seed(0)
@@ -775,8 +839,10 @@ def find_images(path_dir, im_pattern='*', img_posixs=IMAGE_POSIXS):
     ['./testing-image.png']
     >>> os.remove(path_img)
     """
+    logging.debug('searching in folder (%s) <- "%s"',
+                  os.path.exists(path_dir), path_dir)
     paths_img_most = []
-    for im_posix in img_posixs:
+    for im_posix in img_extensions:
         path_search = os.path.join(path_dir, im_pattern + im_posix)
         paths_img = glob.glob(path_search)
         logging.debug('images found %i for search "%s"', len(paths_img), path_search)
@@ -785,26 +851,17 @@ def find_images(path_dir, im_pattern='*', img_posixs=IMAGE_POSIXS):
     return paths_img_most
 
 
-def dataset_load_images(path_dir, im_pattern='*', nb_spls=None, path_imgs=None, nb_jobs=1):
+def dataset_load_images(path_imgs, nb_spls=None, nb_jobs=1):
     """ load complete dataset or just a subset
 
-    :param str name: name od particular dataset
-    :param str path_base: path to the results directory
-    :param str im_pattern: specific pattern of loaded images
-    :param str im_posix: image pattern line '.png'
+    :param [str] path_imgs: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
-    :param int nb_jobs:
+    :param int nb_jobs: number of running jobs
     :return [np.array], [str]:
     """
-    logging.debug('loading folder (%s) <- "%s"',
-                  os.path.exists(path_dir), path_dir)
-    assert os.path.exists(path_dir), '%s' % path_dir
-    if path_imgs is None:
-        path_imgs = find_images(path_dir, im_pattern)
     assert all(os.path.exists(p) for p in path_imgs)
     path_imgs = sorted(path_imgs)[:nb_spls]
-    logging.debug('number samples %i in dataset "%s"', len(path_imgs),
-                  os.path.basename(path_dir))
+    logging.debug('number samples %i in dataset', len(path_imgs))
     if nb_jobs > 1:
         logging.debug('running in %i threads...', nb_jobs)
         nb_load_blocks = len(path_imgs) / float(BLOCK_NB_LOAD_IMAGES)
@@ -830,10 +887,11 @@ def dataset_load_images(path_dir, im_pattern='*', nb_spls=None, path_imgs=None, 
     return imgs, im_names
 
 
-def load_image(path_img, bool_val=True):
-    """
+def load_image(path_img, prob_val=True):
+    """ loading image
 
     :param str path_img:
+    :param bool bool_val: weather normalise values in range (0, 1)
     :return str, np.array<height, width>:
 
     PNG image
@@ -844,7 +902,7 @@ def load_image(path_img, bool_val=True):
     './testing_image.png'
     >>> os.path.exists(path_img)
     True
-    >>> _, img_new = load_image(path_img, bool_val=False)
+    >>> _, img_new = load_image(path_img, prob_val=False)
     >>> np.array_equal(img, img_new)
     True
     >>> os.remove(path_img)
@@ -857,7 +915,7 @@ def load_image(path_img, bool_val=True):
     './testing_image.tiff'
     >>> os.path.exists(path_img)
     True
-    >>> _, img_new = load_image(path_img, bool_val=False)
+    >>> _, img_new = load_image(path_img, prob_val=False)
     >>> img_new.shape
     (5, 20, 20)
     >>> np.array_equal(img, img_new)
@@ -866,6 +924,11 @@ def load_image(path_img, bool_val=True):
     """
     assert os.path.exists(path_img), path_img
     n_img, img_ext = os.path.splitext(os.path.basename(path_img))
+
+    # to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+    l_lvl = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.INFO)
+
     if img_ext in ['.tif', '.tiff']:
         img = io.imread(path_img)
         # im = libtiff.TiffFile().get_tiff_array()
@@ -876,7 +939,11 @@ def load_image(path_img, bool_val=True):
     else:
         img = io.imread(path_img)
         # img = np.array(Image.open(path_img))
-    if bool_val and img.max() > 0:
+
+    # return to original logging level
+    logging.getLogger().setLevel(l_lvl)
+
+    if prob_val and img.max() > 0:
         img = (img / float(img.max()))
     return n_img, img
 
@@ -887,6 +954,17 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
     :param str path_base: path to the results directory
     :param str name_csv: name of file with weights
     :return: np.array<nb_imgs, nb_lbs>
+
+    >>> np.random.seed(0)
+    >>> name_csv = 'sample_weigths.csv'
+    >>> pd.DataFrame(np.random.randint(0, 2, (5, 3))).to_csv(name_csv)
+    >>> dataset_load_weights('.', name_csv)
+    array([[0, 1, 1],
+           [0, 1, 1],
+           [1, 1, 1],
+           [1, 1, 0],
+           [0, 1, 0]])
+    >>> os.remove(name_csv)
     """
     path_csv = os.path.join(path_base, name_csv)
     assert os.path.exists(path_csv), 'missing %s' % path_csv
@@ -905,17 +983,28 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
     return np.array(encoding)
 
 
-def dataset_compose_atlas(path_base, name=DIR_NAME_DICTIONARY,
-                          img_temp_name='pattern_*'):
+def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
     """ load all independent patterns and compose them into single m-label atlas
 
-    :param str name: name of dataset
-    :param str path_base: path to the results directory
+    :param str path_dir: name of dataset
     :param str img_temp_name:
     :return: np.array<height, width>
+
+    >>> dir_name = 'sample_atlas'
+    >>> os.mkdir(dir_name)
+    >>> np.random.seed(0)
+    >>> export_image(dir_name, np.random.randint(0, 2, (5, 10)), 'pattern_0')
+    'sample_atlas/pattern_0.png'
+    >>> dataset_compose_atlas(dir_name)
+    array([[0, 1, 1, 0, 1, 1, 1, 1, 1, 1],
+           [1, 0, 0, 1, 0, 0, 0, 0, 0, 1],
+           [0, 1, 1, 0, 0, 1, 1, 1, 1, 0],
+           [1, 0, 1, 0, 1, 1, 0, 1, 1, 0],
+           [0, 1, 0, 1, 1, 1, 1, 1, 0, 1]], dtype=uint8)
+    >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
-    imgs, _ = dataset_load_images(os.path.join(path_base, name),
-                                  im_pattern=img_temp_name)
+    path_imgs = find_images(path_dir, im_pattern=img_temp_name)
+    imgs, _ = dataset_load_images(path_imgs)
     assert len(imgs) > 0
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
@@ -936,7 +1025,9 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> os.mkdir(path_dir)
     >>> dataset_export_images(path_dir, images, nb_jobs=2)
-    >>> imgs, im_names = dataset_load_images(path_dir, nb_jobs=2)
+    >>> path_imgs = find_images(path_dir)
+    >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=1)
+    >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=2)
     >>> len(imgs)
     36
     >>> np.round(imgs[0], 1)
@@ -957,7 +1048,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
            [ 0.9,  0.4,  0.4,  0.9,  0.8,  0.7,  0.1,  0.9,  0.7,  1. ]])
     >>> im_names   # doctest: +ELLIPSIS
     ('sample_00000', 'sample_00001', ..., 'sample_00034', 'sample_00035')
-    >>> shutil.rmtree(path_dir)
+    >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
     create_clean_folder(path_out)
     logging.debug('export %i images into "%s"', len(imgs), path_out)

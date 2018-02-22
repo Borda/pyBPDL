@@ -5,7 +5,7 @@ EXAMPLES:
 >> python run_recompute_experiments_results.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth
 
-Copyright (C) 2015-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
@@ -19,12 +19,6 @@ import gc, time
 import multiprocessing as mproc
 from functools import partial
 
-# to suppress all visual, has to be on the beginning
-import matplotlib
-if os.environ.get('DISPLAY','') == '':
-    logging.warning('No display found. Using non-interactive Agg backend')
-    matplotlib.use('Agg')
-
 import tqdm
 import numpy as np
 import pandas as pd
@@ -34,8 +28,8 @@ from skimage.segmentation import relabel_sequential
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.metric_similarity as sim_measure
-import bpdl.dataset_utils as gen_data
-import experiments.run_generate_dataset as r_data
+import bpdl.dataset_utils as tl_data
+import experiments.run_dataset_generate as r_data
 
 NAME_INPUT_CONFIG = r_data.NAME_CONFIG
 NAME_INPUT_RESULT = 'results.csv'
@@ -86,8 +80,8 @@ def load_atlas(path_atlas):
 
 def export_atlas_overlap(atlas_gt, atlas, path_out_img, fig_size=FIGURE_SIZE):
     fig, ax = plt.subplots(figsize=(fig_size, fig_size))
-    ax.imshow(atlas, alpha=0.5, interpolation='nearest')
-    ax.contour(atlas_gt, levels=np.unique(atlas_gt), linewidth=2)
+    ax.imshow(atlas, alpha=0.5, interpolation='nearest', cmap=plt.cm.jet)
+    ax.contour(atlas_gt, levels=np.unique(atlas_gt), linewidth=2, cmap=plt.cm.jet)
 
     ax.axis('off')
     ax.axes.get_xaxis().set_ticklabels([])
@@ -148,10 +142,12 @@ def parse_experiment_folder(path_expt, params):
     df_res[index_name] = df_res.index
 
     # load the GT atlas
-    atlas_gt = gen_data.dataset_compose_atlas(dict_info['path_in'])
+    path_atlas = os.path.join(dict_info['path_in'],
+                              tl_data.DIR_NAME_DICTIONARY)
+    atlas_gt = tl_data.dataset_compose_atlas(path_atlas)
     path_atlas_gt = os.path.join(dict_info['path_in'], SUB_PATH_GT_ATLAS)
     atlas_name = str(os.path.splitext(os.path.basename(path_atlas_gt))[0])
-    gen_data.export_image(os.path.dirname(path_atlas_gt), atlas_gt, atlas_name)
+    tl_data.export_image(os.path.dirname(path_atlas_gt), atlas_gt, atlas_name)
     plt.imsave(os.path.splitext(path_atlas_gt)[0] + '_visual.png', atlas_gt)
 
     df_res_new = pd.DataFrame()

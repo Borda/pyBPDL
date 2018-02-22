@@ -18,8 +18,8 @@ env:
 
 build:
   ci:
-    - mkdir -p shippable/testresults
-    - mkdir -p shippable/codecoverage
+    - echo $CI_REPORTS && mkdir -p $CI_REPORTS
+    - echo $COVERAGE_REPORTS && mkdir -p $COVERAGE_REPORTS
 
 before_install:
   - apt-get update # --fix-missing
@@ -32,9 +32,9 @@ install:
   - root=$PWD
   - gcc --version
   - mkdir libs
-  - cd $root/libs && git clone https://github.com/Borda/pyGCO.git
-  - cd $root/libs/pyGCO && pip install -r requirements.txt
-  - cd $root/libs/pyGCO && python setup.py install
+#  - cd $root/libs && git clone https://github.com/Borda/pyGCO.git
+#  - cd $root/libs/pyGCO && pip install -r requirements.txt
+#  - cd $root/libs/pyGCO && python setup.py install
 #  - rm -r -f $here/libs/pyGCO
   - cd $root
 
@@ -44,12 +44,20 @@ install:
 script:
   - mkdir data && mkdir results
   - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
-  - python experiments/run_generate_dataset.py --nb_samples 25 --nb_patterns 2
   - nosetests bpdl -v --exe --with-doctest --with-coverage --cover-package=bpdl
+  - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
   - nosetests experiments -v --exe --with-doctest --with-xunit
+
+  - python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
+  - python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset segm_gene_small
+
+  - python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
+  - python experiments/run_experiments_all.py --type real -in images -out results --dataset segm_gene_small
+
+  - python experiments/run_parse_experiments_results.py -p results
 #  - codecov
 
 after_success:
   - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9
-  - coverage xml -o shippable/codecoverage/coverage.xml
+  - coverage xml -o $COVERAGE_REPORTS/coverage.xml
   - coverage report
