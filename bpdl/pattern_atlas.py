@@ -8,12 +8,6 @@ import os
 import logging
 import traceback
 
-# to suppress all visual, has to be on the beginning
-import matplotlib
-if os.environ.get('DISPLAY','') == '':
-    logging.warning('No display found. Using non-interactive Agg backend')
-    matplotlib.use('Agg')
-
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi

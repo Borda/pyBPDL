@@ -43,10 +43,10 @@ install:
 
 script:
   - mkdir data && mkdir results
-  - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
+  # - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
   - nosetests bpdl -v --exe --with-doctest --with-coverage --cover-package=bpdl
   - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
-  - nosetests experiments -v --exe --with-doctest --with-xunit
+  - nosetests experiments -v --exe --with-doctest --with-xunit --xunit-file=shippable/testresults/nosetests.xml
 
   - python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
   - python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset segm_gene_small
@@ -58,6 +58,8 @@ script:
 #  - codecov
 
 after_success:
+  - python setup.py install
+
   - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9
   - coverage xml -o $COVERAGE_REPORTS/coverage.xml
   - coverage report

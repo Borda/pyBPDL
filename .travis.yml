@@ -47,6 +47,7 @@ script:
   - nosetests experiments -v --exe --with-doctest --with-xunit
 
 after_success:
+  - python setup.py install
 #  - codecov  # public repository on Travis CI
   # private repository on Travis CI
   - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9

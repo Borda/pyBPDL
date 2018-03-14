@@ -1,11 +1,11 @@
 """
 The build/compilations setup
 
->>> pip install -r requirements.txt
->>> python setup.py build_ext --inplace
->>> python setup.py install
+>> pip install -r requirements.txt
+>> python setup.py build_ext --inplace
+>> python setup.py install
 
-Copyright (C) 2014-2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2014-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 try:
@@ -18,7 +18,7 @@ except ImportError:
 
 setup(
     name='BPDL',
-    version='0.1',
+    version='0.1.0',
     author='Jiri Borovec',
     author_email='jiri.borovec@fel.cvut.cz',
     url='https://borda.github.com/pyBPDL',
@@ -26,10 +26,10 @@ setup(
 
     description='Binary Pattern Dictionary Learning',
     packages=["bpdl"],
-    cmdclass = {'build_ext': build_ext},
+    cmdclass={'build_ext': build_ext},
 
     long_description="""
-Image processing package for unsupervised pattern extraction.
+Image processing package for unsupervised pattern extraction and atlas estimation.
 """,
     classifiers=[
         "Development Status :: 4 - Beta",

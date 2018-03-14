@@ -15,13 +15,39 @@ For the image segmentation and individual object detection we used [Image segmen
 
 ## Comparable (SoA) Methods
 
-We have our method BPDL and also we comapre it to state-of-the-art, see [Faces dataset decompositions](http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#example-decomposition-plot-faces-decomposition-py):
+We have our method BPDL and also we compare it to State-of-the-Art, see [Faces dataset decompositions](http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#example-decomposition-plot-faces-decomposition-py):
  
  * [**Fast ICA**](notebooks/method_FastICA.ipynb), derived from [sklearn.decomposition.FastICA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html)
  * [**Sparse PCA**](notebooks/method_SparsePCA.ipynb), derived from [sklearn.decomposition.SparsePCA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html)
  * [**Non-negative Matrix Factorisation**](notebooks/method_NMF.ipynb), derived from [sklearn.decomposition.NMF](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html)
  * [**Dictionary Learning**](notebooks/method_DictiLearn.ipynb) with Matching pursuit, derived from [sklearn.decomposition.DictionaryLearning](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html)
  * our [**Binary Pattern Dictionary Learning**](notebooks/method_BPDL.ipynb)
+
+---
+
+## Installation and configuration
+
+**Configure local environment**
+
+Create your own local environment, for more see the [User Guide](https://pip.pypa.io/en/latest/user_guide.html), and install dependencies requirements.txt contains list of packages and can be installed as
+```bash
+@duda:~$ cd pyImSegm  
+@duda:~/pyBPDL virtualenv env
+@duda:~/pyBPDL source env/bin/activate  
+(env)@duda:~/pyBPDL pip install -r requirements.txt  
+(env)@duda:~/pyBPDL python ...
+```
+and in the end terminating...
+```bash
+(env)@duda:~/pyBPDL deactivate
+```
+
+**Installation**
+
+The package can be installed via pip from the folder
+```bash
+python setup.py install
+```
 
 ---
 
@@ -118,4 +144,4 @@ python run_experiments_all.py --type real \
 ## References
 
 For complete references see [bibtex](docs/references.bib).
-1. Borovec J., Kybic J. (2016) **Binary Pattern Dictionary Learning for Gene Expression Representation in Drosophila Imaginal Discs.** In: Computer Vision – ACCV 2016 Workshops. Lecture Notes in Computer Science, vol 10117, Springer, http://doi.org/10.1007/978-3-319-54427-4_40 
+1. Borovec J., Kybic J. (2016) **Binary Pattern Dictionary Learning for Gene Expression Representation in Drosophila Imaginal Discs.** In: Computer Vision – ACCV 2016 Workshops. Lecture Notes in Computer Science, vol 10117, Springer, [DOI: 10.1007/978-3-319-54427-4_40](http://doi.org/10.1007/978-3-319-54427-4_40).

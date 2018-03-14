@@ -13,7 +13,7 @@ import traceback
 # to suppress all visual, has to be on the beginning
 import matplotlib
 if os.environ.get('DISPLAY','') == '':
-    logging.warning('No display found. Using non-interactive Agg backend')
+    logging.warning('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
 import numpy as np

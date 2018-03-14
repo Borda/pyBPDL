@@ -6,7 +6,7 @@ Simple script for adding Gaussian noise to already generated images
 >> python run_dataset_add_noise.py -p ~/Medical-drosophila/synthetic_data \
     -d apdDataset_v0 apdDataset_v1 apdDataset_v2
 
-Copyright (C) 2017 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 

@@ -42,4 +42,5 @@ test:
     - unset DISPLAY && python experiments/run_parse_experiments_results.py -p results
 
   post:
+    - python setup.py install
     - coverage report && coverage xml -o $CIRCLE_TEST_REPORTS/coverage.xml
