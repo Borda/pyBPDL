@@ -83,10 +83,34 @@ python experiments/run_dataset_add_noise.py \
 
 ```
  
-### Real images - drosophila
+### Real images
 
-We can use as input images either binary segmentation or probabilistic values.
+We can use as input images either binary segmentation or fuzzy values.
 For the activation extraction we used [pyImSegm](https://github.com/Borda/pyImSegm) package.
+
+**Drosophila imaginal discs**
+
+For extracting gene activations we used unsupervised segmentation because the colour appearing variate among images so we segment the gene in each image indipendetly.
+
+![imaginal disk](images/imaginal_discs/image/insitu109365.png)
+<!-- ![segmentation](images/imaginal_discs/segm_rgb/insitu109365.png) -->
+![gene activation](images/imaginal_discs/gene/insitu109365.png)
+
+
+**Drosophila ovary**
+
+Here the gene activation is presented in separate channel - green. so we just take this information and normalise it. Further we assume that this activation is fuzzy based on intensities on the green channel.
+
+Ovary in development stage 2
+
+![ovary stage 2](images/ovary_stage-2/image/insitu5938.png)
+![gene activation s2](images/ovary_stage-2/gene/insitu5938.png)
+
+Ovary in development stage 3
+
+![ovary stage 3](images/ovary_stage-3/image/insitu11033.png)
+![gene activation s3](images/ovary_stage-3/gene/insitu11033.png)
+
 
 ---
 

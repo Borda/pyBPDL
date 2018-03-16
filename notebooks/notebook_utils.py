@@ -17,8 +17,8 @@ import bpdl.dataset_utils as tl_data
 
 PATH_DATA_SYNTH = tl_data.update_path('images')
 SYNTH_DATASET = 'syntheticDataset_vX'
-PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
-SYNTH_DATASET = 'atomicPatternDictionary_v0'
+# PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
+#  = 'atomicPatternDictionary_v0'
 DEFAULT_PATH = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET)
 SYNTH_DATASETS_BINARY = ['datasetBinary_raw',
                          'datasetBinary_deform',

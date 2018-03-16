@@ -57,9 +57,10 @@ if sys.version_info.major == 2:
 
     copy_reg.pickle(types.MethodType, _reduce_method)
 
-NB_THREADS = int(mproc.cpu_count() * .75)
+NB_THREADS = int(mproc.cpu_count() * .8)
 PATH_DATA_SYNTH = tl_data.update_path('images')
-PATH_DATA_REAL = tl_data.update_path('images')
+PATH_DATA_REAL_DISC = os.path.join(tl_data.update_path('images'), 'imaginal_discs')
+PATH_DATA_REAL_OVARY = os.path.join(tl_data.update_path('images'), 'ovary_stage-2')
 PATH_RESULTS = tl_data.update_path('results')
 DEFAULT_PARAMS = {
     'type': None,
@@ -102,8 +103,8 @@ SYNTH_PARAMS.update({
 REAL_PARAMS = DEFAULT_PARAMS.copy()
 REAL_PARAMS.update({
     'type': 'real',
-    'path_in': PATH_DATA_REAL,
-    'dataset': ['segm_gene_small'],
+    'path_in': PATH_DATA_REAL_DISC,
+    'dataset': ['gene_small'],
     'max_iter': 50,
     'nb_runs': 3,
     'path_out': PATH_RESULTS

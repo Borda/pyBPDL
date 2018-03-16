@@ -414,10 +414,10 @@ def dictionary_generate_rnd_pattern(path_out=None,
     :param rand_seed: random initialization
     :return: [np.array<height, width>] list of independent patters in the dict.
 
-    >>> list_imgs = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8), rand_seed=0)
-    >>> len(list_imgs)
+    >>> list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8), rand_seed=0)
+    >>> len(list_img_paths)
     3
-    >>> list_imgs[1]
+    >>> list_img_paths[1]
     array([[  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],

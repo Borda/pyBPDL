@@ -49,10 +49,10 @@ script:
   - nosetests experiments -v --exe --with-doctest --with-xunit --xunit-file=shippable/testresults/nosetests.xml
 
   - python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
-  - python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset segm_gene_small
+  - python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset gene_small
 
   - python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
-  - python experiments/run_experiments_all.py --type real -in images -out results --dataset segm_gene_small
+  - python experiments/run_experiments_all.py --type real -in images -out results --dataset gene_small
 
   - python experiments/run_parse_experiments_results.py -p results
 #  - codecov

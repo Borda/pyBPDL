@@ -49,7 +49,7 @@ def test_experiments_soa_real(params=r_all.REAL_PARAMS):
     logging.getLogger().setLevel(logging.DEBUG)
 
     params.update({
-        'dataset': 'segm_gene_small',
+        'dataset': 'gene_small',
         'max_iter': 15,
         'nb_runs': 1,
     })

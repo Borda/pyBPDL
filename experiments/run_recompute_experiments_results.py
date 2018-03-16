@@ -27,7 +27,7 @@ from PIL import Image
 from skimage.segmentation import relabel_sequential
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.metric_similarity as sim_measure
+import bpdl.metric_similarity as tl_metric
 import bpdl.dataset_utils as tl_data
 import experiments.run_dataset_generate as r_data
 
@@ -158,9 +158,9 @@ def parse_experiment_folder(path_expt, params):
         atlas_name = NAME_PATTERN_ATLAS % (index_name, str(idx))
         atlas = load_atlas(os.path.join(path_expt, atlas_name))
         # try to find the mest match among patterns / labels
-        atlas = sim_measure.relabel_max_overlap_unique(atlas_gt, atlas)
+        atlas = tl_metric.relabel_max_overlap_unique(atlas_gt, atlas)
         # recompute the similarity measure
-        dict_measure = sim_measure.compute_classif_metrics(atlas_gt.ravel(), atlas.ravel())
+        dict_measure = tl_metric.compute_classif_metrics(atlas_gt.ravel(), atlas.ravel())
         dict_measure = {'atlas %s' % k: dict_measure[k] for k in dict_measure}
         dict_row.update(dict_measure)
         df_res_new = df_res_new.append(dict_row, ignore_index=True)

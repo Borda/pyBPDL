@@ -34,10 +34,10 @@ test:
     - unset DISPLAY && coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/pytest_junit.xml
 
     - unset DISPLAY && python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
-    - unset DISPLAY && python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset segm_gene_small
+    - unset DISPLAY && python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset gene_small
 
     - unset DISPLAY && python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
-    - unset DISPLAY && python experiments/run_experiments_all.py --type real -in images -out results --dataset segm_gene_small
+    - unset DISPLAY && python experiments/run_experiments_all.py --type real -in images -out results --dataset gene_small
 
     - unset DISPLAY && python experiments/run_parse_experiments_results.py -p results
 
