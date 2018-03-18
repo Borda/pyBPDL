@@ -19,7 +19,8 @@ import types
 import multiprocessing as mproc
 
 import matplotlib
-if os.environ.get('DISPLAY', '') == '':
+if os.environ.get('DISPLAY', '') == '' \
+        and matplotlib.rcParams['backend'] != 'agg':
     logging.warning('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
@@ -41,7 +42,6 @@ FILE_LOGS = 'logging.txt'
 
 # fixing ImportError: No module named 'copy_reg' for Python3
 if sys.version_info.major == 2:
-    import types
     import copy_reg
 
     def _reduce_method(m):

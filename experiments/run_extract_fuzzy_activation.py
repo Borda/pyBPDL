@@ -3,8 +3,8 @@ Extracting the gene activation in case it is separate image channel
 
 
 >>  python run_extract_fuzzy_activation.py \
-    -in "images/ovary_stage-2/image/*.png" \
-    -out images/ovary_stage-2/gene
+    -in "../images/ovary_stage-2/image/*.png" \
+    -out ../images/ovary_stage-2/gene
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -18,10 +18,15 @@ import logging
 import multiprocessing as mproc
 from functools import partial
 
+import matplotlib
+if os.environ.get('DISPLAY', '') == '':
+    logging.warning('No display found. Using non-interactive Agg backend.')
+    matplotlib.use('Agg')
+
 import tqdm
 import numpy as np
-from skimage import io, morphology, filters
-from sklearn.mixture import GaussianMixture
+from skimage import filters
+# from sklearn.mixture import GaussianMixture
 from scipy import ndimage
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
@@ -105,12 +110,11 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     mproc_pool.close()
     mproc_pool.join()
 
-    logging.info('DONE')
-
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
     logging.info('running...')
     params = args_parse_params()
     main(params['path_in'], params['path_out'],
          nb_jobs=params['nb_jobs'])
+    logging.info('DONE')

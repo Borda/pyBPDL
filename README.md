@@ -92,9 +92,11 @@ For the activation extraction we used [pyImSegm](https://github.com/Borda/pyImSe
 
 For extracting gene activations we used unsupervised segmentation because the colour appearing variate among images so we segment the gene in each image indipendetly.
 
+<!-- 
 ![imaginal disk](images/imaginal_discs/image/insitu109365.png)
-<!-- ![segmentation](images/imaginal_discs/segm_rgb/insitu109365.png) -->
-![gene activation](images/imaginal_discs/gene/insitu109365.png)
+![segmentation](images/imaginal_discs/segm_rgb/insitu109365.png) 
+![gene activation](images/imaginal_discs/gene/insitu109365.png) 
+-->
 
 
 **Drosophila ovary**

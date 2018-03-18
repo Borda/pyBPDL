@@ -14,8 +14,10 @@ import shutil
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-if os.environ.get('DISPLAY','') == '':
+if os.environ.get('DISPLAY', '') == '' \
+        and matplotlib.rcParams['backend'] != 'agg':
     logging.warning('No display found. Using non-interactive Agg backend.')
+    # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
 import tqdm

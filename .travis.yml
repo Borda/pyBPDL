@@ -24,10 +24,10 @@ cache: pip
 
 before_install:
   - pip install --upgrade pip
-  - mkdir libs
 
 install:
   - root=$PWD
+#  - mkdir libs
 #  - cd $root/libs && git clone https://github.com/Borda/pyGCO.git
 #  - cd $root/libs/pyGCO && pip install -r requirements.txt
 #  - cd $root/libs/pyGCO && python setup.py install
