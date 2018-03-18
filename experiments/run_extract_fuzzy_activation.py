@@ -21,6 +21,7 @@ from functools import partial
 import tqdm
 import numpy as np
 from skimage import io, morphology, filters
+from sklearn.mixture import GaussianMixture
 from scipy import ndimage
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
@@ -63,20 +64,26 @@ def extract_activation(path_img, path_out):
     im_gene = img[:, :, 1]
     im_gene_gauss = ndimage.gaussian_filter(im_gene, 1)
 
-    # im_struc = norm_image(img[:, :, 0], mask)
     mask_struc = im_struc_gauss > filters.threshold_otsu(im_struc_gauss[mask])
     ms = np.median(im_struc_gauss[mask_struc])
-    # im_gene = norm_image(img[:, :, 1], mask)
     mask_gene = im_gene_gauss > filters.threshold_otsu(im_gene_gauss[mask])
     mg = np.median(im_gene_gauss[mask_gene])
 
     ration_gene = np.sum(mask_gene) / float(np.sum(mask))
-    coef = (ms / mg * 2) if ration_gene > 0.3 else (ms / mg * 5)
-    im_mean = np.max(np.array([im_gene + (im_struc / coef)]), axis=0)
+    coef = (ms / mg * 2.5) if ration_gene > 0.3 else (ms / mg * 5)
+    im_mean = np.max(np.array([im_gene_gauss + (im_struc_gauss / coef)]), axis=0)
 
     otsu = filters.threshold_otsu(im_mean[mask])
     im_gene = im_mean.copy()
     im_gene[im_gene < otsu] = 0
+
+    # gmm = GaussianMixture(n_components=3, n_init=10)
+    # data = np.array([im_gene_gauss[mask].ravel(), im_struc_gauss[mask]]).T
+    # gmm.fit(data)
+    # id_max = np.argmax(gmm.means_[:, 0])
+    # gm_mean = gmm.means_[id_max, 0]
+    # gm_std = np.sqrt(gmm.covariances_[id_max, 0, 0])
+    # im_gene[im_gene_gauss < (gm_mean - gm_std)] = 0
 
     # p_out = os.path.join(path_out, name)
     tl_data.export_image(path_out, im_gene, name)
@@ -88,7 +95,7 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
         os.mkdir(path_out)
 
     list_img_paths = glob.glob(path_pattern_in)
-    logging.info('found images: %i', )
+    logging.info('found images: %i', len(list_img_paths))
     wrapper_extract = partial(extract_activation, path_out=path_out)
 
     tqdm_bar = tqdm.tqdm(total=len(list_img_paths))
@@ -105,4 +112,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     logging.info('running...')
     params = args_parse_params()
-    main(params['path_in'], params['path_out'], nb_jobs=params['nb_jobs'])
+    main(params['path_in'], params['path_out'],
+         nb_jobs=params['nb_jobs'])
