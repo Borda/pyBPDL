@@ -71,6 +71,46 @@ def update_path(path_file, lim_depth=5, absolute=True):
     return path_file
 
 
+def io_imread(path_img):
+    """ jsut a wrapper to suppers debug messages from the PIL function
+    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+
+    :param str path_img:
+    :return ndarray:
+    """
+    log_level = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.INFO)
+    img = io.imread(path_img)
+    logging.getLogger().setLevel(log_level)
+    return img
+
+
+def image_open(path_img):
+    """ jsut a wrapper to suppers debug messages from the PIL function
+    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+
+    :param str path_img:
+    :return Image:
+    """
+    log_level = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.INFO)
+    img = Image.open(path_img)
+    logging.getLogger().setLevel(log_level)
+    return img
+
+
+def io_imsave(path_img, img):
+    """ jsut a wrapper to suppers debug messages from the PIL function
+    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+
+    :param str path_img:
+    """
+    log_level = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.INFO)
+    io.imsave(path_img, img)
+    logging.getLogger().setLevel(log_level)
+
+
 def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=None):
     """ create deformation
 
@@ -640,19 +680,18 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     if not isinstance(im_name, str):
         im_name = name_template.format(im_name)
     path_img = os.path.join(path_out, im_name)
-    logging.debug(' .. saving image %s with %s to "%s"', repr(img.shape),
-                  repr(np.unique(img)), path_img)
+    logging.debug(' .. saving image of size %s type %s to "%s"', repr(img.shape),
+                  repr(img.dtype), path_img)
     if img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 3):
         if stretch_range and img.max() > 0:
             img = img / float(img.max()) * 255
-        # io.imsave(path_img, im_norm)
         path_img += '.png'
-        Image.fromarray(img.astype(np.uint8)).save(path_img)
+        io_imsave(path_img, img.astype(np.uint8))
     elif img.ndim == 3:
         if stretch_range and img.max() > 0:
             img = img / float(img.max()) * 255 ** 2
         path_img += '.tiff'
-        io.imsave(path_img, img)
+        io_imsave(path_img, img)
         # tif = libtiff.TIFF.open(path_img, mode='w')
         # tif.write_image(img_clip.astype(np.uint16))
     else:
@@ -925,23 +964,18 @@ def load_image(path_img, prob_val=True):
     assert os.path.exists(path_img), path_img
     n_img, img_ext = os.path.splitext(os.path.basename(path_img))
 
-    # to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
-    l_lvl = logging.getLogger().getEffectiveLevel()
-    logging.getLogger().setLevel(logging.INFO)
-
     if img_ext in ['.tif', '.tiff']:
-        img = io.imread(path_img)
+        img = io_imread(path_img)
         # im = libtiff.TiffFile().get_tiff_array()
         # img = np.empty(im.shape)
         # for i in range(img.shape[0]):
         #     img[i, :, :] = im[i]
         # img = np.array(img.tolist())
     else:
-        img = io.imread(path_img)
+        img = io_imread(path_img)
         # img = np.array(Image.open(path_img))
 
     # return to original logging level
-    logging.getLogger().setLevel(l_lvl)
 
     if prob_val and img.max() > 0:
         img = (img / float(img.max()))
