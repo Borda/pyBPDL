@@ -3,8 +3,7 @@ Estimating the pattern dictionary module
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-from __future__ import absolute_import
-import os
+# from __future__ import absolute_import
 import logging
 import traceback
 

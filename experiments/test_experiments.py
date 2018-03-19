@@ -15,8 +15,8 @@ import bpdl.dataset_utils as tl_data
 import experiments.experiment_apdl as expt_apdl
 import experiments.run_experiments_all as r_all
 import experiments.run_experiments_bpdl as r_bpdl
-import experiments.run_parse_experiments_results as r_parse
-import experiments.run_recompute_experiments_results as r_recomp
+import experiments.run_parse_experiments_result as r_parse
+import experiments.run_recompute_experiments_result as r_recomp
 
 
 def test_experiments_soa_synth(params=r_all.SYNTH_PARAMS):
@@ -122,8 +122,8 @@ def test_experiments_bpdl(dict_params=r_bpdl.SYNTH_PARAMS):
 def test_experiments_postprocessing():
     """ testing experiment postprocessing """
     params = {'res_cols': None, 'func_stat': 'none', 'type': 'synth',
-              'fname_results': [expt_apdl.RESULTS_CSV],
-              'fname_config': expt_apdl.CONFIG_JSON,
+              'name_results': [expt_apdl.RESULTS_CSV],
+              'name_config': expt_apdl.CONFIG_JSON, 'nb_jobs': 2,
               'path': tl_data.update_path('results')}
 
     dir_expts = glob.glob(os.path.join(params['path'], '*'))
@@ -133,12 +133,12 @@ def test_experiments_postprocessing():
 
     r_parse.parse_experiments(params)
 
-    params.update({'fname_results': expt_apdl.RESULTS_CSV})
-    r_recomp.parse_experiments(params, nb_jobs=2)
+    params.update({'name_results': expt_apdl.RESULTS_CSV})
+    r_recomp.parse_experiments(params)
 
     name_res = os.path.splitext(expt_apdl.RESULTS_CSV)[0]
-    params.update({'fname_results': [name_res + '_NEW.csv']})
-    r_parse.parse_experiments(params, nb_jobs=2)
+    params.update({'name_results': [name_res + '_NEW.csv'], 'nb_jobs': 1})
+    r_parse.parse_experiments(params)
 
 
 def main():

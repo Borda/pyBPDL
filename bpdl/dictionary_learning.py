@@ -4,7 +4,8 @@ and computing the encoding / weights
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-from __future__ import absolute_import
+
+# from __future__ import absolute_import
 import os
 import time
 import logging

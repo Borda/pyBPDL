@@ -38,16 +38,16 @@ done
 
 # EVALUATE experiments
 
-python experiments/run_parse_experiments_results.py \
+python experiments/run_parse_experiments_result.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APD_synth \
-    --fname_results results.csv --fname_config config.json --func_stat none
+    --name_results results.csv --name_config config.json --func_stat none
 
-python experiments/run_recompute_experiments_results.py \
+python experiments/run_recompute_experiments_result.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APD_synth
 
-python experiments/run_parse_experiments_results.py \
+python experiments/run_parse_experiments_result.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APD_synth \
-    --fname_results results_NEW.csv --fname_config config.json --func_stat none
+    --name_results results_NEW.csv --name_config config.json --func_stat none
 
 
 # REAL IMAGES by folds

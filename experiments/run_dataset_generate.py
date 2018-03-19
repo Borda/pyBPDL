@@ -18,15 +18,15 @@ import bpdl.dataset_utils as tl_data
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
 DEFAULT_PATH_DATA = tl_data.update_path('images')
-DEFAULT_DIR_APD = tl_data.DIR_MANE_SYNTH_DATASET
-DEFAULT_PATH_APD = os.path.join(DEFAULT_PATH_DATA, DEFAULT_DIR_APD)
+DEFAULT_PATH_APD = os.path.join(DEFAULT_PATH_DATA,
+                                tl_data.DIR_MANE_SYNTH_DATASET)
 NAME_WEIGHTS = tl_data.CSV_NAME_WEIGHTS
 NAME_CONFIG = 'config.json'
-DATASET_TYPE = '2D'
 IMAGE_SIZE = {
     '2D': (64, 64),
     '3D': (16, 128, 128),
 }
+DATASET_TYPE = '2D'
 NB_SAMPLES = 50
 NB_ATM_PATTERNS = 4
 NOISE_BINARY = 0.03
@@ -39,18 +39,20 @@ def aparse_params():
     :return:
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('--nb_samples', type=int, required=False, default=NB_SAMPLES,
-                        help='number of samples to be generated in each dataset')
-    parser.add_argument('--nb_patterns', type=int, required=False,
-                        default=NB_ATM_PATTERNS,
-                        help='number of atom. patterns in created dictionary')
     parser.add_argument('-p', '--path_out', type=str, required=False,
                         default=DEFAULT_PATH_APD,
                         help='path to the output dataset')
+    parser.add_argument('--nb_samples', type=int, required=False,
+                        default=NB_SAMPLES,
+                        help='number of samples to be generated')
+    parser.add_argument('--nb_patterns', type=int, required=False,
+                        default=NB_ATM_PATTERNS,
+                        help='number of atom. patterns in created dictionary')
     parser.add_argument('--image_size', type=int, required=False, nargs='+',
                         default=IMAGE_SIZE[DATASET_TYPE],
                         help='dimensions of generated images in axis Z, X, Y')
-    parser.add_argument('--nb_jobs', type=int, required=False, default=NB_THREADS,
+    parser.add_argument('--nb_jobs', type=int, required=False,
+                        default=NB_THREADS,
                         help='number of processes in parallel')
     args = parser.parse_args()
     assert len(args.image_size) == 2 or len(args.image_size) == 3, \

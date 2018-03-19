@@ -46,6 +46,7 @@ script:
   # - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
   - nosetests bpdl -v --exe --with-doctest --with-coverage --cover-package=bpdl
   - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
+  - python experiments/run_dataset_add_noise.py -p images
   - nosetests experiments -v --exe --with-doctest --with-xunit --xunit-file=shippable/testresults/nosetests.xml
 
   - python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
@@ -57,7 +58,9 @@ script:
   - python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
   - python experiments/run_experiments_all.py --type real -in images/imaginal_discs -out results --dataset gene_small
 
-  - python experiments/run_parse_experiments_results.py -p results
+  - python experiments/run_parse_experiments_result.py -p results -res results.csv
+  - python experiments/run_recompute_experiments_result.py -p results
+  - python experiments/run_parse_experiments_result.py -p results -res results_NEW.csv
 #  - codecov
 
 after_success:

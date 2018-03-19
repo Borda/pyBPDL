@@ -37,13 +37,14 @@ from skimage import segmentation
 import tqdm
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.dataset_utils as tl_data
 import bpdl.pattern_atlas as ptn_dict
 import bpdl.pattern_weights as ptn_weight
 import experiments.experiment_apdl as expt_apd
 import experiments.run_experiments_bpdl as run_bpdl
 
 
-class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
+class ExperimentLinearCombineBase(expt_apd.ExperimentAPDL):
     """
     State-of-te-Art methods that are based on Linear Combination
     """
@@ -142,19 +143,21 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPD):
         :return:
         """
         self.params.update(d_params)
-        name_posix = '_' + '_'.join('{}={}'.format(k, d_params[k])
-                                    for k in sorted(d_params) if k != 'param_idx')
+        d_params['name_suffix'] = expt_apd.generate_atlas_suffix(d_params)
         if isinstance(self.params['nb_samples'], float):
-            self.params['nb_samples'] = int(len(self.imgs) * self.params['nb_samples'])
-        imgs_vec = np.array([np.ravel(im) for im in self.imgs[:self.params['nb_samples']]])
+            self.params['nb_samples'] = \
+                int(len(self.imgs) * self.params['nb_samples'])
+        imgs_vec = np.array([np.ravel(im) for im
+                             in self.imgs[:self.params['nb_samples']]])
         atlas_ptns, rct_vec = self._perform_linear_combination(imgs_vec)
-        # img_rct = rct_vec.reshape(np.asarray(self.imgs[:self.params['nb_samples']]).shape)
+        # img_rct = rct_vec.reshape(np.asarray( \
+        #       self.imgs[:self.params['nb_samples']]).shape)
         self._convert_patterns_to_atlas(atlas_ptns)
-        self._export_atlas(name_posix)
+        self._export_atlas(d_params['name_suffix'])
         w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, self.atlas)
                   for img in self.imgs[:self.params['nb_samples']]]
         self.w_bins = np.array(w_bins)
-        self._export_coding(name_posix)
+        self._export_coding(d_params['name_suffix'])
         img_rct = ptn_dict.reconstruct_samples(self.atlas, self.w_bins)
         stat = self._compute_statistic_gt(img_rct)
         stat.update(d_params)
@@ -217,19 +220,19 @@ class ExperimentNMF_base(ExperimentLinearCombineBase):
         self.components = self.estimator.components_
 
 
-class ExperimentFastICA(ExperimentFastICA_base, expt_apd.ExperimentAPD_parallel):
+class ExperimentFastICA(ExperimentFastICA_base, expt_apd.ExperimentAPDL_parallel):
     pass
 
 
-class ExperimentSparsePCA(ExperimentSparsePCA_base, expt_apd.ExperimentAPD_parallel):
+class ExperimentSparsePCA(ExperimentSparsePCA_base, expt_apd.ExperimentAPDL_parallel):
     pass
 
 
-class ExperimentDictLearn(ExperimentDictLearn_base, expt_apd.ExperimentAPD_parallel):
+class ExperimentDictLearn(ExperimentDictLearn_base, expt_apd.ExperimentAPDL_parallel):
     pass
 
 
-class ExperimentNMF(ExperimentNMF_base, expt_apd.ExperimentAPD_parallel):
+class ExperimentNMF(ExperimentNMF_base, expt_apd.ExperimentAPDL_parallel):
     pass
 
 

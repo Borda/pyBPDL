@@ -119,10 +119,10 @@ Ovary in development stage 3
 ## Experiments
 
 We run experiment for debugging and also evaluating performances.
-To collect the results we use `run_parse_experiments_results.py` which visit all experiments and aggregate the configurations with results together into one large CSV file
+To collect the results we use `run_parse_experiments_result.py` which visit all experiments and aggregate the configurations with results together into one large CSV file
 
 ```bash
-python run_parse_experiments_results.py \
+python run_parse_experiments_result.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --fname_results results.csv --func_stat mean
 ```
@@ -163,6 +163,25 @@ python run_experiments_all.py --type real \
     -in ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
     -out ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
     --dataset gene_small
+```
+
+
+### Aggregating results
+
+The result from multiple experiments can be simpli aggregatid into sigle CVS file
+
+```bash
+python experiments/run_parse_experiments_results.py \
+    --path results --name_results results.csv --name_config config.json --func_stat none
+```
+
+In case you need add of change a evaluation you do not need to retun all experiment since the alases and encoding is done, you can just rerun the elevation phase generating new results `results_NEW.csv` and parsing the new results
+
+```bash
+python experiments/run_recompute_experiments_result.py -p results
+
+python experiments/run_parse_experiments_results.py \
+    --path results --name_results results_NEW.csv --name_config config.json --func_stat none
 ```
 
 ---

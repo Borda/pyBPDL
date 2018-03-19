@@ -111,7 +111,7 @@ def experiment_pipeline_alpe_showcase(path_out):
     return atlas, w_bins
 
 
-class ExperimentBPDL_base(expt_apd.ExperimentAPD):
+class ExperimentBPDL_base(expt_apd.ExperimentAPDL):
     """ the main_train real experiment or our Atlas Learning Pattern Encoding
     """
 
@@ -156,7 +156,7 @@ class ExperimentBPDL_base(expt_apd.ExperimentAPD):
         assert init_atlas.dtype == np.int, 'type: %s' % init_atlas.dtype
         return init_atlas
 
-    def _estimate_atlas(self, posix=''):
+    def _estimate_atlas(self, suffix=''):
         """ set all params and run the atlas estimation in try mode
 
         :param int i: index of try
@@ -168,7 +168,7 @@ class ExperimentBPDL_base(expt_apd.ExperimentAPD):
         init_atlas = self._init_atlas(self.params['nb_labels'] - 1,
                                       self.params['init_tp'], self.imgs)
         # prefix = 'expt_{}'.format(p['init_tp'])
-        path_out = os.path.join(self.params['path_exp'], 'debug' + posix)
+        path_out = os.path.join(self.params['path_exp'], 'debug' + suffix)
         if isinstance(self.params['nb_samples'], float):
             self.params['nb_samples'] = int(len(self.imgs) * self.params['nb_samples'])
         try:
@@ -200,23 +200,22 @@ class ExperimentBPDL_base(expt_apd.ExperimentAPD):
         :return: {str: ...}
         """
         self.params.update(d_params)
-        name_posix = '_' + '_'.join('{}={}'.format(k, d_params[k])
-                                    for k in sorted(d_params) if k != 'param_idx')
+        d_params['name_suffix'] = expt_apd.generate_atlas_suffix(d_params)
         logging.info('perform single experiment...')
-        self._estimate_atlas(posix=name_posix)
+        self._estimate_atlas(suffix=d_params['name_suffix'])
         logging.debug('atlas of size %s and labels %s', repr(self.atlas.shape),
                       repr(np.unique(self.atlas).tolist()))
         logging.debug('weights of size %s and summing %s',
                       repr(self.w_bins.shape), repr(np.sum(self.w_bins, axis=0)))
-        self._export_atlas(name_posix)
-        self._export_coding(name_posix)
+        self._export_atlas(d_params['name_suffix'])
+        self._export_coding(d_params['name_suffix'])
         img_rct = ptn_dict.reconstruct_samples(self.atlas, self.w_bins)
         stat = self._compute_statistic_gt(img_rct)
         stat.update(d_params)
         return stat
 
 
-class ExperimentBPDL(ExperimentBPDL_base, expt_apd.ExperimentAPD_parallel):
+class ExperimentBPDL(ExperimentBPDL_base, expt_apd.ExperimentAPDL_parallel):
     """
     parallel version of APDL
     """

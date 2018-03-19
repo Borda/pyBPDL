@@ -3,8 +3,10 @@ The basic module for generating synthetic images and also loading / exporting
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-from __future__ import absolute_import
+
+# from __future__ import absolute_import
 import os
+import re
 import glob
 import logging
 import itertools
@@ -883,8 +885,8 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     logging.debug('searching in folder (%s) <- "%s"',
                   os.path.exists(path_dir), path_dir)
     paths_img_most = []
-    for im_posix in img_extensions:
-        path_search = os.path.join(path_dir, im_pattern + im_posix)
+    for im_suffix in img_extensions:
+        path_search = os.path.join(path_dir, im_pattern + im_suffix)
         paths_img = glob.glob(path_search)
         logging.debug('images found %i for search "%s"', len(paths_img), path_search)
         if len(paths_img) > len(paths_img_most):
@@ -1107,17 +1109,48 @@ def wrapper_export_image(mp_set):
     export_image(*mp_set)
 
 
-# def dataset_convert_nifti(path_in, path_out, img_posix=IMAGE_POSIX):
+def convert_numerical(s):
+    """ try to convert a string tu numerical
+
+    :param str s: input string
+    :return:
+
+    >>> convert_numerical('-1')
+    -1
+    >>> convert_numerical('-2.0')
+    -2.0
+    >>> convert_numerical('.1')
+    0.1
+    >>> convert_numerical('-0.')
+    -0.0
+    >>> convert_numerical('abc58')
+    'abc58'
+    """
+    INT_RE = re.compile(r"^[-]?\d+$")
+    FLOAT_RE1 = re.compile(r"^[-]?\d+.\d*$")
+    FLOAT_RE2 = re.compile(r"^[-]?\d*.\d+$")
+
+    if INT_RE.match(str(s)) is not None:
+        return int(s)
+    elif FLOAT_RE1.match(str(s)) is not None:
+        return float(s)
+    elif FLOAT_RE2.match(str(s)) is not None:
+        return float(s)
+    else:
+        return s
+
+
+# def dataset_convert_nifti(path_in, path_out, img_suffix=IMAGE_POSIX):
 #     """ having a datset of png images conver them into nifti images
 #
 #     :param path_in: str
 #     :param path_out: str
-#     :param img_posix: str, like '.png'
+#     :param img_suffix: str, like '.png'
 #     :return:
 #     """
 #     import src.own_utils.data_io as tl_data
 #     logging.info('convert a dataset to Nifti')
-#     p_imgs = glob.glob(os.path.join(path_in, '*' + img_posix))
+#     p_imgs = glob.glob(os.path.join(path_in, '*' + img_suffix))
 #     create_clean_folder(path_out)
 #     p_imgs = sorted(p_imgs)
 #     for path_im in p_imgs:

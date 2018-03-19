@@ -3,7 +3,8 @@ Estimating pattern weight vector for each image
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-from __future__ import absolute_import
+
+# from __future__ import absolute_import
 import logging
 
 import numpy as np

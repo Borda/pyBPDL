@@ -29,6 +29,7 @@ test:
 #    - python setup.py build_ext --inplace
     - mkdir -p $CIRCLE_TEST_REPORTS
     - unset DISPLAY && python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
+    - unset DISPLAY && python experiments/run_dataset_add_noise.py -p images
 
   override:
     - unset DISPLAY && coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/pytest_junit.xml
@@ -42,7 +43,9 @@ test:
     - unset DISPLAY && python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
     - unset DISPLAY && python experiments/run_experiments_all.py --type real -in images/imaginal_discs -out results --dataset gene_small
 
-    - unset DISPLAY && python experiments/run_parse_experiments_results.py -p results
+    - unset DISPLAY && python experiments/run_parse_experiments_result.py -p results -res results.csv
+    - unset DISPLAY && python experiments/run_recompute_experiments_result.py -p results
+    - unset DISPLAY && python experiments/run_parse_experiments_result.py -p results -res results_NEW.csv
 
   post:
     - python setup.py install

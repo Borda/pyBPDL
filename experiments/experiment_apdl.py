@@ -14,6 +14,7 @@ import random
 import time
 import json
 import copy
+import re
 import traceback
 import types
 import multiprocessing as mproc
@@ -193,12 +194,12 @@ def parse_params(default_params):
             and os.path.isfile(arg_params['path_config']):
         logging.info('loading config: %s', arg_params['path_config'])
         d_json = json.load(open(arg_params['path_config']))
-        logging.debug(string_dict(d_json, desc='LOADED CONFIG'))
+        logging.debug(string_dict(d_json, desc='LOADED CONFIG:'))
 
         # skipp al keys with path or passed from arg params
         d_update = {k: d_json[k] for k in default_params
                     if not k.startswith('path_') or not k in arg_params}
-        logging.debug(string_dict(d_json, desc='TO BE UPDATED'))
+        logging.debug(string_dict(d_json, desc='TO BE UPDATED:'))
         params.update(d_update)
 
     return params
@@ -285,7 +286,7 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
     log.addHandler(fh)
 
 
-def string_dict(d, desc='DICTIONARY', offset=30):
+def string_dict(d, desc='DICTIONARY:', offset=30):
     """ transform dictionary to a formatted string
 
     :param {} d:
@@ -294,16 +295,57 @@ def string_dict(d, desc='DICTIONARY', offset=30):
     :return str:
 
     >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
-    \'DICTIONARY: \\n"abc": 123\'
+    \'DICTIONARY:\\n"abc": 123\'
     """
-    s = desc + ': \n'
+    s = desc + '\n'
     tmp_name = '{:' + str(offset) + 's} {}'
-    rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
+    rows = [tmp_name.format('"{}":'.format(n), repr(d[n]))
+            for n in sorted(d)]
     s += '\n'.join(rows)
     return str(s)
 
 
-class ExperimentAPD(object):
+def copy_dict(d):
+    """ alternative of deep copy without pickle on in first level
+    Nose testing - TypeError: can't pickle dict_keys objects
+
+    :param d:
+    :return:
+    >>> d1 = {'a': [0, 1]}
+    >>> d2 = copy_dict(d1)
+    >>> d2['a'].append(3)
+    >>> d1
+    {'a': [0, 1]}
+    >>> d2
+    {'a': [0, 1, 3]}
+    """
+    d_new = copy.deepcopy(d)
+    return d_new
+
+
+def generate_atlas_suffix(d_params):
+    """ generating suffix strung according given params
+
+    :param d_params:
+    :return:
+
+    >>> params = {'my_Param': 15}
+    >>> generate_atlas_suffix(params)
+    '_my-Param=15'
+    >>> params.update({'new_Param': 'abc'})
+    >>> generate_atlas_suffix(params)
+    '_my-Param=15_new-Param=abc'
+    """
+    suffix = '_'
+    suffix += '_'.join('{}={}'.format(k.replace('_', '-'), d_params[k])
+                      for k in sorted(d_params) if k != 'param_idx')
+    return suffix
+
+# =============================================================================
+# =============================================================================
+
+
+class ExperimentAPDL(object):
     """
     main_train class for APD experiments State-of-the-Art and BPDL
 
@@ -311,7 +353,7 @@ class ExperimentAPD(object):
     >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
-    >>> expt = ExperimentAPD(params, time_stamp=False)
+    >>> expt = ExperimentAPDL(params, time_stamp=False)
     >>> expt.run(gt=True)
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
     """
@@ -349,9 +391,9 @@ class ExperimentAPD(object):
         self.path_stat = os.path.join(self.params.get('path_exp'), RESULTS_TXT)
         self.list_img_paths = None
         # self.params.export_as(self.path_stat)
-        logging.info(string_dict(self.params, desc='PARAMETERS'))
+        logging.info(string_dict(self.params, desc='PARAMETERS:'))
         with open(self.path_stat, 'w') as fp:
-            fp.write(string_dict(self.params, desc='PARAMETERS'))
+            fp.write(string_dict(self.params, desc='PARAMETERS:'))
 
     def __check_exist_path(self):
         for p in [self.params[n] for n in self.params
@@ -435,7 +477,8 @@ class ExperimentAPD(object):
         if is_list_like(iter_params):
             self.iter_params = copy_dict(iter_params)
         elif isinstance(iter_params, dict):
-            logging.info(string_dict(iter_params, desc='ITERATE PARAMETERS'))
+            logging.info(string_dict(iter_params,
+                                             desc='ITERATE PARAMETERS:'))
             self.iter_params = expand_params(iter_params)
         else:
             self.iter_params = None
@@ -483,31 +526,31 @@ class ExperimentAPD(object):
         :return {str: val}:
         """
         stat = copy_dict(d_params)
-        name_posix = '_' + '_'.join('{}={}'.format(k, d_params[k])
+        name_suffix = '_' + '_'.join('{}={}'.format(k, d_params[k])
                                     for k in sorted(d_params) if k != 'param_idx')
         return stat
 
-    def _export_atlas(self, posix=''):
+    def _export_atlas(self, suffix=''):
         """ export estimated atlas
 
         :param np.array<height, width> atlas:
-        :param str posix:
+        :param str suffix:
         """
         assert hasattr(self, 'atlas')
-        n_img = 'atlas{}'.format(posix)
+        n_img = 'atlas{}'.format(suffix)
         tl_data.export_image(self.params.get('path_exp'), self.atlas, n_img)
         path_atlas_rgb = os.path.join(self.params.get('path_exp'),
                                       n_img + '_rgb.png')
         plt.imsave(path_atlas_rgb, self.atlas, cmap=plt.cm.jet)
 
-    def _export_coding(self, posix=''):
+    def _export_coding(self, suffix=''):
         """ export estimated atlas
 
         :param np.array<height, width> atlas:
-        :param str posix:
+        :param str suffix:
         """
         assert hasattr(self, 'w_bins')
-        n_csv = 'encoding{}.csv'.format(posix)
+        n_csv = 'encoding{}.csv'.format(suffix)
         path_csv = os.path.join(self.params.get('path_exp'), n_csv)
         if not hasattr(self, '_im_names'):
             self._im_names = [str(i) for i in range(self.w_bins.shape[0])]
@@ -566,8 +609,11 @@ class ExperimentAPD(object):
                 fp.write('\n{}'.format(df_stat))
             logging.debug('statistic: \n%s', repr(df_stat))
 
+# =============================================================================
+# =============================================================================
 
-class ExperimentAPD_parallel(ExperimentAPD):
+
+class ExperimentAPDL_parallel(ExperimentAPDL):
     """
     run the experiment in multiple threads
     """
@@ -578,7 +624,7 @@ class ExperimentAPD_parallel(ExperimentAPD):
         :param {str: ...} dict_params:
         :param int nb_jobs:
         """
-        super(ExperimentAPD_parallel, self).__init__(dict_params)
+        super(ExperimentAPDL_parallel, self).__init__(dict_params)
         self.nb_jobs = nb_jobs
 
     def _load_images(self):
@@ -634,32 +680,8 @@ class ExperimentAPD_parallel(ExperimentAPD):
         # remove temporary image file
         # os.remove(p_imgs)
 
-
-def copy_dict(d):
-    """ alternative of deep copy without pickle on in first level
-    Nose testing - TypeError: can't pickle dict_keys objects
-
-    :param d:
-    :return:
-    >>> d1 = {'a': [0, 1]}
-    >>> d2 = copy_dict(d1)
-    >>> d2['a'].append(3)
-    >>> d1
-    {'a': [0, 1]}
-    >>> d2
-    {'a': [0, 1, 3]}
-    """
-    d_new = copy.deepcopy(d)
-    # d_new = {}
-    # for k in d:
-    #     tp = type(d[k])
-    #     if d[k] is None:
-    #         d_new[k] = None
-    #     elif is_list_like(d[k]):
-    #         d_new[k] = list(d[k])
-    #     else:
-    #         d_new[k] = tp(d[k])
-    return d_new
+# =============================================================================
+# =============================================================================
 
 
 def is_list_like(var):
@@ -703,7 +725,8 @@ def is_iterable(var):
     >>> is_iterable(range(2))
     True
     """
-    return (hasattr(var, '__iter__') and not isinstance(var, str))
+    res = (hasattr(var, '__iter__') and not isinstance(var, str))
+    return res
 
 
 def extend_list_params(list_params, name_param, list_options):
@@ -753,7 +776,8 @@ def simplify_params(dict_params):
     """
     d_params = {}
     for k in dict_params:
-        d_params[k] = dict_params[k][0] if is_list_like(dict_params[k]) else dict_params[k]
+        d_params[k] = dict_params[k][0] if is_list_like(dict_params[k]) \
+            else dict_params[k]
     return d_params
 
 
@@ -787,3 +811,31 @@ def expand_params(dict_params, simple_config=None):
             list_configs = extend_list_params(list_configs, k, dict_params[k])
 
     return list_configs
+
+
+def parse_config_txt(path_config):
+    """ open file with saved configuration and restore it
+
+    :param str path_config:
+    :return {str: str}:
+
+    >>> p_txt = 'sample_config.txt'
+    >>> with open(p_txt, 'w') as fp:
+    ...     fp.write('"my":   ')
+    >>> parse_config_txt(p_txt)
+    {}
+    >>> with open(p_txt, 'w') as fp:
+    ...     fp.write('"my":   123')
+    >>> parse_config_txt(p_txt)
+    {'my': 123}
+    >>> os.remove(p_txt)
+    """
+    if not os.path.exists(path_config):
+        logging.error('config file "%s" does not exist!', path_config)
+        return {}
+    with open(path_config, 'r') as fp:
+        text = ''.join(fp.readlines())
+    rec = re.compile('"(\S+)":\s+(.*)')
+    dict_config = {n: tl_data.convert_numerical(v)
+                   for n, v in rec.findall(text) if len(v) > 0}
+    return dict_config
