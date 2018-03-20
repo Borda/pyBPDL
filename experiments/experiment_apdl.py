@@ -821,11 +821,11 @@ def parse_config_txt(path_config):
 
     >>> p_txt = 'sample_config.txt'
     >>> with open(p_txt, 'w') as fp:
-    ...     fp.write('"my":   ')
+    ...     _= fp.write('"my":   ')  # it may return nb characters
     >>> parse_config_txt(p_txt)
     {}
     >>> with open(p_txt, 'w') as fp:
-    ...     fp.write('"my":   123')
+    ...     _= fp.write('"my":   123')  # it may return nb characters
     >>> parse_config_txt(p_txt)
     {'my': 123}
     >>> os.remove(p_txt)

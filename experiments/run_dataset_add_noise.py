@@ -63,7 +63,7 @@ def add_noise_image(img_name, path_in, path_out, noise_level):
     path_img = os.path.join(path_in, img_name)
     logging.debug('loading image: %s', path_img)
     name, img = tl_data.load_image(path_img)
-    img_noise = tl_data.add_image_prob_gauss_noise(img, noise_level)
+    img_noise = tl_data.add_image_fuzzy_gauss_noise(img, noise_level)
     tl_data.export_image(path_out, img_noise, name)
 
 

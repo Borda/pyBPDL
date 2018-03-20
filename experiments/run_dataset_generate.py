@@ -84,7 +84,7 @@ def generate_all(path_out=DEFAULT_PATH_APD,
                  nb_samples=NB_SAMPLES,
                  nb_jobs=NB_THREADS):
     """ generate complete dataset containing dictionary od patterns and also
-    input binary / probab. images with geometrical deformation and random noise
+    input binary / fuzzy images with geometrical deformation and random noise
 
     :param (int, int) atlas_size:
     :param int nb_samples:
@@ -118,13 +118,13 @@ def generate_all(path_out=DEFAULT_PATH_APD,
              tl_data.add_image_binary_noise, NOISE_BINARY)
 
     im_comb_prob = ds_apply(im_comb, path_dir('datasetProb_raw'),
-                            tl_data.image_transform_binary2prob, 0.5)
+                            tl_data.image_transform_binary2fuzzy, 0.5)
     im_def_prob = ds_apply(im_deform, path_dir('datasetProb_deform'),
-                           tl_data.add_image_prob_pepper_noise, 0.5)
+                           tl_data.add_image_fuzzy_pepper_noise, 0.5)
     ds_apply(im_comb_prob, path_dir('datasetProb_noise'),
-             tl_data.add_image_prob_pepper_noise, NOISE_PROB)
+             tl_data.add_image_fuzzy_pepper_noise, NOISE_PROB)
     ds_apply(im_def_prob, path_dir('datasetProb_defNoise'),
-             tl_data.add_image_prob_pepper_noise, NOISE_PROB)
+             tl_data.add_image_fuzzy_pepper_noise, NOISE_PROB)
 
 
 if __name__ == "__main__":

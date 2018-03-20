@@ -28,9 +28,9 @@ def initialise_weights_random(nb_imgs, nb_patterns, ratio_select=0.2, rand_seed=
     logging.debug('initialise weights for %i images and %i labels '
                  'as random selection', nb_imgs, nb_patterns)
     np.random.seed(rand_seed)
-    prob = np.random.random((nb_imgs, nb_patterns + 1))
-    weights = np.zeros_like(prob)
-    weights[prob <= ratio_select] = 1
+    fuzzy = np.random.random((nb_imgs, nb_patterns + 1))
+    weights = np.zeros_like(fuzzy)
+    weights[fuzzy <= ratio_select] = 1
     for i, w in enumerate(weights):
         if np.sum(w) == 0:
             weights[i, np.random.randint(0, nb_patterns + 1)] = 1

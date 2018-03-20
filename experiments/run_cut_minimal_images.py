@@ -20,11 +20,11 @@ import multiprocessing as mproc
 import tqdm
 import numpy as np
 
-
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
 
 NB_THREADS = int(mproc.cpu_count() * .75)
+NAME_JSON_BBOX = 'cut_bounding_box.json'
 PARAMS = {
     'path_in': os.path.join(tl_data.update_path('images/imaginal_discs/gene'), '*.png'),
     'path_out': tl_data.update_path('images/imaginal_discs/gene_cut'),
@@ -69,7 +69,7 @@ def find_min_bbox(img, threshold=0):
     return bbox
 
 
-def export_bbox_json(path_dir, bbox, name='bounding_box.json'):
+def export_bbox_json(path_dir, bbox, name=NAME_JSON_BBOX):
     d_bbox = dict(zip(['left', 'top', 'right', 'bottom'], bbox))
     path_json = os.path.join(path_dir, name)
     logging.info('exporting JSON: %s', path_json)

@@ -767,7 +767,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     return imgs_new
 
 
-def image_transform_binary2prob(im, coef=0.1):
+def image_transform_binary2fuzzy(im, coef=0.1):
     """ convert a binary image to probability while computing distance function
     on the binary function (contours)
 
@@ -783,23 +783,23 @@ def image_transform_binary2prob(im, coef=0.1):
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-    >>> img_prob = image_transform_binary2prob(img, coef=0.1)
-    >>> np.round(img_prob[2, :], 2).tolist() # doctest: +NORMALIZE_WHITESPACE
+    >>> img_fuzzy = image_transform_binary2fuzzy(img, coef=0.1)
+    >>> np.round(img_fuzzy[2, :], 2).tolist() # doctest: +NORMALIZE_WHITESPACE
     [0.43, 0.45, 0.48, 0.52, 0.55, 0.55, 0.52, 0.48, 0.45, 0.43, 0.4, 0.38,
      0.35, 0.33, 0.31]
     """
     logging.debug('... transform binary image to probability')
     im_dist = ndimage.distance_transform_edt(im)
     im_dist -= ndimage.distance_transform_edt(1 - im)
-    im_prob = 1. / (1. + np.exp(-coef * im_dist))
+    im_fuzzy = 1. / (1. + np.exp(-coef * im_dist))
     # plt.subplot(1,3,1), plt.imshow(im)
     # plt.subplot(1,3,2), plt.imshow(im_dist)
-    # plt.subplot(1,3,3), plt.imshow(im_prob)
+    # plt.subplot(1,3,3), plt.imshow(im_fuzzy)
     # plt.show()
-    return im_prob
+    return im_fuzzy
 
 
-def add_image_prob_pepper_noise(im, ration=0.1, rand_seed=None):
+def add_image_fuzzy_pepper_noise(im, ration=0.1, rand_seed=None):
     """ generate and add a continues noise to an image
 
     :param ndarray im: np.array<height, width> input float image
@@ -809,7 +809,7 @@ def add_image_prob_pepper_noise(im, ration=0.1, rand_seed=None):
 
     >>> img = np.zeros((5, 9), dtype=int)
     >>> img[1:4, 2:7] = 1
-    >>> img = add_image_prob_pepper_noise(img, ration=0.5, rand_seed=0)
+    >>> img = add_image_fuzzy_pepper_noise(img, ration=0.5, rand_seed=0)
     >>> np.round(img, 2)
     array([[ 0.1 ,  0.43,  0.21,  0.09,  0.15,  0.29,  0.12,  0.  ,  0.  ],
            [ 0.23,  0.  ,  0.94,  0.86,  1.  ,  1.  ,  1.  ,  0.  ,  0.  ],
@@ -829,7 +829,7 @@ def add_image_prob_pepper_noise(im, ration=0.1, rand_seed=None):
     return im_noise
 
 
-def add_image_prob_gauss_noise(im, sigma=0.1, rand_seed=None):
+def add_image_fuzzy_gauss_noise(im, sigma=0.1, rand_seed=None):
     """ generate and add a continues noise to an image
 
     :param ndarray im: np.array<height, width> input float image
@@ -839,7 +839,7 @@ def add_image_prob_gauss_noise(im, sigma=0.1, rand_seed=None):
 
     >>> img = np.zeros((5, 9), dtype=int)
     >>> img[1:4, 2:7] = 1
-    >>> img = add_image_prob_gauss_noise(img, sigma=0.5, rand_seed=0)
+    >>> img = add_image_fuzzy_gauss_noise(img, sigma=0.5, rand_seed=0)
     >>> np.round(img, 2)
     array([[ 0.88,  0.2 ,  0.49,  1.  ,  0.93,  0.  ,  0.48,  0.  ,  0.  ],
            [ 0.21,  0.07,  1.  ,  1.  ,  1.  ,  1.  ,  1.  ,  0.75,  0.  ],
@@ -930,7 +930,7 @@ def dataset_load_images(path_imgs, nb_spls=None, nb_jobs=1):
     return imgs, im_names
 
 
-def load_image(path_img, prob_val=True):
+def load_image(path_img, fuzzy_val=True):
     """ loading image
 
     :param str path_img:
@@ -945,7 +945,7 @@ def load_image(path_img, prob_val=True):
     './testing_image.png'
     >>> os.path.exists(path_img)
     True
-    >>> _, img_new = load_image(path_img, prob_val=False)
+    >>> _, img_new = load_image(path_img, fuzzy_val=False)
     >>> np.array_equal(img, img_new)
     True
     >>> os.remove(path_img)
@@ -958,7 +958,7 @@ def load_image(path_img, prob_val=True):
     './testing_image.tiff'
     >>> os.path.exists(path_img)
     True
-    >>> _, img_new = load_image(path_img, prob_val=False)
+    >>> _, img_new = load_image(path_img, fuzzy_val=False)
     >>> img_new.shape
     (5, 20, 20)
     >>> np.array_equal(img, img_new)
@@ -981,7 +981,7 @@ def load_image(path_img, prob_val=True):
 
     # return to original logging level
 
-    if prob_val and img.max() > 0:
+    if fuzzy_val and img.max() > 0:
         img = (img / float(img.max()))
     return n_img, img
 

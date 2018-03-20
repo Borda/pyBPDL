@@ -560,7 +560,7 @@ def reconstruct_samples(atlas, w_bins):
 
 
 def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
-                          ptn_compact=REINIT_PATTERN_COMPACT, thr_prob=0.5):
+                          ptn_compact=REINIT_PATTERN_COMPACT, thr_fuzzy=0.5):
     """ estimate new pattern that occurs in input images and is not cover
     by any label in actual atlas, remove collision with actual atlas
 
@@ -605,7 +605,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     id_max = np.argmax(diffs)
     # im_diff = np.logical_and(imgs[id_max] == True, imgs_reconst[id_max] == False)
     # take just positive differences
-    im_diff = (imgs[id_max] - imgs_reconst[id_max]) > thr_prob
+    im_diff = (imgs[id_max] - imgs_reconst[id_max]) > thr_fuzzy
     if ptn_compact:  # WaterShade
         logging.debug('.. reinit pattern using WaterShade')
         # im_diff = morphology.opening(im_diff, morphology.disk(3))
