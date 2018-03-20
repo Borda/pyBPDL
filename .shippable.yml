@@ -49,6 +49,7 @@ script:
   - python experiments/run_dataset_add_noise.py -p images
   - nosetests experiments -v --exe --with-doctest --with-xunit --xunit-file=shippable/testresults/nosetests.xml
 
+  - python experiments/run_cut_minimal_images.py -in "images/imaginal_discs/gene/*.png" -out images/imaginal_discs/gene_cut
   - python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
   - python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-3/image/*.png" -out images/ovary_stage-3/gene
 

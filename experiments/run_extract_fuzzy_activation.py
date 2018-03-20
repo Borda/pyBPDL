@@ -13,7 +13,6 @@ Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import sys
 import glob
-import argparse
 import logging
 import multiprocessing as mproc
 from functools import partial
@@ -31,32 +30,13 @@ from scipy import ndimage
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
+import experiments.run_cut_minimal_images as r_cut
 
 NB_THREADS = int(mproc.cpu_count() * .75)
-PATH_IN = os.path.join(tl_data.update_path('images/ovary_stage-3/image'), '*.png')
-PATH_OUT = tl_data.update_path('images/ovary_stage-3/gene')
-
-
-def args_parse_params():
-    """ create simple arg parser with default values (input, output)
-
-    :param {str: ...} dict_params:
-    :return: object argparse<...>
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-in', '--path_in', type=str, required=True, default=PATH_IN,
-                        help='path to the folder with input image dataset')
-    parser.add_argument('-out', '--path_out', type=str, required=True, default=PATH_OUT,
-                        help='path to the output with experiment results')
-    parser.add_argument('--nb_jobs', type=int, required=False,
-                        default=NB_THREADS, help='number of parallel processes')
-
-    args = vars(parser.parse_args())
-    for k in (k for k in args if k.startswith('path_')):
-        p = tl_data.update_path(os.path.dirname(args[k]))
-        assert os.path.exists(p), 'missing: %s' % p
-        args[k] = os.path.join(p, os.path.basename(args[k]))
-    return args
+PARAMS = {
+    'path_in': os.path.join(tl_data.update_path('images/ovary_stage-3/image'), '*.png'),
+    'path_out': tl_data.update_path('images/ovary_stage-3/gene'),
+}
 
 
 def extract_activation(path_img, path_out):
@@ -95,6 +75,11 @@ def extract_activation(path_img, path_out):
 
 
 def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
+    assert os.path.isdir(os.path.dirname(path_pattern_in)), \
+        'missing: %s' % path_pattern_in
+    assert os.path.isdir(os.path.dirname(path_out)), \
+        'missing: %s' % os.path.dirname(path_out)
+
     if not os.path.isdir(path_out):
         logging.info('create dir: %s', path_out)
         os.mkdir(path_out)
@@ -114,7 +99,9 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     logging.info('running...')
-    params = args_parse_params()
+
+    params = r_cut.args_parse_params(PARAMS)
     main(params['path_in'], params['path_out'],
          nb_jobs=params['nb_jobs'])
+
     logging.info('DONE')

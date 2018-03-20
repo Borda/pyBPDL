@@ -98,10 +98,23 @@ For extracting gene activations we used unsupervised segmentation because the co
 ![gene activation](images/imaginal_discs/gene/insitu109365.png) 
 -->
 
+To cut the set of images to the minimal size with reasonable infomation (basicaly removing bacround starting from image boundaries) you can use following scirpt
+
+```bash
+python experiments/run_cut_minimal_images.py \
+    -in "images/imaginal_discs/gene/*.png" \
+    -out images/imaginal_discs/gene_cut -thr 0.001
+```
+
 
 **Drosophila ovary**
 
 Here the gene activation is presented in separate channel - green. so we just take this information and normalise it. Further we assume that this activation is fuzzy based on intensities on the green channel.
+
+```bash
+python experiments/run_extract_fuzzy_activation.py \
+    -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
+```
 
 Ovary in development stage 2
 
