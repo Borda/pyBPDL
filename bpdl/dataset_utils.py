@@ -26,7 +26,7 @@ import tqdm
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy import ndimage
+from scipy import ndimage, stats
 from skimage import io, draw, transform, filters
 from PIL import Image
 
@@ -120,7 +120,7 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
 
     :param (int, int) im_size: image size 2D or 3D
     :param float coef: deformation
-    :param (int, int) grid_size: size of deformation frid
+    :param (int, int) grid_size: size of deformation grid
     :return:
 
     >>> tf = create_elastic_deform_2d((100, 100))
@@ -732,17 +732,18 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
 
     >>> img = np.zeros((10, 5))
     >>> dir_name = 'sample_dataset_dir'
-    >>> dataset_apply_image_function([img], dir_name, image_deform_elastic)
+    >>> im = dataset_apply_image_function([img], dir_name, image_deform_elastic)
+    >>> im  # doctest: +NORMALIZE_WHITESPACE
     [array([[0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0]], dtype=uint8)]
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0]], dtype=uint8)]
     >>> os.path.isdir(dir_name)
     True
     >>> shutil.rmtree(dir_name, ignore_errors=True)
@@ -1138,6 +1139,46 @@ def convert_numerical(s):
         return float(s)
     else:
         return s
+
+
+def generate_gauss_2d(mean, std, im_size=None, norm=None):
+    """ Generating a Gaussian distribution in 2D image
+
+    :param [int] means:
+    :param [[int]] covs:
+    :param (int, int) im_size:
+    :return ndarray:
+
+    >>> im = generate_gauss_2d([4, 5], [[1, 0], [0, 2]], (8, 10), norm=1.)
+    >>> np.round(im, 1)  # doctest: +NORMALIZE_WHITESPACE
+    array([[ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
+           [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
+           [ 0. ,  0. ,  0. ,  0.1,  0.1,  0.1,  0.1,  0.1,  0. ,  0. ],
+           [ 0. ,  0.1,  0.2,  0.4,  0.5,  0.6,  0.5,  0.4,  0.2,  0.1],
+           [ 0. ,  0.1,  0.3,  0.6,  0.9,  1. ,  0.9,  0.6,  0.3,  0.1],
+           [ 0. ,  0.1,  0.2,  0.4,  0.5,  0.6,  0.5,  0.4,  0.2,  0.1],
+           [ 0. ,  0. ,  0. ,  0.1,  0.1,  0.1,  0.1,  0.1,  0. ,  0. ],
+           [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ]])
+    >>> im = generate_gauss_2d([2, 3], [[1., 0], [0, 1.2]])
+    >>> np.round(im, 2)  # doctest: +NORMALIZE_WHITESPACE
+    array([[ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ],
+           [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
+           [ 0.01,  0.03,  0.09,  0.13,  0.09,  0.03,  0.01,  0.  ],
+           [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
+           [ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ]])
+    """
+    covar = np.array(std) ** 2
+    if im_size is None:
+        im_size = np.array(mean) + covar.diagonal() * 3
+
+    x, y = np.mgrid[0:im_size[0], 0:im_size[1]]
+    pos = np.rollaxis(np.array([x, y]), 0, 3)
+    gauss = stats.multivariate_normal(mean, covar)
+    pdf = gauss.pdf(pos)
+
+    if norm is not None:
+        pdf *= norm / np.max(pdf)
+    return pdf
 
 
 # def dataset_convert_nifti(path_in, path_out, img_suffix=IMAGE_POSIX):

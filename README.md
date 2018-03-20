@@ -64,7 +64,7 @@ We have script `run_dataset_generate.py` which generate dataset with given confi
   3. **deform** images from (1) with applyed small elastic deformation
   4. **deform&noise** images from (3) with added binary noise
   
-both for binary and probabilistic images.  
+both for binary and fuzzy images.  
 Some parameters like number of patterns and image size (2D or 3D) are parameters passed to the script
 Other parameters like noise and deformation ratio are specified in the script.
   
