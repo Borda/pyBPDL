@@ -74,14 +74,28 @@ python experiments/run_dataset_generate.py \
     --nb_samples 600 --nb_patterns 9 --image_size 128 128
 ```
 
+**Sample atlases**
+
+![atlases](figures/synth_atlases.png)
+
+**Sample binary images**
+
+![binary samples](figures/synth_samples_binary.png)
+
+**Sample fuzzy images**
+
+![fuzzy samples](figures/synth_samples_fuzzy.png)
+
 For adding Gaussian noise with given sigmas use following script:
   
 ```bash
 python experiments/run_dataset_add_noise.py \
     -p ~/Medical-drosophila/synthetic_data \
     -d apdDataset_vX --sigmas 0.01 0.1 0.2
-
 ```
+
+![gauss noise](figures/synth_gauss-noise.png)
+
  
 ### Real images
 
