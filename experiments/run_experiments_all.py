@@ -72,7 +72,7 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPDL):
 
             atlas_ptns = self.components.reshape((-1, ) + self.imgs[0].shape)
             rct_vec = np.dot(self.fit_result, self.components)
-        except:
+        except Exception:
             logging.warning('crash in "_perform_linear_combination" in %s',
                             self.__class__.__name__)
             logging.warning(traceback.format_exc())
@@ -83,7 +83,8 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPDL):
     def estim_atlas_as_argmax(self, atlas_components, bg_threshold=0.1):
         """ take max pattern with max value
 
-        :param [] atlas_components:
+        :param [ndarray] atlas_components:
+        :param float bg_threshold: setting the backround
         :return: np.array<height, width>
         """
         # in case the method crash before and the attribute doe not exst
@@ -103,7 +104,7 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPDL):
             % (atlas.shape, atlas_components.shape)
         return atlas
 
-    def estim_atlas_as_unique_sum(self, atlas_ptns):
+    def _estim_atlas_as_unique_sum(self, atlas_ptns):
         """
 
         :param [] atlas_ptns:
@@ -121,7 +122,7 @@ class ExperimentLinearCombineBase(expt_apd.ExperimentAPDL):
         :return: np.array<height, width>
         """
         atlas = self.estim_atlas_as_argmax(atlas_ptns)
-        # atlas = self.estim_atlas_as_unique_sum(atlas_ptns)
+        # atlas = self._estim_atlas_as_unique_sum(atlas_ptns)
         self.atlas = segmentation.relabel_sequential(atlas)[0]
 
     def _binarize_img_reconstruction(self, img_rct, thr=0.5):

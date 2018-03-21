@@ -134,10 +134,10 @@ def parse_experiment_folder(path_expt, params):
     plt.imsave(os.path.splitext(path_atlas_gt)[0] + '_visual.png', atlas_gt)
 
     df_res_new = pd.DataFrame()
-    for idx, row in df_res.iterrows():
+    for _, row in df_res.iterrows():
         dict_row = dict(row)
-        if not isinstance(idx, str) and idx - int(idx) == 0:
-            idx = int(idx)
+        # if not isinstance(idx, str) and idx - int(idx) == 0:
+        #     idx = int(idx)
         atlas_name = NAME_PATTERN_ATLAS % dict_row['name_suffix']
         atlas = load_atlas(os.path.join(path_expt, atlas_name))
         # try to find the mest match among patterns / labels
@@ -164,7 +164,7 @@ def try_parse_folder(path_expt, params):
     """ just a wrapper to cover all paring as try  """
     try:
         parse_experiment_folder(path_expt, params)
-    except:
+    except Exception:
         logging.warning(traceback.format_exc())
 
 

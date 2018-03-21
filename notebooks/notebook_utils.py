@@ -52,7 +52,7 @@ def show_sample_data_as_imgs(imgs, im_shape, nb_rows=5, nb_cols=3, bool_clr=Fals
     for i in range(int(nb_spls)):
         im = imgs[i, :].reshape(im_shape)
         # u_px = Counter(im)
-        unique_px = sorted(np.unique(im), reverse=True)
+        # unique_px = sorted(np.unique(im), reverse=True)
         plt.subplot(nb_rows, nb_cols, i + 1)
         if bool_clr:
             plt.imshow(im, interpolation='nearest'), plt.colorbar()
@@ -88,7 +88,7 @@ def bpdl_w_update_param(w_params, uq_params):
             try:
                 float(uq_params[n][0])
                 vals = ['v_'+str(v) for v in uq_params[n]]
-            except:
+            except Exception:
                 vals = uq_params[n]
             w_params[n].options = dict(zip(vals, uq_params[n]))
             if len(uq_params[n]) == 1:
@@ -114,12 +114,14 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
                for n in ['gc_reinit', 'init_tp', 'ptn_split', 'gc_regul']}
     w_range = {n: w_is(min=0, max=0, description=n)
                for n in ['nb_lbs', 'samples']}
+
     def colect_params():
         params = {n: w_source[n].value for n in w_source}
         params.update({n: w_param[n].value for n in w_param})
         params.update({n: w_range[n].value for n in w_range})
         round_range_val(df_data, params, 'nb_lbs')
         return params
+
     def show_results(**kwargs):
         params = colect_params()
         print 'params:', params
@@ -134,6 +136,7 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
         df_filter, uq_range['samples'] = find_experiment(df_data, filter_param)
         bpdl_w_update_range(w_range, uq_range)
         bpdl_show_results(df_filter, uq_range['samples'], params['samples'], tp)
+
     # show the interact
     widgets.interact(show_results, w=w_source['dataset'])
     widgets.interact(show_results, w=w_source['sub_dataset'])

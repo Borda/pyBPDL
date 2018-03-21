@@ -184,9 +184,9 @@ def edges_in_image_plane(im_size):
     idxs = np.arange(np.product(im_size))
     idxs = idxs.reshape(im_size)
     # logging.debug(idxs)
-    eA = idxs[:, :-1].ravel().tolist() + idxs[:-1, :].ravel().tolist()
-    eB = idxs[:, 1:].ravel().tolist() + idxs[1:, :].ravel().tolist()
-    edges = np.array([eA, eB]).transpose()
+    edge_a = idxs[:, :-1].ravel().tolist() + idxs[:-1, :].ravel().tolist()
+    edge_b = idxs[:, 1:].ravel().tolist() + idxs[1:, :].ravel().tolist()
+    edges = np.array([edge_a, edge_b]).transpose()
     logging.debug('edges for image plane are shape {}'.format(edges.shape))
     return edges
 
@@ -224,18 +224,18 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
         return labels
 
     labeling_sum = compute_positive_cost_images_weights(imgs, ptn_weights)
-    unary_cost = np.array(-1 * labeling_sum , dtype=np.int32)
+    unary_cost = np.array(-1 * labeling_sum, dtype=np.int32)
     logging.debug('graph unaries potentials %s: \n %s', repr(unary_cost.shape),
-                                        repr(np.histogram(unary_cost, bins=10)))
+                  repr(np.histogram(unary_cost, bins=10)))
     # original and the right way..
     pairwise = (1 - np.eye(labeling_sum.shape[-1])) * coef
-    pairwise_cost = np.array(pairwise , dtype=np.int32)
+    pairwise_cost = np.array(pairwise, dtype=np.int32)
     logging.debug('graph pairwise coefs %s', repr(pairwise_cost.shape))
     # run GraphCut
     try:
         labels = cut_grid_graph_simple(unary_cost, pairwise_cost,
                                        algorithm='expansion')
-    except:
+    except Exception:
         logging.warning(traceback.format_exc())
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
@@ -280,7 +280,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
 
     u_cost = compute_relative_penalty_images_weights(imgs, ptn_weights)
     # u_cost = 1. / (labelingSum +1)
-    unary_cost = np.array(u_cost , dtype=np.float64)
+    unary_cost = np.array(u_cost, dtype=np.float64)
     unary_cost = unary_cost.reshape(-1, u_cost.shape[-1])
     logging.debug('graph unaries potentials %s: \n %s', repr(unary_cost.shape),
                   repr(np.histogram(unary_cost, bins=10)))
@@ -292,7 +292,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
 
     # original and the right way...
     pairwise = (1 - np.eye(u_cost.shape[-1])) * coef
-    pairwise_cost = np.array(pairwise , dtype=np.float64)
+    pairwise_cost = np.array(pairwise, dtype=np.float64)
     logging.debug('graph pairwise coefs %s', repr(pairwise_cost.shape))
 
     if init_atlas is None:
@@ -306,7 +306,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
         labels = cut_general_graph(edges, edge_weights, unary_cost, pairwise_cost,
                                    algorithm='expansion', init_labels=init_labels,
                                    n_iter=NB_GRAPH_CUT_ITER)
-    except:
+    except Exception:
         logging.warning(traceback.format_exc())
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
@@ -386,7 +386,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     :param ndarray init_weights: np.array<nb_imgs, nb_lbs>
     :param str out_prefix:
     :param str out_dir: path to the results directory
-    :param rnd_seed: random initialization
+    :param rand_seed: random initialization
     :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -455,6 +455,7 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
 
     :param [ndarray] imgs: list of images np.array<height, width>
     :param ndarray atlas: used atlas of np.array<height, width>
+    :param bool overlap_major: whether it has majority overlap the pattern
     :return: np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -557,6 +558,9 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
         is less then this given threshold. eg for -1 never until max nb iters
     :param int max_iter: max namber of iteration
     :param bool gc_reinit: wether use atlas from previous step as init for act.
+    :param bool ptn_compact: enforce compactness of patterns
+    :param bool ptn_split: split the connected components
+    :param bool overlap_major: whether it has majority overlap the pattern
     :param str out_prefix:
     :param str out_dir: path to the results directory
     :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
@@ -636,7 +640,7 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
                           step_diff, tol)
             break
     logging.info('APDL: terminated with iter %i / %i and step diff %f <? %f',
-                 iter, max_iter, step_diff, tol)
+                 len(list_crit), max_iter, (list_crit[-1] - list_crit[-2]), tol)
     logging.debug('criterion evolved:\n %s', repr(list_crit))
     # atlas = sk_image.relabel_sequential(atlas)[0]
     w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas) for img in imgs]

@@ -25,7 +25,8 @@ def initialise_atlas_random(im_size, nb_patterns, rand_seed=None):
     """ initialise atlas with random labels
 
     :param (int, int) im_size: size of image
-    :param int label_max: number of labels
+    :param int nb_patterns: number of labels
+    :param rand_seed: random initialization
     :return: np.array<height, width>
 
     >>> initialise_atlas_random((6, 12), 4, rand_seed=0)
@@ -48,7 +49,8 @@ def initialise_atlas_grid(im_size, nb_patterns, rand_seed=None):
     """ initialise atlas with a grid schema
 
     :param (int, int) im_size: size of image
-    :param int nb_patterns: number of labels
+    :param int nb_patterns: number of pattern in the atlas to be set
+    :param rand_seed: random initialisation
     :return: np.array<height, width>
 
     >>> initialise_atlas_grid((6, 12), 4, rand_seed=0)
@@ -70,7 +72,7 @@ def initialise_atlas_grid(im_size, nb_patterns, rand_seed=None):
     np.random.seed(rand_seed)
     labels = np.random.permutation(range(1, nb_patterns + 1)).tolist()
     block_size = np.ceil(np.array(im_size) / np.sqrt(nb_patterns)).astype(int)
-    img = np.zeros((im_size), dtype=int)
+    img = np.zeros(im_size, dtype=int)
     for i in range(0, im_size[0], block_size[0]):
         for j in range(0, im_size[1], block_size[1]):
             label = labels.pop(0) if len(labels) > 0 else 0
@@ -83,7 +85,7 @@ def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     each row contains all labels (permutation)
 
     :param (int, int) im_size: size of image
-    :param int nb_patterns: number of patters, labels - 1
+    :param int nb_patterns: number of pattern in the atlas to be set
     :param float coef:
     :param rand_seed: random initialization
     :return: np.array<height, width>
@@ -109,6 +111,7 @@ def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     """
     logging.debug('initialise atlas %s as grid labeling', repr(im_size))
     max_label = int(nb_patterns * coef)
+    assert max_label > 0, 'at least some labels should be reuested'
     # reinit seed to have random samples even in the same time
     np.random.seed(rand_seed)
     block_size = np.ceil(np.array(im_size) / float(max_label))
@@ -123,10 +126,12 @@ def initialise_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
                 row = b
             else:
                 row = np.hstack((row, b))
-        if label == 0: mosaic = row
-        else: mosaic = np.vstack((mosaic, row))
+        if label == 0:
+            mosaic = row
+        else:
+            mosaic = np.vstack((mosaic, row))
     logging.debug('generated mosaic %s with labeling %s',
-                 repr(mosaic.shape), repr(np.unique(mosaic).tolist()))
+                  repr(mosaic.shape), repr(np.unique(mosaic).tolist()))
     img_init = mosaic[:im_size[0], :im_size[1]]
     img_init = np.remainder(img_init, nb_patterns + 1)
     return np.array(img_init, dtype=np.int)
@@ -138,9 +143,9 @@ def initialise_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
     1] sum over all images, 2] Otsu thresholding, 3] watershed
 
     :param [ndarray] imgs: list of images np.array<height, width>
-    :param int nb_patterns: number of labels
-    :param str bg_type: set weather the Otsu backround sould be filled randomly
-    :param float bg_threshhold:
+    :param int nb_patterns: number of pattern in the atlas to be set
+    :param str bg_type: set weather the Otsu backround should be filled randomly
+    :param float bg_threshold: threshold foe binarisation
     :return: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -218,21 +223,21 @@ def detect_peaks(image, struct=(2, 2)):
     """
     # define an 8-connected neighborhood
     neighborhood = ndi.morphology.generate_binary_structure(*struct)
-    #apply the local maximum filter; all pixel of maximal value
-    #in their neighborhood are set to 1
+    # apply the local maximum filter; all pixel of maximal value
+    # in their neighborhood are set to 1
     local_max = ndi.filters.maximum_filter(image, footprint=neighborhood) == image
-    #local_max is a mask that contains the peaks we are
-    #looking for, but also the background.
-    #In order to isolate the peaks we must remove the background from the mask.
-    #we create the mask of the background
+    # local_max is a mask that contains the peaks we are
+    # looking for, but also the background.
+    # In order to isolate the peaks we must remove the background from the mask.
+    # we create the mask of the background
     background = (image == 0)
     # a little technicality: we must erode the background in order to
-    #successfully subtract it form local_max, otherwise a line will
-    #appear along the background border (artifact of the local maximum filter)
+    # successfully subtract it form local_max, otherwise a line will
+    # appear along the background border (artifact of the local maximum filter)
     eroded_background = ndi.morphology.binary_erosion(
         background, structure=neighborhood, border_value=1)
-    #we obtain the final mask, containing only peaks,
-    #by removing the background from the local_max mask (xor operation)
+    # we obtain the final mask, containing only peaks,
+    # by removing the background from the local_max mask (xor operation)
     detected_peaks = local_max ^ eroded_background
     # label each peak by single label
     labeled_peaks = measure.label(detected_peaks)
@@ -245,7 +250,8 @@ def initialise_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
     1] sum over all images, 2]watershed
 
     :param [ndarray] imgs: list of input images np.array<height, width>
-    :param int nb_labels:
+    :param int nb_patterns: number of pattern in the atlas to be set
+    :param float bg_threshhold: threshold foe binarisation
     :return: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -295,7 +301,7 @@ def convert_lin_comb_patterns_2_atlas(atlas_components, used_components,
     atlas = np.argmax(atlas_components[idxs, ...], axis=0) + 1
     # filter small values
     atlas[atlas_mean < bg_threshold] = 0
-    # atlas = self.estim_atlas_as_unique_sum(atlas_ptns)
+    # atlas = self._estim_atlas_as_unique_sum(atlas_ptns)
     atlas = segmentation.relabel_sequential(atlas)[0]
     atlas = np.remainder(atlas, len(used_components))
     return atlas
@@ -305,7 +311,7 @@ def initialise_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
-    :param int nb_patterns: max number of estimated atlases
+    :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
     :return np.array: estimated atlas
@@ -340,7 +346,7 @@ def initialise_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
 
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
-    except:
+    except Exception:
         # logging.warning('CRASH: %s' % initialise_atlas_nmf.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
@@ -351,7 +357,7 @@ def initialise_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
-    :param int nb_patterns: max number of estimated atlases
+    :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
     :return np.array: estimated atlas
@@ -387,7 +393,7 @@ def initialise_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
 
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
-    except:
+    except Exception:
         # logging.warning('CRASH: %s' % initialise_atlas_fast_ica.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
@@ -398,7 +404,7 @@ def initialise_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
-    :param int nb_patterns: max number of estimated atlases
+    :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
     :return np.array: estimated atlas
@@ -432,7 +438,7 @@ def initialise_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
 
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
-    except:
+    except Exception:
         # logging.warning('CRASH: %s' % initialise_atlas_sparse_pca.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
@@ -443,7 +449,7 @@ def initialise_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
     :param [np.array] imgs: list of input images
-    :param int nb_patterns: max number of estimated atlases
+    :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
     :return np.array: estimated atlas
@@ -480,7 +486,7 @@ def initialise_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
 
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
-    except:
+    except Exception:
         logging.warning('CRASH: %s' % initialise_atlas_dict_learn.__name__)
         logging.warning(traceback.format_exc())
         atlas = np.zeros(imgs[0].shape, dtype=int)
@@ -565,8 +571,11 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     by any label in actual atlas, remove collision with actual atlas
 
     :param [ndarray] imgs: list of input images np.array<height, width>
+    :param [ndarray] imgs_reconst: list of reconstructed images np.array<height, width>
     :param ndarray atlas: np.array<height, width>
     :param [int] diffs: list of differences among input and reconstruct images
+    :param bool ptn_compact: enforce compactness of patterns
+    :param float thr_fuzzy:
     :return: np.array<height, width> binary single pattern
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -614,7 +623,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
         try:
             peaks = detect_peaks(dist)
             labels = morphology.watershed(-dist, peaks, mask=im_diff)
-        except:
+        except Exception:
             logging.warning(traceback.format_exc())
             labels = None
     else:
@@ -639,7 +648,7 @@ def insert_new_pattern(imgs, imgs_reconst, atlas, label,
     :param [ndarray] imgs: list of input images np.array<height, width>
     :param [ndarray] imgs_reconst: list of reconstructed images np.array<height, width>
     :param ndarray atlas: np.array<height, width>
-    :param int label:
+    :param bool ptn_compact: enforce compactness of patterns
     :return: np.array<height, width> updated atlas
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -677,7 +686,8 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     :param [ndarray] imgs: list of input images np.array<height, width>
     :param ndarray w_bins: binary weigths np.array<nb_imgs, nb_lbs>
     :param ndarray atlas: image np.array<height, width>
-    :param int label_max:
+    :param int label_max: set max number of components
+    :param bool ptn_compact: enforce compactness of patterns
     :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)

@@ -67,8 +67,9 @@ def update_path(path_file, lim_depth=5, absolute=True):
     elif path_file.startswith('~'):
         path_file = os.path.expanduser(path_file)
     else:
-        for depth in range(lim_depth):
-            if os.path.exists(path_file): break
+        for _ in range(lim_depth):
+            if os.path.exists(path_file):
+                break
             path_file = os.path.join('..', path_file)
     if absolute:
         path_file = os.path.abspath(path_file)
@@ -76,7 +77,7 @@ def update_path(path_file, lim_depth=5, absolute=True):
 
 
 def io_imread(path_img):
-    """ jsut a wrapper to suppers debug messages from the PIL function
+    """ just a wrapper to suppers debug messages from the PIL function
     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
 
     :param str path_img:
@@ -90,7 +91,7 @@ def io_imread(path_img):
 
 
 def image_open(path_img):
-    """ jsut a wrapper to suppers debug messages from the PIL function
+    """ just a wrapper to suppers debug messages from the PIL function
     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
 
     :param str path_img:
@@ -104,10 +105,11 @@ def image_open(path_img):
 
 
 def io_imsave(path_img, img):
-    """ jsut a wrapper to suppers debug messages from the PIL function
+    """ just a wrapper to suppers debug messages from the PIL function
     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
 
     :param str path_img:
+    :param ndarray img:
     """
     log_level = logging.getLogger().getEffectiveLevel()
     logging.getLogger().setLevel(logging.INFO)
@@ -121,6 +123,7 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
     :param (int, int) im_size: image size 2D or 3D
     :param float coef: deformation
     :param (int, int) grid_size: size of deformation grid
+    :param rand_seed: random initialization
     :return:
 
     >>> tf = create_elastic_deform_2d((100, 100))
@@ -149,6 +152,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     :param ndarray im: image np.array<height, width>
     :param float coef: a param describing the how much it is deformed (0 = None)
     :param (int, int) grid_size: is size of elastic grid for deformation
+    :param rand_seed: random initialization
     :return ndarray: np.array<height, width>
 
     >>> img = np.zeros((10, 15), dtype=int)
@@ -183,7 +187,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
     """
     logging.debug('deform image plane by elastic transform with grid %s',
-                 repr(grid_size))
+                  repr(grid_size))
     # logging.debug(im.shape)
     im_size = im.shape[-2:]
     tform = create_elastic_deform_2d(im_size, coef, grid_size, rand_seed)
@@ -200,6 +204,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
         img = np.array(im_stack)
     else:
         logging.error('not supported image dimension - %s' % repr(im.shape))
+        img = im.copy()
     img = np.array(img, dtype=np.uint8)
     return img
 
@@ -209,6 +214,7 @@ def generate_rand_center_radius(img, ratio, rand_seed=None):
 
     :param ndarray img: np.array<height, width>
     :param float ratio:
+    :param rand_seed: random initialization
     :return (int, ), (float, ):
 
     >>> generate_rand_center_radius(np.zeros((50, 50)), 0.2, rand_seed=0)
@@ -233,6 +239,7 @@ def draw_rand_ellipse(img, ratio=0.1, color=255, rand_seed=None):
     :param ndarray img: np.array<height, width> while None, create empty one
     :param float ratio: defining size of the ellipse to the image plane
     :param int color: value (0, 255) of an image intensity
+    :param rand_seed: random initialization
     :return: np.array<height, width>
 
     >>> img = draw_rand_ellipse(np.zeros((10, 15)), ratio=0.3, color=1, rand_seed=0)
@@ -262,6 +269,7 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     :param float ratio: defining size of the ellipse to the image plane
     :param ndarray img: np.array<depth, height, width> image / volume
     :param int clr: value (0, 255) of an image intensity
+    :param rand_seed: random initialization
     :return: np.array<depth, height, width>
 
     >>> img = draw_rand_ellipsoid(np.zeros((10, 10, 5)), clr=255, rand_seed=0)
@@ -280,9 +288,9 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     logging.debug('draw an ellipse to an image with value %i', clr)
     center, radius = generate_rand_center_radius(img, ratio, rand_seed)
     vec_dims = [np.arange(0, img.shape[i]) - center[i] for i in range(img.ndim)]
-    Z, X, Y = np.meshgrid(*vec_dims, indexing='ij')
+    mesh_z, mesh_x, mesh_y = np.meshgrid(*vec_dims, indexing='ij')
     a, b, c = radius
-    dist = (Z ** 2 / a ** 2) + (X ** 2 / b ** 2) + (Y ** 2 / c ** 2)
+    dist = (mesh_z ** 2 / a ** 2) + (mesh_x ** 2 / b ** 2) + (mesh_y ** 2 / c ** 2)
     img[dist < 1.] = clr
     return img
 
@@ -386,7 +394,8 @@ def atlas_filter_larges_components(atlas):
         im[atlas == idx] = 1
         # remove all smaller unconnected elements
         im = extract_image_largest_element(im)
-        if np.sum(im) == 0: continue
+        if np.sum(im) == 0:
+            continue
         imgs_patterns.append(im)
         # add them to the final arlas
         atlas_new[im == 1] = i + 1
@@ -458,7 +467,8 @@ def dictionary_generate_rnd_pattern(path_out=None,
     :param rand_seed: random initialization
     :return: [np.array<height, width>] list of independent patters in the dict.
 
-    >>> list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8), rand_seed=0)
+    >>> list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8),
+    ...                                                  rand_seed=0)
     >>> len(list_img_paths)
     3
     >>> list_img_paths[1]
@@ -476,15 +486,15 @@ def dictionary_generate_rnd_pattern(path_out=None,
     logging.info('generate Dict. composed from %i patterns and img. size %s',
                  nb_patterns, repr(im_size))
     if path_out is not None:
-        out_dir = os.path.join(path_out, dir_name)
-        create_clean_folder(out_dir)
+        path_out = os.path.join(path_out, dir_name)
+        create_clean_folder(path_out)
     list_imgs = []
     for i in range(nb_patterns):
         im = draw_rand_ellipse(np.zeros(im_size, dtype=np.uint8), rand_seed=rand_seed)
         im = image_deform_elastic(im, rand_seed=rand_seed)
         list_imgs.append(im)
         if path_out is not None:
-            export_image(out_dir, im, i, temp_img_name)
+            export_image(path_out, im, i, temp_img_name)
     return list_imgs
 
 
@@ -578,7 +588,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     sample_00004     0.0     1.0
     """
     logging.info('generate a Binary dataset composed from %i samples  '
-                'and ration pattern occlusion %f', nb_samples, ptn_ration)
+                 'and ration pattern occlusion %f', nb_samples, ptn_ration)
     if out_dir is not None:
         create_clean_folder(out_dir)
     df_weights = pd.DataFrame()
@@ -935,7 +945,7 @@ def load_image(path_img, fuzzy_val=True):
     """ loading image
 
     :param str path_img:
-    :param bool bool_val: weather normalise values in range (0, 1)
+    :param bool fuzzy_val: weather normalise values in range (0, 1)
     :return str, np.array<height, width>:
 
     PNG image
@@ -992,6 +1002,7 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
 
     :param str path_base: path to the results directory
     :param str name_csv: name of file with weights
+    :param [str] img_names: list of image names
     :return: np.array<nb_imgs, nb_lbs>
 
     >>> np.random.seed(0)
@@ -1065,7 +1076,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
     >>> os.mkdir(path_dir)
     >>> dataset_export_images(path_dir, images, nb_jobs=2)
     >>> path_imgs = find_images(path_dir)
-    >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=1)
+    >>> _, _ = dataset_load_images(path_imgs, nb_jobs=1)
     >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=2)
     >>> len(imgs)
     36
@@ -1127,15 +1138,15 @@ def convert_numerical(s):
     >>> convert_numerical('abc58')
     'abc58'
     """
-    INT_RE = re.compile(r"^[-]?\d+$")
-    FLOAT_RE1 = re.compile(r"^[-]?\d+.\d*$")
-    FLOAT_RE2 = re.compile(r"^[-]?\d*.\d+$")
+    re_int = re.compile(r"^[-]?\d+$")
+    re_float1 = re.compile(r"^[-]?\d+.\d*$")
+    re_float2 = re.compile(r"^[-]?\d*.\d+$")
 
-    if INT_RE.match(str(s)) is not None:
+    if re_int.match(str(s)) is not None:
         return int(s)
-    elif FLOAT_RE1.match(str(s)) is not None:
+    elif re_float1.match(str(s)) is not None:
         return float(s)
-    elif FLOAT_RE2.match(str(s)) is not None:
+    elif re_float2.match(str(s)) is not None:
         return float(s)
     else:
         return s
@@ -1144,9 +1155,10 @@ def convert_numerical(s):
 def generate_gauss_2d(mean, std, im_size=None, norm=None):
     """ Generating a Gaussian distribution in 2D image
 
-    :param [int] means:
-    :param [[int]] covs:
-    :param (int, int) im_size:
+    :param float norm: normalise the maximal value
+    :param [int] mean: mean position
+    :param [[int]] std: STD
+    :param (int, int) im_size: optional image size
     :return ndarray:
 
     >>> im = generate_gauss_2d([4, 5], [[1, 0], [0, 2]], (8, 10), norm=1.)

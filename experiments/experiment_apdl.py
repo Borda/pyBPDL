@@ -396,11 +396,11 @@ class ExperimentAPDL(object):
             fp.write(string_dict(self.params, desc='PARAMETERS:'))
 
     def __check_exist_path(self):
-        for p in [self.params[n] for n in self.params
-                  if 'dir' in n.lower() or 'path' in n.lower()]:
+        for p in (self.params[n] for n in self.params
+                  if 'dir' in n.lower() or 'path' in n.lower()):
             if not os.path.exists(p):
                 raise Exception('given folder "%s" does not exist!' % p)
-        for p in [self.params[n] for n in self.params if 'file' in n.lower()]:
+        for p in (self.params[n] for n in self.params if 'file' in n.lower()):
             if not os.path.exists(p):
                 raise Exception('given folder "%s" does not exist!' % p)
 
@@ -468,8 +468,7 @@ class ExperimentAPDL(object):
         """ the main procedure that load, perform and evaluate experiment
 
         :param bool gt:
-        :param str iter_var: name of variable to be iterated in the experiment
-        :param [] iter_vals: list of possible values for :param iter_var:
+        :param [] iter_params: list of possible configuration
         """
         logging.info('perform the complete experiment')
 
@@ -526,8 +525,7 @@ class ExperimentAPDL(object):
         :return {str: val}:
         """
         stat = copy_dict(d_params)
-        name_suffix = '_' + '_'.join('{}={}'.format(k, d_params[k])
-                                    for k in sorted(d_params) if k != 'param_idx')
+        stat['name_suffix'] = generate_atlas_suffix(d_params)
         return stat
 
     def _export_atlas(self, suffix=''):
@@ -640,7 +638,7 @@ class ExperimentAPDL_parallel(ExperimentAPDL):
             stat = self._perform_once(d_params)
             stat['time'] = time.time() - t
             logging.info('partial results: %s', repr(stat))
-        except:
+        except Exception:
             stat = copy_dict(d_params)
             # fixme, optionally remove the try/catch
             logging.error(traceback.format_exc())
@@ -702,11 +700,11 @@ def is_list_like(var):
     True
     """
     try:  # for python 3
-        ITER_TYPES = (list, tuple, range, np.ndarray, types.GeneratorType)
-        is_iter = [isinstance(var, tp) for tp in ITER_TYPES]
-    except:  # for python 2
-        ITER_TYPES = (list, tuple, np.ndarray, types.GeneratorType)
-        is_iter = [isinstance(var, tp) for tp in ITER_TYPES]
+        is_iter = [isinstance(var, tp) for tp
+                   in (list, tuple, range, np.ndarray, types.GeneratorType)]
+    except Exception:  # for python 2
+        is_iter = [isinstance(var, tp) for tp
+                   in (list, tuple, np.ndarray, types.GeneratorType)]
     return any(is_iter)
 
 
@@ -784,7 +782,8 @@ def simplify_params(dict_params):
 def expand_params(dict_params, simple_config=None):
     """ extend parameters to a list
 
-    :param d_params:
+    :param {} simple_config:
+    :param {} dict_params:
     :return:
 
     >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y')})

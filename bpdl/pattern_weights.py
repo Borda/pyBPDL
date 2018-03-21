@@ -16,6 +16,7 @@ def initialise_weights_random(nb_imgs, nb_patterns, ratio_select=0.2, rand_seed=
     :param int nb_patterns: number of all available labels
     :param float ratio_select: number <0, 1> defining how many should be set on,
         1 means all and 0 means none
+    :param rand_seed: random initialization
     :return: np.array<nb_imgs, nb_labels>
 
     >>> initialise_weights_random(5, 3, rand_seed=0)
@@ -26,7 +27,7 @@ def initialise_weights_random(nb_imgs, nb_patterns, ratio_select=0.2, rand_seed=
            [ 1.,  0.,  0.,  0.]])
     """
     logging.debug('initialise weights for %i images and %i labels '
-                 'as random selection', nb_imgs, nb_patterns)
+                  'as random selection', nb_imgs, nb_patterns)
     np.random.seed(rand_seed)
     fuzzy = np.random.random((nb_imgs, nb_patterns + 1))
     weights = np.zeros_like(fuzzy)
@@ -156,7 +157,7 @@ def weights_label_atlas_overlap_threshold(imgs, atlas, label, threshold=1.):
     """ estimate what patterns are activated  with given atlas and input image
     compute overlap matrix and eval nr of overlapping and non pixels and threshold
 
-    :param [ndarray] img: list of images np.array<height, width>
+    :param [ndarray] imgs: list of images np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
     :param int label:
     :param float threshold: represent the ration between overlapping and non pixels

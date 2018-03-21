@@ -20,6 +20,7 @@ def compare_atlas_rnd_pairs(a1, a2, rand_seed=None):
 
     :param a1: np.array<height, width>
     :param a2: np.array<height, width>
+    :param rand_seed: random initialization
     :return float: with 0 means no difference
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
@@ -164,6 +165,7 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
 
     :param ndarray seg_ref: segmentation
     :param ndarray seg_relabel: segmentation
+    :param bool keep_bg:
     :return ndarray:
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
@@ -208,8 +210,9 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
         lut[0] = 0
         overlap[0, :] = 0
         overlap[:, 0] = 0
-    for i in range(max(overlap.shape) + 1):
-        if np.sum(overlap) == 0: break
+    for _ in range(max(overlap.shape) + 1):
+        if np.sum(overlap) == 0:
+            break
         lb_ref, lb_est = np.argwhere(overlap.max() == overlap)[0]
         lut[lb_est] = lb_ref
         overlap[lb_ref, :] = 0
@@ -219,7 +222,8 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
         if lb == -1 and i not in lut:
             lut[i] = i
     for i, lb in enumerate(lut):
-        if lb > -1: continue
+        if lb > -1:
+            continue
         for j in range(len(lut)):
             if j not in lut:
                 lut[i] = j
@@ -236,6 +240,7 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
 
     :param ndarray seg_ref: segmentation
     :param ndarray seg_relabel: segmentation
+    :param bool keep_bg:
     :return ndarray:
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
@@ -294,6 +299,7 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
 def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     """ compute standard metrics for multi-class classification
 
+    :param [str] metric_averages:
     :param [int] y_true:
     :param [int] y_pred:
     :return: {str: float}
@@ -358,7 +364,7 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
             mtr = metrics.precision_recall_fscore_support(y_true, y_pred,
                                                           average=avg)
             res = dict(zip(['{}_{}'.format(n, avg) for n in names], mtr))
-        except:
+        except Exception:
             logging.error(traceback.format_exc())
             res = dict(zip(['{}_{}'.format(n, avg) for n in names], [0] * 4))
         dict_metrics.update(res)

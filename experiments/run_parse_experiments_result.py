@@ -153,7 +153,7 @@ def parse_experiment_folder(path_expt, params):
     try:
         func_stat = DICT_STATISTIC_FUNC.get(params['func_stat'], None)
         df_results = load_multiple_results(path_expt, func_stat, params)
-    except:
+    except Exception:
         logging.error(traceback.format_exc())
         df_results = pd.DataFrame()
 
@@ -180,7 +180,7 @@ def try_parse_experiment_folder(path_expt, params):
     """
     try:
         df_folder = parse_experiment_folder(path_expt, params)
-    except:
+    except Exception:
         logging.warning('no data extracted from folder %s',
                         os.path.basename(path_expt))
         logging.warning(traceback.format_exc())
@@ -192,7 +192,7 @@ def append_folder(df_all, df_folder):
     try:
         # df = pd.concat([df, df_folder], ignore_index=True)
         df_all = df_all.append(df_folder, ignore_index=True)
-    except:
+    except Exception:
         logging.warning('appending fail for DataFrame...')
         logging.error(traceback.format_exc())
     return df_all
@@ -202,6 +202,7 @@ def parse_experiments(params, nb_jobs=NB_THREADS):
     """ with specific input parameters wal over result folder and parse it
 
     :param {str: any} params:
+    :param int nb_jobs:
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')

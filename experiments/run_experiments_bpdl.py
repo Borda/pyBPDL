@@ -183,7 +183,7 @@ class ExperimentBPDL_base(expt_apd.ExperimentAPDL):
                                         ptn_compact=self.params['ptn_compact'],
                                         overlap_major=self.params['overlap_mj'],
                                         out_dir=path_out)  # , out_prefix=prefix
-        except:
+        except Exception:
             logging.error('FAILED, no atlas estimated!')
             logging.error(traceback.format_exc())
             atlas = np.zeros_like(self.imgs[0])
