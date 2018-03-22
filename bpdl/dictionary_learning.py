@@ -149,7 +149,8 @@ def compute_positive_cost_images_weights(imgs, ptn_weights):
     logging.debug('compute unary cost from images and related ptn_weights')
     w_idx = ptn_weight.convert_weights_binary2indexes(ptn_weights)
     nb_lbs = ptn_weights.shape[1] + 1
-    assert len(imgs) == len(w_idx)
+    assert len(imgs) == len(w_idx), 'nb of images (%i) and weights (%i) ' \
+                                    'do not match' % (len(imgs), len(w_idx))
     pott_sum = np.zeros(imgs[0].shape + (nb_lbs,))
     # walk over all pixels in image
     logging.debug('... walk over all pixels in each image')

@@ -138,7 +138,7 @@ class ExperimentBPDL_base(expt_apd.ExperimentAPDL):
             fn_init_atlas = DICT_ATLAS_INIT[init_type]
             init_atlas = fn_init_atlas(imgs, nb_patterns)
         elif init_type.startswith('GT'):
-            assert hasattr(self, 'gt_atlas')
+            assert hasattr(self, 'gt_atlas'), 'missing GT atlas'
             init_atlas = np.remainder(self.gt_atlas, nb_patterns)
             if init_type == 'GT-deform':
                 init_atlas = ptn_dict.init_atlas_deform_original(init_atlas)

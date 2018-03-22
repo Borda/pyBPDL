@@ -905,23 +905,23 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     return paths_img_most
 
 
-def dataset_load_images(path_imgs, nb_spls=None, nb_jobs=1):
+def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
     """ load complete dataset or just a subset
 
-    :param [str] path_imgs: path to the images
+    :param [str] img_paths: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
     :param int nb_jobs: number of running jobs
     :return [np.array], [str]:
     """
-    assert all(os.path.exists(p) for p in path_imgs)
-    path_imgs = sorted(path_imgs)[:nb_spls]
-    logging.debug('number samples %i in dataset', len(path_imgs))
+    assert all(os.path.exists(p) for p in img_paths)
+    img_paths = sorted(img_paths)[:nb_spls]
+    logging.debug('number samples %i in dataset', len(img_paths))
     if nb_jobs > 1:
         logging.debug('running in %i threads...', nb_jobs)
-        nb_load_blocks = len(path_imgs) / float(BLOCK_NB_LOAD_IMAGES)
+        nb_load_blocks = len(img_paths) / float(BLOCK_NB_LOAD_IMAGES)
         nb_load_blocks = int(np.ceil(nb_load_blocks))
         logging.debug('estimated %i loading blocks', nb_load_blocks)
-        block_paths_img = (path_imgs[i::nb_load_blocks]
+        block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
 
         mproc_pool = mproc.Pool(nb_jobs)
@@ -934,10 +934,10 @@ def dataset_load_images(path_imgs, nb_spls=None, nb_jobs=1):
         im_names, imgs = zip(*names_imgs)
     else:
         logging.debug('running in single thread...')
-        names_imgs = [load_image(p) for p in path_imgs]
+        names_imgs = [load_image(p) for p in img_paths]
         logging.debug('split the resulting tuples')
         im_names, imgs = zip(*names_imgs)
-    assert len(path_imgs) == len(imgs)
+    assert len(img_paths) == len(imgs), 'not all images was loaded'
     return imgs, im_names
 
 
@@ -976,7 +976,7 @@ def load_image(path_img, fuzzy_val=True):
     True
     >>> os.remove(path_img)
     """
-    assert os.path.exists(path_img), path_img
+    assert os.path.exists(path_img), 'missing: %s' % path_img
     n_img, img_ext = os.path.splitext(os.path.basename(path_img))
 
     if img_ext in ['.tif', '.tiff']:
@@ -1055,7 +1055,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
     """
     path_imgs = find_images(path_dir, im_pattern=img_temp_name)
     imgs, _ = dataset_load_images(path_imgs)
-    assert len(imgs) > 0
+    assert len(imgs) > 0, 'no images on input'
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
         atlas[im == 1] = i+1

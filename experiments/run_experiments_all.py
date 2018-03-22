@@ -282,7 +282,7 @@ def experiment_iterate(params, iter_params, user_gt):
             cls_expt = METHODS_BASE.get(method, None)
         else:
             cls_expt = METHODS.get(method, None)
-        assert cls_expt is not None
+        assert cls_expt is not None, 'not existing experiment "%s"' % method
 
         expt = cls_expt(params)
         expt.run(gt=user_gt, iter_params=iter_params)

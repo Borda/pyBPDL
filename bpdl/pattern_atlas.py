@@ -721,8 +721,8 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     >>> _ = reinit_atlas_likely_patterns(imgs, w_bins, atlas, (np.max(atlas) + 5))
     """
     # find empty patterns
-    # assert len(imgs) == w_bins.shape[1], \
-    #     'images %i and weigts %i' % (len(imgs), w_bins.shape[1])
+    # assert len(imgs) == w_bins.shape[1], 'images %i and weigts %i' \
+    #                                      % (len(imgs), w_bins.shape[1])
     if label_max is None:
         label_max = max(np.max(atlas), w_bins.shape[1])
     else:

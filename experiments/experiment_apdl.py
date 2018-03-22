@@ -214,7 +214,7 @@ def load_list_img_names(path_csv, path_in=''):
     """
     assert os.path.exists(path_csv), '%s' % path_csv
     df = pd.DataFrame.from_csv(path_csv, index_col=False, header=None)
-    assert len(df.columns) == 1  # assume just single column
+    assert len(df.columns) == 1, 'assume just single column'
     list_names = df.as_matrix()[:, 0].tolist()
     # if the input path was set and the list are just names, no complete paths
     if os.path.exists(path_in) and not all(os.path.exists(p) for p in list_names):
@@ -455,7 +455,9 @@ class ExperimentAPDL(object):
         self._load_images()
         if gt:
             self._load_data_ground_truth()
-            assert len(self.imgs) == len(self.gt_img_rct)
+            assert len(self.imgs) == len(self.gt_img_rct), \
+                'nb of input (%i) and reconst. (%i) images do not match' \
+                % (len(self.imgs), len(self.gt_img_rct))
         logging.debug('loaded %i images', len(self.imgs))
         # self.imgs = [im.astype(np.uint8, copy=False) for im in self.imgs]
 
@@ -534,7 +536,7 @@ class ExperimentAPDL(object):
         :param np.array<height, width> atlas:
         :param str suffix:
         """
-        assert hasattr(self, 'atlas')
+        assert hasattr(self, 'atlas'), 'atlas is not defined'
         n_img = 'atlas{}'.format(suffix)
         tl_data.export_image(self.params.get('path_exp'), self.atlas, n_img)
         path_atlas_rgb = os.path.join(self.params.get('path_exp'),
@@ -547,7 +549,7 @@ class ExperimentAPDL(object):
         :param np.array<height, width> atlas:
         :param str suffix:
         """
-        assert hasattr(self, 'w_bins')
+        assert hasattr(self, 'w_bins'), 'weights are not defined'
         n_csv = 'encoding{}.csv'.format(suffix)
         path_csv = os.path.join(self.params.get('path_exp'), n_csv)
         if not hasattr(self, '_im_names'):
