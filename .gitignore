@@ -17,6 +17,7 @@ output/
 results/
 temporary/
 temp/
+.nfs*
 
 # PyCharm
 .idea/

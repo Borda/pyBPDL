@@ -20,6 +20,7 @@ if os.environ.get('DISPLAY', '') == '' \
     matplotlib.use('Agg')
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import skimage.segmentation as sk_image
 # using https://github.com/Borda/pyGCO
@@ -29,6 +30,7 @@ import bpdl.pattern_atlas as ptn_dict
 import bpdl.pattern_weights as ptn_weight
 import bpdl.metric_similarity as sim_metric
 import bpdl.dataset_utils as tl_data
+import bpdl.registration as regist
 
 UNARY_BACKGROUND = 1
 NB_GRAPH_CUT_ITER = 5
@@ -81,7 +83,9 @@ def compute_relative_penalty_images_weights(imgs, weights):
     logging.debug('compute unary cost from images and related weights')
     # weightsIdx = ptn_weight.convert_weights_binary2indexes(weights)
     nb_lbs = weights.shape[1] + 1
-    assert len(imgs) == weights.shape[0]
+    assert len(imgs) == weights.shape[0], \
+        'not matching nb images (%i) and nb weights (%i)' \
+        % (len(imgs), weights.shape[0])
     pott_sum = np.zeros(imgs[0].shape + (nb_lbs,))
     # extenf the weights by background value 0
     weights_ext = np.append(np.zeros((weights.shape[0], 1)), weights, axis=1)
@@ -437,7 +441,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
         nb_patterns = int(np.sqrt(len(imgs)))
         logging.debug('... initialise Atlas with ')
         # IDEA: find better way of initialisation
-        init_atlas = ptn_dict.initialise_atlas_mosaic(
+        init_atlas = ptn_dict.init_atlas_mosaic(
             imgs[0].shape, nb_patterns, rand_seed=rand_seed)
         export_visual_atlas(0, out_dir, init_atlas, out_prefix)
 
@@ -542,14 +546,23 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_sp
     return atlas_new
 
 
-def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=None,
-                                         gc_coef=0.0, tol=1e-3, max_iter=25,
-                                         gc_reinit=True, ptn_split=True,
-                                         overlap_major=False, ptn_compact=True,
-                                         out_prefix='debug', out_dir=''):
+def bpdl_deform_images(imgs, atlas, weights):
+    logging.debug('... perform register images onto atlas')
+    images_warped, deforms = regist.register_images_to_atlas_demons(imgs, atlas, weights)
+    return images_warped, deforms
+
+
+
+def bpdl_pipeline(images, init_atlas=None, init_weights=None,
+                  gc_coef=0.0, tol=1e-3, max_iter=25,
+                  gc_reinit=True, ptn_split=True,
+                  overlap_major=False, ptn_compact=True,
+                  deform_coef=None,
+                  out_prefix='debug', out_dir=''):
     """ the experiments_synthetic pipeline for block coordinate descent
     algo with graphcut...
 
+    :param float deform_coef: regularise the deformation
     :param [ndarray] imgs: list of images np.array<height, width>
     :param ndarray init_atlas: used atlas of np.array<height, width>
     :param ndarray init_weights: weights np.array<nb_imgs, nb_lbs>
@@ -569,10 +582,10 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
-    >>> imgs = [lut[atlas] for lut in luts]
+    >>> images = [lut[atlas] for lut in luts]
     >>> w_bins = luts[:, 1:]
-    >>> init_atlas = ptn_dict.initialise_atlas_mosaic(atlas.shape,
-    ...                                               nb_patterns=2, rand_seed=0)
+    >>> init_atlas = ptn_dict.init_atlas_mosaic(atlas.shape, nb_patterns=2,
+    ...                                         rand_seed=0)
     >>> init_atlas
     array([[2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
            [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
@@ -582,7 +595,7 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
            [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
            [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
            [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2]])
-    >>> bpdl_atlas, bpdl_w_bins = bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas)
+    >>> bpdl_atlas, bpdl_w_bins, deforms = bpdl_pipeline(images, init_atlas)
     >>> bpdl_atlas
     array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -602,9 +615,20 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
            [1, 1],
            [1, 1],
            [1, 1]])
+    >>> bpdl_atlas, bpdl_w_bins, deforms = bpdl_pipeline(images, init_atlas,
+    ...                                                  deform_coef=1)
+    >>> bpdl_atlas
+    array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    logging.debug('compute an Atlas and weights for %i images...', len(imgs))
-    assert len(imgs) >= 0
+    logging.debug('compute an Atlas and weights for %i images...', len(images))
+    assert len(images) >= 0, 'missing input images'
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
@@ -612,39 +636,56 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
     # initialise
     label_max = np.max(init_atlas)
     logging.debug('max nb labels set: %i', label_max)
-    atlas, w_bins = bpdl_initialisation(imgs, init_atlas, init_weights,
+    atlas, w_bins = bpdl_initialisation(images, init_atlas, init_weights,
                                         out_dir, out_prefix)
     list_crit = []
+    list_times = []
+    imgs_warped = images
 
     for iter in range(max_iter):
+        d_times = {}
         if len(np.unique(atlas)) == 1:
             logging.warning('.. iter: %i, no labels in the atlas %s', iter,
                             repr(np.unique(atlas).tolist()))
-        w_bins = bpdl_update_weights(imgs, atlas, overlap_major)
+        # 1: update WEIGHTS
+        t = time.time()
+        w_bins = bpdl_update_weights(imgs_warped, atlas, overlap_major)
+        d_times['weights update'] = time.time() - t
+        # 2: reinitialise empty patterns
         atlas_reinit, w_bins = ptn_dict.reinit_atlas_likely_patterns(
-                                    imgs, w_bins, atlas, label_max, ptn_compact)
-        atlas_new = bpdl_update_atlas(imgs, atlas_reinit, w_bins, label_max,
-                                      gc_coef, gc_reinit, ptn_split)
+            imgs_warped, w_bins, atlas, label_max, ptn_compact)
+        d_times['reinit. atlas'] = time.time() - d_times['weights update']
+        # 3: update the ATLAS
+        atlas_new = bpdl_update_atlas(imgs_warped, atlas_reinit, w_bins,
+                                      label_max, gc_coef, gc_reinit, ptn_split)
+        d_times['atlas update'] = time.time() - d_times['reinit. atlas']
+
+        if deform_coef is not None:
+            imgs_warped, deforms = bpdl_deform_images(images, atlas_new, w_bins)
 
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
         # step_diff = np.sum(abs(atlas - atlas_new)) / float(np.product(atlas.shape))
         list_crit.append(step_diff)
+        list_times.append(d_times)
         atlas = sk_image.relabel_sequential(atlas_new)[0]
 
         logging.debug('-> iter. #%i with Atlas diff %f', (iter + 1), step_diff)
         export_visual_atlas(iter + 1, out_dir, atlas, out_prefix)
 
-        # stopping criterion
+        # STOPPING criterion
         if step_diff <= tol and len(np.unique(atlas)) > 1:
             logging.debug('>> exit while the atlas diff %f is smaller then %f',
                           step_diff, tol)
             break
-    logging.info('APDL: terminated with iter %i / %i and step diff %f <? %f',
+    logging.info('BPDL: terminated with iter %i / %i and step diff %f <? %f',
                  len(list_crit), max_iter, (list_crit[-1] - list_crit[-2]), tol)
     logging.debug('criterion evolved:\n %s', repr(list_crit))
+    logging.debug('measured time: %s', repr(pd.DataFrame(list_times)))
+    logging.info(pd.DataFrame(list_times).describe())
     # atlas = sk_image.relabel_sequential(atlas)[0]
-    w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas) for img in imgs]
-    return atlas, np.array(w_bins)
+    w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+              for img in imgs_warped]
+    return atlas, np.array(w_bins), deforms
 
 
 def test_simple_show_case(atlas, imgs, ws):

@@ -6,6 +6,8 @@ Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 import time
 import logging
+import multiprocessing as mproc
+from functools import partial
 
 import numpy as np
 from scipy import interpolate
@@ -14,6 +16,9 @@ from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration
 from dipy.align.metrics import SSDMetric
 
+import bpdl.pattern_atlas as ptn_atlas
+
+NB_THREADS = int(mproc.cpu_count() * .8)
 DEAMONS_PARAMS = dict(
     step_length=1.,
     level_iters=[5, 10],
@@ -76,6 +81,10 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
            [ 0. ,  0. ,  0.2,  0.6,  0.6,  0.7,  0.8,  0.9,  0.9,  1. ],
            [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ]])
     """
+    if img_ref.max() == 0 or img_sense.max() == 0:
+        logging.debug('one of the images is zeros')
+        return img_sense.copy(), np.zeros(img_ref.shape + (2,))
+
     sdr = SymmetricDiffeomorphicRegistration(metric=SSDMetric(img_ref.ndim),
                                              step_length=params['step_length'],
                                              level_iters=params['level_iters'],
@@ -101,7 +110,7 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
     return img_warped, mapping_atlas
 
 
-def warp_atlas_domain_to_image(img, deform, method='linear'):
+def warp2d_apply_deform_field(img, deform, method='linear'):
     """ warping reconstructed image using atlas and weight
     to the expected image image domain
 
@@ -112,16 +121,22 @@ def warp_atlas_domain_to_image(img, deform, method='linear'):
     >>> img = np.zeros((8, 12), dtype=int)
     >>> img[2:6, 3:9] = 1
     >>> deform = np.ones(img.shape + (2,))
-    >>> warp_atlas_domain_to_image(img, deform)
+    >>> deform[:, :, 1] *= -2
+    >>> warp2d_apply_deform_field(img, deform)
     array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
-           [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.],
-           [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.],
-           [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.],
-           [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.],
+           [ 0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.,  0.,  0.,  0.],
+           [ 0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.,  0.,  0.,  0.],
+           [ 0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.,  0.,  0.,  0.],
+           [ 0.,  1.,  1.,  1.,  1.,  1.,  1.,  0.,  0.,  0.,  0.,  0.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
     """
+    assert img.ndim == 2, 'expected only 2D image'
+    assert deform.ndim == 3, 'expected only 2D deformation'
+    assert img.shape == deform.shape[:-1], \
+        'image %s and deform %s size should match' \
+        % (repr(img.shape), repr(deform.shape))
     grid_x, grid_y = np.mgrid[0:img.shape[0], 0:img.shape[1]]
     deform_x = deform[..., 0]
     deform_y = deform[..., 1]
@@ -135,3 +150,105 @@ def warp_atlas_domain_to_image(img, deform, method='linear'):
                                       method=method, fill_value=0)
     img_warped.astype(img.dtype)
     return img_warped
+
+
+def wrapper_regist_demons_images_weights(idx_img_weights, atlas, coef,
+                                         params=None):
+    """ wrapper for registration of input images to reconstructed as demons
+
+    :param (int, ndarray, ndarray) idx_img_weights:
+    :param ndarray atlas:
+    :param float coef:
+    :param {str: } params:
+    :return:
+    """
+    idx, img, w = idx_img_weights
+    # extension for using zero as backround
+    w_ext = np.asarray([0] + w.tolist())
+    img_reconst = w_ext[atlas].astype(atlas.dtype)
+    assert atlas.shape == img_reconst.shape, 'im. size of atlas and image'
+
+    if params is None:
+        params = DEAMONS_PARAMS
+    img_warp, deform = register_demons_sym_diffeom(img, img_reconst, coef, params)
+
+    return idx, img_warp, deform
+
+
+def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
+                                    params=None, nb_jobs=NB_THREADS):
+    """ register whole set of images to estimated atlas and weights
+
+    :param [ndarray] list_images:
+    :param ndarray atlas:
+    :param ndarray list_weights:
+    :param float coef:
+    :param {str:} params:
+    :param int nb_jobs:
+    :return: [ndarray], [ndarray]
+
+    >>> atlas = np.zeros((8, 12), dtype=int)
+    >>> atlas[:3, 1:5] = 1
+    >>> atlas[3:7, 6:12] = 2
+    >>> w_bins = np.array([[0, 0], [0, 1], [1, 1]], dtype=bool)
+    >>> imgs = ptn_atlas.reconstruct_samples(atlas, w_bins)
+    >>> deform = np.ones(atlas.shape + (2,)) * -2
+    >>> imgs[1] = warp2d_apply_deform_field(imgs[1], deform)
+    >>> imgs[1].astype(int)
+    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+           [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+           [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+           [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> _, _ = register_images_to_atlas_demons(imgs, atlas, w_bins, nb_jobs=1)
+    >>> imgs_w, deforms = register_images_to_atlas_demons(imgs, atlas, w_bins,
+    ...                                                   coef=0.1, nb_jobs=2)
+    >>> np.sum(imgs_w[0])
+    0
+    >>> imgs_w[1].astype(int)
+    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
+           [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> np.mean(deforms[1][:, :, 0])  # doctest: +ELLIPSIS
+    -0.9...
+    >>> np.mean(deforms[1][:, :, 1])  # doctest: +ELLIPSIS
+    -0.9...
+    >>> np.sum(abs(imgs[2] - imgs_w[2]))
+    0.0
+    """
+    assert len(list_images) == len(list_weights), \
+        'number of images (%i) and weights (%i) have to match' \
+        % (len(list_images), len(list_weights))
+    atlas = np.asarray(atlas, dtype=int)
+    list_weights = list(list_weights)
+
+    list_imgs_wrap = [None] * len(list_images)
+    list_deform = [None] * len(list_weights)
+    list_items = zip(range(len(list_images)), list_images, list_weights)
+
+    if nb_jobs > 1:
+        wrapper_register = partial(wrapper_regist_demons_images_weights,
+                                   atlas=atlas, coef=coef, params=params)
+        mproc_pool = mproc.Pool(nb_jobs)
+        for idx, img_w, deform in mproc_pool.map(wrapper_register, list_items):
+            list_imgs_wrap[idx] = img_w
+            list_deform[idx] = deform
+        mproc_pool.close()
+        mproc_pool.join()
+    else:
+        for item in list_items:
+            idx, img_w, deform = wrapper_regist_demons_images_weights(
+                item, atlas, coef, params)
+            list_imgs_wrap[idx] = img_w
+            list_deform[idx] = deform
+
+
+    return list_imgs_wrap, list_deform

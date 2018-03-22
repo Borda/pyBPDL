@@ -51,25 +51,25 @@ REAL_PARAMS.update({
 })
 
 DICT_ATLAS_INIT = {
-    'random-grid': ptn_dict.initialise_atlas_grid,
-    'random-mosaic': ptn_dict.initialise_atlas_mosaic,
-    'random-mosaic-1.5': partial(ptn_dict.initialise_atlas_mosaic, coef=1.5),
-    'random-mosaic-2': partial(ptn_dict.initialise_atlas_mosaic, coef=2),
-    'random': ptn_dict.initialise_atlas_random,
-    'greedy-GausWS': ptn_dict.initialise_atlas_gauss_watershed_2d,
-    'greedy-OtsuWS': ptn_dict.initialise_atlas_otsu_watershed_2d,
-    'greedy-OtsuWS-rand': partial(ptn_dict.initialise_atlas_otsu_watershed_2d,
+    'random-grid': ptn_dict.init_atlas_grid,
+    'random-mosaic': ptn_dict.init_atlas_mosaic,
+    'random-mosaic-1.5': partial(ptn_dict.init_atlas_mosaic, coef=1.5),
+    'random-mosaic-2': partial(ptn_dict.init_atlas_mosaic, coef=2),
+    'random': ptn_dict.init_atlas_random,
+    'greedy-GausWS': ptn_dict.init_atlas_gauss_watershed_2d,
+    'greedy-OtsuWS': ptn_dict.init_atlas_otsu_watershed_2d,
+    'greedy-OtsuWS-rand': partial(ptn_dict.init_atlas_otsu_watershed_2d,
                                   bg_type='rand'),
     'GT': None,  # init by Ground Truth, require GT atlas
     'GT-deform': None,  # init by deformed Ground Truth, require GT atlas
-    'soa-init-NFM': partial(ptn_dict.initialise_atlas_nmf, nb_iter=5),
-    'soa-init-ICA': partial(ptn_dict.initialise_atlas_fast_ica, nb_iter=15),
-    'soa-init-PCA': partial(ptn_dict.initialise_atlas_sparse_pca, nb_iter=5),
-    'soa-init-DL': partial(ptn_dict.initialise_atlas_dict_learn, nb_iter=5),
-    'soa-tune-NFM': partial(ptn_dict.initialise_atlas_nmf, nb_iter=150),
-    'soa-tune-ICA': partial(ptn_dict.initialise_atlas_fast_ica, nb_iter=150),
-    'soa-tune-PCA': partial(ptn_dict.initialise_atlas_sparse_pca, nb_iter=150),
-    'soa-tune-DL': partial(ptn_dict.initialise_atlas_dict_learn, nb_iter=150),
+    'soa-init-NFM': partial(ptn_dict.init_atlas_nmf, nb_iter=5),
+    'soa-init-ICA': partial(ptn_dict.init_atlas_fast_ica, nb_iter=15),
+    'soa-init-PCA': partial(ptn_dict.init_atlas_sparse_pca, nb_iter=5),
+    'soa-init-DL': partial(ptn_dict.init_atlas_dict_learn, nb_iter=5),
+    'soa-tune-NFM': partial(ptn_dict.init_atlas_nmf, nb_iter=150),
+    'soa-tune-ICA': partial(ptn_dict.init_atlas_fast_ica, nb_iter=150),
+    'soa-tune-PCA': partial(ptn_dict.init_atlas_sparse_pca, nb_iter=150),
+    'soa-tune-DL': partial(ptn_dict.init_atlas_dict_learn, nb_iter=150),
 }
 
 # SIMPLE RUN
@@ -100,12 +100,12 @@ def experiment_pipeline_alpe_showcase(path_out):
     # imgs = tl_data.dataset_load_images('datasetBinary_defNoise',
     #                                       path_base=SYNTH_PATH_APD)
 
-    # init_atlas_org = ptn_dict.initialise_atlas_deform_original(atlas)
-    # init_atlas_rnd = ptn_dict.initialise_atlas_random(atlas.shape, np.max(atlas))
-    init_atlas_msc = ptn_dict.initialise_atlas_mosaic(atlas.shape, np.max(atlas))
+    # init_atlas_org = ptn_dict.init_atlas_deform_original(atlas)
+    # init_atlas_rnd = ptn_dict.init_atlas_random(atlas.shape, np.max(atlas))
+    init_atlas_msc = ptn_dict.init_atlas_mosaic(atlas.shape, np.max(atlas))
     # init_encode_rnd = ptn_weigth.initialise_weights_random(len(imgs), np.max(atlas))
 
-    atlas, w_bins = dl.bpdl_pipe_atlas_learning_ptn_weights(
+    atlas, w_bins, deforms = dl.bpdl_pipeline(
                         imgs, out_prefix='mosaic', init_atlas=init_atlas_msc,
                         max_iter=9, out_dir=path_out)
     return atlas, w_bins
@@ -141,7 +141,7 @@ class ExperimentBPDL_base(expt_apd.ExperimentAPDL):
             assert hasattr(self, 'gt_atlas')
             init_atlas = np.remainder(self.gt_atlas, nb_patterns)
             if init_type == 'GT-deform':
-                init_atlas = ptn_dict.initialise_atlas_deform_original(init_atlas)
+                init_atlas = ptn_dict.init_atlas_deform_original(init_atlas)
             init_atlas = init_atlas.astype(int)
         else:
             logging.error('not supported atlas init "%s"', init_type)
@@ -172,7 +172,7 @@ class ExperimentBPDL_base(expt_apd.ExperimentAPDL):
         if isinstance(self.params['nb_samples'], float):
             self.params['nb_samples'] = int(len(self.imgs) * self.params['nb_samples'])
         try:
-            atlas, w_bins = dl.bpdl_pipe_atlas_learning_ptn_weights(
+            atlas, w_bins, deforms = dl.bpdl_pipeline(
                                         self.imgs[:self.params['nb_samples']],
                                         init_atlas=init_atlas,
                                         tol=self.params['tol'],
