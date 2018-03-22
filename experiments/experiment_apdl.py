@@ -629,7 +629,7 @@ class ExperimentAPDL_parallel(ExperimentAPDL):
         """ load image data """
         self.imgs, self._im_names = tl_data.dataset_load_images(self.list_img_paths, nb_jobs=self.nb_jobs)
 
-    def _warp_perform_once(self, d_params):
+    def _wrapper_perform_once(self, d_params):
         try:
             self.params.update(d_params)
             logging.debug(' -> set iterable %s', repr(d_params))
@@ -668,7 +668,7 @@ class ExperimentAPDL_parallel(ExperimentAPDL):
         self.list_stats = []
         # tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
         mproc_pool = mproc.Pool(self.nb_jobs)
-        for stat in mproc_pool.map(self._warp_perform_once, self.iter_params):
+        for stat in mproc_pool.map(self._wrapper_perform_once, self.iter_params):
             self.list_stats.append(stat)
             self._evaluate()
             # tqdm_bar.update(1)
