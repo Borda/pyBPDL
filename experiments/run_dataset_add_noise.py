@@ -26,9 +26,9 @@ import bpdl.dataset_utils as tl_data
 NB_THREADS = int(mproc.cpu_count() * 0.7)
 IMAGE_PATTERN = '*.png'
 DIR_POSIX = '_gauss-%.3f'
-NOISE_RANGE = [0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001]
+NOISE_RANGE = tl_data.GAUSS_NOISE
 LIST_DATASETS = [tl_data.DIR_MANE_SYNTH_DATASET]
-BASE_IMAGE_SET = 'datasetProb_raw'
+BASE_IMAGE_SET = 'datasetFuzzy_raw'
 
 
 def args_parser():
@@ -94,13 +94,13 @@ def dataset_add_noise(path_in, path_out, noise_level,
     else:
         logging.warning('the output dir already exists')
 
-    wrapper_image_niose = partial(add_noise_image, path_in=path_in,
+    wrapper_image_noise = partial(add_noise_image, path_in=path_in,
                                   path_out=path_out, noise_level=noise_level)
 
     logging.debug('running in %i threads...', nb_jobs)
     mproc_pool = mproc.Pool(nb_jobs)
     tqdm_bar = tqdm.tqdm(total=len(name_imgs))
-    for x in mproc_pool.imap_unordered(wrapper_image_niose, name_imgs):
+    for x in mproc_pool.imap_unordered(wrapper_image_noise, name_imgs):
         tqdm_bar.update()
 
     logging.info('DONE')

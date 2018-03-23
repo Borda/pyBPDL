@@ -26,7 +26,8 @@ import bpdl.dataset_utils as tl_data
 NB_THREADS = int(mproc.cpu_count() * .75)
 NAME_JSON_BBOX = 'cut_bounding_box.json'
 PARAMS = {
-    'path_in': os.path.join(tl_data.update_path('images/imaginal_discs/gene'), '*.png'),
+    'path_in': os.path.join(tl_data.update_path('images/imaginal_discs/gene'),
+                            '*.png'),
     'path_out': tl_data.update_path('images/imaginal_discs/gene_cut'),
 }
 
@@ -52,7 +53,7 @@ def args_parse_params(params):
     args = vars(parser.parse_args())
     for k in (k for k in args if k.startswith('path_')):
         p = tl_data.update_path(os.path.dirname(args[k]))
-        assert os.path.exists(p), 'missing: %s' % p
+        assert os.path.exists(p), 'missing (%s): %s' % (k, p)
         args[k] = os.path.join(p, os.path.basename(args[k]))
     return args
 

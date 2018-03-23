@@ -27,8 +27,6 @@ DEAMONS_PARAMS = dict(
     opt_tol=1.e-2
 )
 
-# todo, think about parallel registration per sets as for loading images
-
 
 def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
                                 params=DEAMONS_PARAMS):
@@ -178,6 +176,7 @@ def wrapper_regist_demons_images_weights(idx_img_weights, atlas, coef,
 def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
                                     params=None, nb_jobs=NB_THREADS):
     """ register whole set of images to estimated atlas and weights
+    IDEA: think about parallel registration per sets as for loading images
 
     :param [ndarray] list_images:
     :param ndarray atlas:
@@ -249,6 +248,5 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
                 item, atlas, coef, params)
             list_imgs_wrap[idx] = img_w
             list_deform[idx] = deform
-
 
     return list_imgs_wrap, list_deform

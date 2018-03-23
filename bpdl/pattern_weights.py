@@ -140,7 +140,7 @@ def weights_image_atlas_overlap_threshold(img, atlas, threshold=1.):
     # logging.debug('weights image by atlas with labels: {}'.format(lbs))
     if 0 in labels:
         labels.remove(0)
-    weight = [0] * np.max(atlas)
+    weight = [0] * int(np.max(atlas))
     for lb in labels:
         mask = (atlas == lb)
         total = np.sum(mask)

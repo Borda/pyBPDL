@@ -53,11 +53,8 @@ script:
   - python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
   - python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-3/image/*.png" -out images/ovary_stage-3/gene
 
-  - python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
-  - python experiments/run_experiments_bpdl.py --type real -in images/imaginal_discs -out results --dataset gene_small
-
-  - python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
-  - python experiments/run_experiments_all.py --type real -in images/imaginal_discs -out results --dataset gene_small
+  - python experiments/run_experiments.py --type synth -in images/syntheticDataset_vX -out results
+  - python experiments/run_experiments.py --type real -in images/imaginal_discs -out results --dataset gene_small
 
   - python experiments/run_parse_experiments_result.py -p results -res results.csv
   - python experiments/run_recompute_experiments_result.py -p results

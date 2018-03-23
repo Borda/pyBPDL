@@ -45,6 +45,7 @@ DIR_NAME_DICTIONARY = 'dictionary'
 CSV_NAME_WEIGHTS = 'binary_weights.csv'
 DEFAULT_NAME_DATASET = 'datasetBinary_raw'
 COLUMN_NAME = 'ptn_{:02d}'
+GAUSS_NOISE = [0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001]
 
 
 def update_path(path_file, lim_depth=5, absolute=True):
@@ -467,11 +468,11 @@ def dictionary_generate_rnd_pattern(path_out=None,
     :param rand_seed: random initialization
     :return: [np.array<height, width>] list of independent patters in the dict.
 
-    >>> list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8),
+    >>> _list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8),
     ...                                                  rand_seed=0)
-    >>> len(list_img_paths)
+    >>> len(_list_img_paths)
     3
-    >>> list_img_paths[1]
+    >>> _list_img_paths[1]
     array([[  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
@@ -1194,7 +1195,7 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
 
 
 # def dataset_convert_nifti(path_in, path_out, img_suffix=IMAGE_POSIX):
-#     """ having a datset of png images conver them into nifti images
+#     """ having a datset of png images conver them into nifti _images
 #
 #     :param path_in: str
 #     :param path_out: str

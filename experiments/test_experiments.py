@@ -12,14 +12,14 @@ import glob
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
-import experiments.experiment_apdl as expt_apdl
-import experiments.run_experiments_all as r_all
-import experiments.run_experiments_bpdl as r_bpdl
+import experiments.experiment_general as e_gen
+import experiments.experiment_methods as e_mthd
+import experiments.run_experiments as r_expt
 import experiments.run_parse_experiments_result as r_parse
 import experiments.run_recompute_experiments_result as r_recomp
 
 
-def test_experiments_soa_synth(params=r_all.SYNTH_PARAMS):
+def test_experiments_soa_synth(params=r_expt.SYNTH_PARAMS):
     """ simple test of State-of-the-Art methods on Synthetic dataset
 
     :param {str: value} dict_params:
@@ -33,15 +33,15 @@ def test_experiments_soa_synth(params=r_all.SYNTH_PARAMS):
         'nb_samples': 0.5,
     })
 
-    for n in r_all.METHODS:
-        cls_expt = r_all.METHODS[n]
-        logging.info('testing %s by %s', n, cls_expt.__class__)
+    for n in r_expt.METHODS:
+        cls_expt = r_expt.METHODS[n]
+        logging.info('testing %s by %s', n, cls_expt.__class__.__name__)
         expt = cls_expt(params)
         expt.run(gt=True, iter_params={'run': range(params['nb_runs'])})
         del expt
 
 
-def test_experiments_soa_real(params=r_all.REAL_PARAMS):
+def test_experiments_soa_real(params=r_expt.REAL_PARAMS):
     """ simple test of State-of-the-Art methods on Real images
 
     :param {str: value} dict_params:
@@ -54,44 +54,44 @@ def test_experiments_soa_real(params=r_all.REAL_PARAMS):
         'nb_runs': 1,
     })
 
-    for n in r_all.METHODS_BASE:
-        cls_expt = r_all.METHODS_BASE[n]
-        logging.info('testing %s by %s', n, cls_expt.__class__)
+    for n in r_expt.METHODS_BASE:
+        cls_expt = r_expt.METHODS_BASE[n]
+        logging.info('testing %s by %s', n, cls_expt.__class__.__name__)
         expt = cls_expt(params)
         expt.run(gt=False, iter_params={'nb_labels': [3, 5, 9]})
         del expt
 
 
-def test_experiments_bpdl_inits(dict_params=r_bpdl.SYNTH_PARAMS):
+def test_experiments_bpdl_inits(dict_params=r_expt.SYNTH_PARAMS):
     """  simple test of various BPDL initializations
 
     :param {str: any} dict_params:
     """
     logging.getLogger().setLevel(logging.DEBUG)
     # experiment_pipeline_alpe_showcase()
-    params = expt_apdl.simplify_params(dict_params)
+    params = e_gen.simplify_params(dict_params)
     params.update({
         'dataset': tl_data.DEFAULT_NAME_DATASET,
         'max_iter': 15,
         'nb_runs': 1,
     })
 
-    for tp in r_bpdl.DICT_ATLAS_INIT.keys():
+    for tp in e_mthd.DICT_ATLAS_INIT.keys():
         params.update({'init_tp': tp})
         logging.info('RUN: ExperimentBPDL-base, init: %s', tp)
-        expt = r_bpdl.ExperimentBPDL_base(params)
+        expt = e_mthd.ExperimentBPDL_base(params)
         expt.run(gt=True, iter_params={'run': range(params['nb_runs'])})
         del expt
 
 
-def test_experiments_bpdl(dict_params=r_bpdl.SYNTH_PARAMS):
+def test_experiments_bpdl(dict_params=r_expt.SYNTH_PARAMS):
     """  simple & parallel test of BPDL
 
     :param {str: any} dict_params:
     """
     logging.getLogger().setLevel(logging.DEBUG)
     # experiment_pipeline_alpe_showcase()
-    params = expt_apdl.simplify_params(dict_params)
+    params = e_gen.simplify_params(dict_params)
     params.update({
         'dataset': tl_data.DEFAULT_NAME_DATASET,
         'max_iter': 15,
@@ -99,12 +99,12 @@ def test_experiments_bpdl(dict_params=r_bpdl.SYNTH_PARAMS):
     })
 
     logging.info('RUN: ExperimentBPDL-base')
-    expt = r_bpdl.ExperimentBPDL_base(params)
+    expt = e_mthd.ExperimentBPDL_base(params)
     expt.run(gt=True, iter_params={'run': range(params['nb_runs'])})
     del expt
 
     # negate default params
-    params = expt_apdl.simplify_params(dict_params)
+    params = e_gen.simplify_params(dict_params)
     params.update({
         'init_tp': 'random',
         'gc_reinit': not params['gc_reinit'],
@@ -114,7 +114,7 @@ def test_experiments_bpdl(dict_params=r_bpdl.SYNTH_PARAMS):
     })
 
     logging.info('RUN: ExperimentBPDL-parallel')
-    expt_p = r_bpdl.ExperimentBPDL(params)
+    expt_p = e_mthd.ExperimentBPDL(params)
     expt_p.run(gt=True, iter_params={'run': range(params['nb_runs'])})
     del expt_p
 
@@ -122,21 +122,21 @@ def test_experiments_bpdl(dict_params=r_bpdl.SYNTH_PARAMS):
 def test_experiments_postprocessing():
     """ testing experiment postprocessing """
     params = {'res_cols': None, 'func_stat': 'none', 'type': 'synth',
-              'name_results': [expt_apdl.RESULTS_CSV],
-              'name_config': expt_apdl.CONFIG_JSON, 'nb_jobs': 2,
+              'name_results': [e_gen.RESULTS_CSV],
+              'name_config': e_gen.CONFIG_JSON, 'nb_jobs': 2,
               'path': tl_data.update_path('results')}
 
     dir_expts = glob.glob(os.path.join(params['path'], '*'))
-    # in case the the posporcesing is called before experiment themselves
+    # in case the the postporcesing is called before experiment themselves
     if len([p for p in dir_expts if os.path.isdir(p)]) == 0:
         test_experiments_soa_synth()
 
     r_parse.parse_experiments(params)
 
-    params.update({'name_results': expt_apdl.RESULTS_CSV})
+    params.update({'name_results': e_gen.RESULTS_CSV})
     r_recomp.parse_experiments(params)
 
-    name_res = os.path.splitext(expt_apdl.RESULTS_CSV)[0]
+    name_res = os.path.splitext(e_gen.RESULTS_CSV)[0]
     params.update({'name_results': [name_res + '_NEW.csv'], 'nb_jobs': 1})
     r_parse.parse_experiments(params)
 
@@ -145,7 +145,7 @@ def main():
     """ main entry point """
     logging.info('test experiments BPDL')
     test_experiments_bpdl()
-    logging.info('test experiments BPDL inits')
+    logging.info('test experiments BPDL initials')
     test_experiments_bpdl_inits()
 
     logging.info('test experiments S-o-A synth')

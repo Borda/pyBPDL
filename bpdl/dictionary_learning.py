@@ -639,9 +639,12 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     logging.debug('max nb labels set: %i', label_max)
     atlas, w_bins = bpdl_initialisation(images, init_atlas, init_weights,
                                         out_dir, out_prefix)
-    list_crit = []
+    list_diff = []
     list_times = []
     imgs_warped = images
+    deforms = None
+    if max_iter < 1:  # set at least single iteration
+        max_iter = 1
 
     for iter in range(max_iter):
         d_times = {}
@@ -666,7 +669,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
 
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
         # step_diff = np.sum(abs(atlas - atlas_new)) / float(np.product(atlas.shape))
-        list_crit.append(step_diff)
+        list_diff.append(step_diff)
         list_times.append(d_times)
         atlas = sk_image.relabel_sequential(atlas_new)[0]
 
@@ -679,8 +682,8 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
                           step_diff, tol)
             break
     logging.info('BPDL: terminated with iter %i / %i and step diff %f <? %f',
-                 len(list_crit), max_iter, (list_crit[-1] - list_crit[-2]), tol)
-    logging.debug('criterion evolved:\n %s', repr(list_crit))
+                 len(list_diff), max_iter, list_diff[-1], tol)
+    logging.debug('criterion evolved:\n %s', repr(list_diff))
     logging.debug('measured time: %s', repr(pd.DataFrame(list_times)))
     logging.info(pd.DataFrame(list_times).describe())
     # atlas = sk_image.relabel_sequential(atlas)[0]

@@ -34,12 +34,16 @@ import matplotlib.pylab as plt
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
 import bpdl.pattern_atlas as ptn_dict
+import bpdl.pattern_weights as ptn_weight
 
 FORMAT_DT = '%Y%m%d-%H%M%S'
 CONFIG_JSON = 'config.json'
 RESULTS_TXT = 'resultStat.txt'
 RESULTS_CSV = 'results.csv'
 FILE_LOGS = 'logging.txt'
+NAME_ATLAS = 'atlas{}'
+NAME_ENCODING = 'encoding{}.csv'
+EVAL_COLUMNS = ['atlas_ARS', 'reconstruct_diff', 'time']
 
 # fixing ImportError: No module named 'copy_reg' for Python3
 if sys.version_info.major == 2:
@@ -49,7 +53,7 @@ if sys.version_info.major == 2:
         """ REQURED FOR MPROC POOL
         ISSUE: cPickle.PicklingError:
           Can't pickle <type 'instancemethod'>: attribute lookup __builtin__.instancemethod failed
-        http://stackoverflow.com/questions/25156768/cant-pickle-type-instancemethod-using-pythons-multiprocessing-pool-apply-a
+        SEE: http://stackoverflow.com/questions/25156768
         """
         if m.im_self is None:
             return getattr, (m.im_class, m.im_func.func_name)
@@ -87,10 +91,9 @@ SYNTH_PATH_APD = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME)
 
 SYNTH_SUBSETS = ['raw', 'noise', 'deform', 'defNoise']
 SYNTH_SUB_DATASETS_BINARY = ['datasetBinary_' + n for n in SYNTH_SUBSETS]
-SYNTH_SUB_DATASETS_PROBA = ['datasetProb_' + n for n in SYNTH_SUBSETS]
-SYNTH_SUB_DATASETS_PROBA_NOISE = ['datasetProb_raw_gauss-%.3f' % d
-                                  for d in [0.001, 0.005, 0.01, 0.025, 0.05, 0.075,
-                                            0.100, 0.125, 0.15, 0.2]]
+SYNTH_SUB_DATASETS_PROBA = ['datasetFuzzy_' + n for n in SYNTH_SUBSETS]
+SYNTH_SUB_DATASETS_PROBA_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d
+                                  for d in tl_data.GAUSS_NOISE]
 
 SYNTH_PARAMS = DEFAULT_PARAMS.copy()
 SYNTH_PARAMS.update({
@@ -117,7 +120,7 @@ def create_args_parser(dict_params):
     """ create simple arg parser with default values (input, output, dataset)
 
     :param {str: ...} dict_params:
-    :return: object argparse<...>
+    :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-in', '--path_in', type=str, required=True,
@@ -155,7 +158,7 @@ def create_args_parser(dict_params):
 def parse_arg_params(parser):
     """ parse basic args and return as dictionary
 
-    :param parser: argparse
+    :param obj parser: argparse
     :return: {str: ...}
     """
     args = vars(parser.parse_args())
@@ -226,11 +229,11 @@ def load_list_img_names(path_csv, path_in=''):
 def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True):
     """ create the experiment folder and iterate while there is no available
 
-    :param {str: any} params:
+    :param {str: ...} params:
     :param str dir_name:
     :param bool stamp_unique:
     :param bool skip_load:
-    :return {str: any}:
+    :return {str: ...}:
 
     >>> p = {'path_out': '.'}
     >>> p = create_experiment_folder(p, 'my_test', False, skip_load=True)
@@ -270,10 +273,9 @@ def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True
 def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
     """ set the logger to file
 
-    :param path_out:
-    :param file_name:
-    :param reset:
-    :return:
+    :param str path_out:
+    :param str file_name:
+    :param bool reset:
     """
     log = logging.getLogger()
     if reset:
@@ -289,7 +291,7 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
 def string_dict(d, desc='DICTIONARY:', offset=30):
     """ transform dictionary to a formatted string
 
-    :param {} d:
+    :param {} d: dictionary with parameters
     :param int offset: length between name and value
     :param str desc: dictionary title
     :return str:
@@ -309,8 +311,8 @@ def copy_dict(d):
     """ alternative of deep copy without pickle on in first level
     Nose testing - TypeError: can't pickle dict_keys objects
 
-    :param d:
-    :return:
+    :param {} d: dictionary
+    :return {}:
     >>> d1 = {'a': [0, 1]}
     >>> d2 = copy_dict(d1)
     >>> d2['a'].append(3)
@@ -326,8 +328,8 @@ def copy_dict(d):
 def generate_atlas_suffix(d_params):
     """ generating suffix strung according given params
 
-    :param d_params:
-    :return:
+    :param {} d_params: dictionary
+    :return str:
 
     >>> params = {'my_Param': 15}
     >>> generate_atlas_suffix(params)
@@ -345,7 +347,7 @@ def generate_atlas_suffix(d_params):
 # =============================================================================
 
 
-class ExperimentAPDL(object):
+class Experiment(object):
     """
     main_train class for APD experiments State-of-the-Art and BPDL
 
@@ -353,19 +355,20 @@ class ExperimentAPDL(object):
     >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
-    >>> expt = ExperimentAPDL(params, time_stamp=False)
+    >>> expt = Experiment(params, time_stamp=False)
     >>> expt.run(gt=True)
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
     """
 
-    REQURED_PARAMS = ['dataset', 'path_in', 'path_out']
+    REQUIRED_PARAMS = ['dataset', 'path_in', 'path_out']
 
     def __init__(self, dict_params, time_stamp=True):
         """ initialise class and set the experiment parameters
 
         :param {str: ...} dict_params:
+        :param bool time_stamp: mark if you want an unique folder per experiment
         """
-        assert all(n in dict_params for n in self.REQURED_PARAMS), \
+        assert all(n in dict_params for n in self.REQUIRED_PARAMS), \
             'missing some required parameters'
         dict_params = simplify_params(dict_params)
 
@@ -384,18 +387,19 @@ class ExperimentAPDL(object):
 
         self.params = dict_params
         self.params['class'] = self.__class__.__name__
-        self.__check_exist_path()
+        self.__check_exist_paths()
         self.__create_folder(stamp_unique=time_stamp)
         set_experiment_logger(self.params['path_exp'])
         self.df_results = pd.DataFrame()
-        self.path_stat = os.path.join(self.params.get('path_exp'), RESULTS_TXT)
-        self.list_img_paths = None
-        # self.params.export_as(self.path_stat)
-        logging.info(string_dict(self.params, desc='PARAMETERS:'))
-        with open(self.path_stat, 'w') as fp:
+        self._path_stat = os.path.join(self.params.get('path_exp'), RESULTS_TXT)
+        self._list_img_paths = None
+        # self.params.export_as(self._path_stat)
+        with open(self._path_stat, 'w') as fp:
             fp.write(string_dict(self.params, desc='PARAMETERS:'))
+        logging.info(string_dict(self.params, desc='PARAMETERS:'))
 
-    def __check_exist_path(self):
+    def __check_exist_paths(self):
+        """ Check all required paths in parameters whether they exist """
         for p in (self.params[n] for n in self.params
                   if 'dir' in n.lower() or 'path' in n.lower()):
             if not os.path.exists(p):
@@ -405,7 +409,9 @@ class ExperimentAPDL(object):
                 raise Exception('given folder "%s" does not exist!' % p)
 
     def __create_folder(self, stamp_unique=True):
-        """ create the experiment folder and iterate while there is no available
+        """ Create the experiment folder and iterate while there is no available
+
+        :param bool stamp_unique: mark if you want an unique folder per experiment
         """
         # create results folder for experiments
         if not os.path.exists(self.params.get('path_out')):
@@ -419,24 +425,31 @@ class ExperimentAPDL(object):
     def _load_data_ground_truth(self):
         """ loading all GT suh as atlas and reconstructed images from GT encoding
 
-        :param params: {str: ...}, parameter settings
+        :param {str: ...} params: parameter settings
         """
         path_atlas = os.path.join(self.params.get('path_in'),
                                   tl_data.DIR_NAME_DICTIONARY)
-        self.gt_atlas = tl_data.dataset_compose_atlas(path_atlas)
+        self._gt_atlas = tl_data.dataset_compose_atlas(path_atlas)
         if self.params.get('list_images') is not None:
             img_names = [os.path.splitext(os.path.basename(p))[0]
-                         for p in self.list_img_paths]
-            gt_encoding = tl_data.dataset_load_weights(self.path_data,
-                                                       img_names=img_names)
+                         for p in self._list_img_paths]
+            self._gt_encoding = tl_data.dataset_load_weights(self.path_data,
+                                                             img_names=img_names)
         else:
-            gt_encoding = tl_data.dataset_load_weights(self.params.get('path_in'))
-        self.gt_img_rct = ptn_dict.reconstruct_samples(self.gt_atlas, gt_encoding)
+            self._gt_encoding = tl_data.dataset_load_weights(self.params.get('path_in'))
+        self._gt_images = ptn_dict.reconstruct_samples(self._gt_atlas,
+                                                       self._gt_encoding)
+        # self._images = [im.astype(np.uint8, copy=False) for im in self._images]
 
-    def _load_data(self, gt=True):
+    def _load_images(self):
+        """ load image data """
+        self._images, self._image_names = tl_data.dataset_load_images(
+            self._list_img_paths, nb_jobs=1)
+
+    def __load_data(self, gt=True):
         """ load all required data for APD and also ground-truth if required
 
-        :param bool gt:
+        :param bool gt: search for the Ground Truth using standard names
         """
         logging.info('loading required data')
         self.path_data = os.path.join(self.params.get('path_in'),
@@ -449,27 +462,23 @@ class ExperimentAPDL(object):
                 path_csv = os.path.abspath(os.path.join(self.path_data, path_csv))
                 shutil.copy(path_csv, os.path.join(self.params['path_exp'],
                                                    os.path.basename(path_csv)))
-            self.list_img_paths = load_list_img_names(path_csv)
+            self._list_img_paths = load_list_img_names(path_csv)
         else:
-            self.list_img_paths = tl_data.find_images(self.path_data)
+            self._list_img_paths = tl_data.find_images(self.path_data)
         self._load_images()
+
+        # loading  if it is set
         if gt:
             self._load_data_ground_truth()
-            assert len(self.imgs) == len(self.gt_img_rct), \
+            assert len(self._images) == len(self._gt_images), \
                 'nb of input (%i) and reconst. (%i) images do not match' \
-                % (len(self.imgs), len(self.gt_img_rct))
-        logging.debug('loaded %i images', len(self.imgs))
-        # self.imgs = [im.astype(np.uint8, copy=False) for im in self.imgs]
-
-    def _load_images(self):
-        """ load image data """
-        self.imgs, self._im_names = tl_data.dataset_load_images(
-            self.list_img_paths, nb_jobs=1)
+                % (len(self._images), len(self._gt_images))
+        logging.debug('loaded %i images', len(self._images))
 
     def run(self, gt=False, iter_params=None):
         """ the main procedure that load, perform and evaluate experiment
 
-        :param bool gt:
+        :param bool gt: search for the Ground Truth using standard names
         :param [] iter_params: list of possible configuration
         """
         logging.info('perform the complete experiment')
@@ -478,133 +487,184 @@ class ExperimentAPDL(object):
         if is_list_like(iter_params):
             self.iter_params = copy_dict(iter_params)
         elif isinstance(iter_params, dict):
-            logging.info(string_dict(iter_params,
-                                             desc='ITERATE PARAMETERS:'))
+            logging.info(string_dict(iter_params, desc='ITERATE PARAMETERS:'))
             self.iter_params = expand_params(iter_params)
         else:
             self.iter_params = None
 
-        self._load_data(gt)
+        self.__load_data(gt)
         self._perform()
-        self._evaluate()
-        self._summarise()
+        self.__summarise()
         logging.getLogger().handlers = []
 
     def _perform(self):
         """ perform experiment as sequence of iterated configurations """
-        self.list_stats = []
         if is_list_like(self.iter_params):
-            logging.info('iterate over %i configuratios', len(self.iter_params))
-            self._perform_sequence()
+            logging.info('iterate over %i configurations', len(self.iter_params))
+            self.__perform_sequence()
         else:
             logging.debug('perform single configuration')
-            self._perform_once({})
+            detail = self.__perform_once({})
+            self.df_results = pd.DataFrame(detail)
 
-    def _perform_sequence(self):
-        """ iteratively change a single experiment parameter with the same data
+    def __perform_sequence(self):
+        """ Iteratively change a single experiment parameter with the same data
         """
         logging.info('perform_sequence in single thread')
         tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
         for d_params in self.iter_params:
-            self.params.update(d_params)
+            # self.params.update(d_params)
             tqdm_bar.set_description(d_params.get('param_idx', ''))
             logging.debug(' -> set iterable %s', repr(d_params))
 
-            t = time.time()
-            stat = self._perform_once(d_params)
-            stat['time'] = time.time() - t
+            detail = self.__perform_once(d_params)
 
-            self.list_stats.append(stat)
-            logging.debug('partial results: %s', repr(stat))
+            self.df_results = self.df_results.append(detail, ignore_index=True)
+            logging.debug('partial results: %s', repr(detail))
             # just partial export
-            self._evaluate()
-            tqdm_bar.update(1)
+            tqdm_bar.update()
 
-    def _perform_once(self, d_params):
+    def _estimate_atlas_weights(self, images, params):
+        """ This is the method to be be over written by individual methods
+
+        :param [ndarray] images:
+        :param {} params:
+        :return (ndarray, ndarray, {}):
+        """
+        del params
+        atlas = np.zeros_like(self._images[0])
+        weights = np.zeros((len(self._images), 0))
+        return atlas, weights, None
+
+    def __perform_once(self, d_params):
         """ perform single experiment
 
-        :param {} v:
-        :return {str: val}:
+        :param {str: ...} d_params: used specific configuration
+        :return {str: ...}: output statistic
         """
-        stat = copy_dict(d_params)
-        stat['name_suffix'] = generate_atlas_suffix(d_params)
-        return stat
+        detail = copy_dict(self.params)
+        detail.update(copy_dict(d_params))
+        detail['name_suffix'] = generate_atlas_suffix(d_params)
 
-    def _export_atlas(self, suffix=''):
+        # in case you chose only a subset of images
+        nb_samples = detail.get('nb_samples', None)
+        if isinstance(nb_samples, float):
+            nb_samples = int(len(self._images) * nb_samples)
+        images = self._images[:nb_samples]
+
+        # try:
+        t = time.time()
+        atlas, weights, extras = self._estimate_atlas_weights(images, detail)
+        detail['time'] = time.time() - t
+
+        logging.debug('estimated atlas of size %s and labels %s',
+                      repr(atlas.shape), repr(np.unique(atlas).tolist()))
+        logging.debug('estimated weights of size %s and summing %s',
+                      repr(weights.shape), repr(np.sum(weights, axis=0)))
+
+        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+                   for img in self._images]
+        weights = np.array(weights)
+
+        self._export_atlas(atlas, suffix=detail['name_suffix'])
+        self._export_coding(weights, suffix=detail['name_suffix'])
+        self._export_extras(extras, suffix=detail['name_suffix'])
+
+        detail.update(self.__evaluate(atlas, weights))
+        detail.update(self._evaluate_extras(atlas, weights, extras))
+
+        # except Exception:
+        #     logging.error(traceback.format_exc())
+
+        return detail
+
+    def _export_atlas(self, atlas, suffix=''):
         """ export estimated atlas
 
-        :param np.array<height, width> atlas:
+        :param ndarray atlas: np.array<height, width>
         :param str suffix:
         """
-        assert hasattr(self, 'atlas'), 'atlas is not defined'
-        n_img = 'atlas{}'.format(suffix)
-        tl_data.export_image(self.params.get('path_exp'), self.atlas, n_img)
+        n_img = NAME_ATLAS.format(suffix)
+        tl_data.export_image(self.params.get('path_exp'), atlas, n_img)
         path_atlas_rgb = os.path.join(self.params.get('path_exp'),
                                       n_img + '_rgb.png')
-        plt.imsave(path_atlas_rgb, self.atlas, cmap=plt.cm.jet)
+        plt.imsave(path_atlas_rgb, atlas, cmap=plt.cm.jet)
 
-    def _export_coding(self, suffix=''):
+    def _export_coding(self, weights, suffix=''):
         """ export estimated atlas
 
-        :param np.array<height, width> atlas:
+        :param ndarray weights:
         :param str suffix:
         """
-        assert hasattr(self, 'w_bins'), 'weights are not defined'
-        n_csv = 'encoding{}.csv'.format(suffix)
+        n_csv = NAME_ENCODING.format(suffix)
         path_csv = os.path.join(self.params.get('path_exp'), n_csv)
-        if not hasattr(self, '_im_names'):
-            self._im_names = [str(i) for i in range(self.w_bins.shape[0])]
-        df = pd.DataFrame(data=self.w_bins, index=self._im_names[:len(self.w_bins)])
+        if not hasattr(self, '_image_names'):
+            self._image_names = [str(i) for i in range(weights.shape[0])]
+        df = pd.DataFrame(data=weights, index=self._image_names[:len(weights)])
         df.columns = ['ptn {:02d}'.format(lb + 1) for lb in df.columns]
         df.index.name = 'image'
         df.to_csv(path_csv)
 
-    def _compute_statistic_gt(self, imgs_rct=None):
-        """ compute the statistic gor GT and estimated atlas and reconstructed images
+    def _export_extras(self, extras, suffix=''):
+        """ export some extra parameters
 
-        :param np.array<height, width> atlas:
-        :param [np.array<height, width>] imgs_rct:
-        :return {str: float, }:
+        :param {} extras: dictionary with extra variables
+        """
+        pass
+
+    def __evaluate(self, atlas, weights):
+        """ Compute the statistic for GT and estimated atlas and reconst. images
+
+        :param ndarray atlas: np.array<height, width>
+        :param [ndarray] weights: np.array<nb_samples, nb_patterns>
+        :return {str: ...}:
         """
         stat = {}
-        logging.debug('compute static - %s', hasattr(self, 'gt_atlas'))
-        if hasattr(self, 'gt_atlas') and hasattr(self, 'atlas'):
-            if self.gt_atlas.shape == self.atlas.shape:
-                stat['atlas_ARS'] = metrics.adjusted_rand_score(self.gt_atlas.ravel(),
-                                                                self.atlas.ravel())
-        logging.debug('compute reconstruction - %s', hasattr(self, 'gt_img_rct'))
+        logging.debug('compute static - %s', hasattr(self, '_gt_atlas'))
+        if hasattr(self, '_gt_atlas'):
+            assert self._gt_atlas.shape == atlas.shape, \
+                'GT %s and estimation %s do not match' \
+                % (repr(self._gt_atlas.shape), repr(atlas.shape))
+            stat['atlas ARS'] = metrics.adjusted_rand_score(self._gt_atlas.ravel(),
+                                                            atlas.ravel())
+        logging.debug('compute reconstruction - %s', hasattr(self, '_gt_images'))
+        images_rct = ptn_dict.reconstruct_samples(atlas, weights)
         # error estimation from original reconstruction
-        if hasattr(self, 'gt_img_rct') and imgs_rct is not None:
-            # imgs_rct = ptn_dict.reconstruct_samples(self.atlas, self.w_bins)
-            # imgs_rct = self._binarize_img_reconstruction(imgs_rct)
-            imgs_gt = self.gt_img_rct[:len(imgs_rct)]
-            diff = np.asarray(imgs_gt) - np.asarray(imgs_rct)
-            stat['reconstruct_diff'] = np.sum(abs(diff)) / float(np.prod(diff.shape))
-        elif hasattr(self, 'imgs') and imgs_rct is not None:
-            imgs = self.imgs[:len(imgs_rct)]
-            diff = np.asarray(imgs) - np.asarray(imgs_rct)
-            stat['reconstruct_diff'] = np.sum(abs(diff)) / float(np.prod(diff.shape))
+        if hasattr(self, '_gt_images') and images_rct is not None:
+            # images_rct = ptn_dict.reconstruct_samples(self.atlas, self.weights)
+            # images_rct = self._binarize_img_reconstruction(images_rct)
+            images_gt = self._gt_images[:len(images_rct)]
+            diff = np.asarray(images_gt) - np.asarray(images_rct)
+            nb_pixels = float(np.prod(diff.shape))
+            stat['reconstruct diff GT'] = np.sum(abs(diff)) / nb_pixels
+        elif hasattr(self, '_images') and images_rct is not None:
+            images = self._images[:len(images_rct)]
+            diff = np.asarray(images) - np.asarray(images_rct)
+            nb_pixels = float(np.prod(diff.shape))
+            stat['reconstruct diff'] = np.sum(abs(diff)) / nb_pixels
         return stat
 
-    def _evaluate(self):
-        """ evaluate experiment with given GT """
-        self.df_results = pd.DataFrame()
-        for stat in self.list_stats:
-            self.df_results = self.df_results.append(stat, ignore_index=True)
-        # if self.iter_var_name in stat:
-        #     self.df_results.set_index(self.iter_var_name, inplace=True)
+    def _evaluate_extras(self, atlas, weights, extras):
+        """ some extra evaluation
+
+        :param ndarray atlas: np.array<height, width>
+        :param [ndarray] weights: np.array<nb_samples, nb_patterns>
+        :param {} extras:
+        :return {}:
+        """
+        return {}
+
+    def __summarise(self):
+        """ summarise and export experiment results """
+        logging.info('summarise the experiment')
         path_csv = os.path.join(self.params.get('path_exp'), RESULTS_CSV)
         logging.debug('save results: "%s"', path_csv)
         self.df_results.to_csv(path_csv)
 
-    def _summarise(self):
-        """ summarise and export experiment results """
-        logging.info('summarise the experiment')
         if hasattr(self, 'df_results') and not self.df_results.empty:
             df_stat = self.df_results.describe()
-            df_stat = df_stat[[c for c in ['atlas_ARS', 'reconstruct_diff', 'time']
-                               if c in df_stat.columns]]
-            with open(self.path_stat, 'a') as fp:
+            df_stat = df_stat[[c for c in EVAL_COLUMNS if c in df_stat.columns]]
+            with open(self._path_stat, 'a') as fp:
                 fp.write('\n' * 3 + 'RESULTS: \n' + '=' * 9)
                 fp.write('\n{}'.format(df_stat))
             logging.debug('statistic: \n%s', repr(df_stat))
@@ -613,67 +673,50 @@ class ExperimentAPDL(object):
 # =============================================================================
 
 
-class ExperimentAPDL_parallel(ExperimentAPDL):
+class ExperimentParallel(Experiment):
     """
     run the experiment in multiple threads
+
+    EXAMPLE:
+    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
+    ...           'path_out': PATH_RESULTS}
+    >>> expt = ExperimentParallel(params, time_stamp=False)
+    >>> expt.run(gt=True)
+    >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
     """
 
-    def __init__(self, dict_params, nb_jobs=NB_THREADS):
+    def __init__(self, dict_params, time_stamp=True):
         """ initialise parameters and nb jobs in parallel
 
         :param {str: ...} dict_params:
         :param int nb_jobs:
         """
-        super(ExperimentAPDL_parallel, self).__init__(dict_params)
-        self.nb_jobs = nb_jobs
+        super(ExperimentParallel, self).__init__(dict_params, time_stamp)
+        self.nb_jobs = dict_params.get('nb_jobs', NB_THREADS)
 
     def _load_images(self):
         """ load image data """
-        self.imgs, self._im_names = tl_data.dataset_load_images(self.list_img_paths, nb_jobs=self.nb_jobs)
+        self._images, self._image_names = tl_data.dataset_load_images(
+            self._list_img_paths, nb_jobs=self.nb_jobs)
 
-    def _wrapper_perform_once(self, d_params):
-        try:
-            self.params.update(d_params)
-            logging.debug(' -> set iterable %s', repr(d_params))
-            t = time.time()
-            # stat = super(ExperimentAPD_mp, self)._perform_once(v)
-            stat = self._perform_once(d_params)
-            stat['time'] = time.time() - t
-            logging.info('partial results: %s', repr(stat))
-        except Exception:
-            stat = copy_dict(d_params)
-            # fixme, optionally remove the try/catch
-            logging.error(traceback.format_exc())
-        return stat
-
-    # def _perform_once(self, v):
-    #     """ perform single experiment
-    #
-    #     :param v: value
-    #     :return: {str: val}
-    #     """
-    #     t = time.time()
-    #     self.params[self.iter_var_name] = v
-    #     stat = super(ExperimentAPD_mp, self)._perform_once(v)
-    #     stat['time'] = time.time() - t
-    #     return stat
-
-    def _perform_sequence(self):
+    def __perform_sequence(self):
         """ perform sequence in multiprocessing pool """
         logging.debug('perform_sequence in %i threads for %i values',
                       self.nb_jobs, len(self.iter_params))
         # ISSUE with passing large date to processes so the images are saved
         # and loaded in particular process again
         # p_imgs = os.path.join(self.params.get('path_exp'), 'input_images.npz')
-        # np.savez(open(p_imgs, 'w'), imgs=self.imgs)
+        # np.savez(open(p_imgs, 'w'), imgs=self._images)
 
-        self.list_stats = []
-        # tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
+        tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
         mproc_pool = mproc.Pool(self.nb_jobs)
-        for stat in mproc_pool.map(self._wrapper_perform_once, self.iter_params):
-            self.list_stats.append(stat)
-            self._evaluate()
-            # tqdm_bar.update(1)
+        for detail in mproc_pool.map(self.__perform_once,
+                                     self.iter_params):
+            self.df_results = self.df_results.append(detail, ignore_index=True)
+            logging.debug('partial results: %s', repr(detail))
+            # just partial export
+            tqdm_bar.update()
         mproc_pool.close()
         mproc_pool.join()
 

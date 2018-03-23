@@ -117,13 +117,13 @@ def generate_all(path_out=DEFAULT_PATH_APD,
     ds_apply(im_deform, path_dir('datasetBinary_defNoise'),
              tl_data.add_image_binary_noise, NOISE_BINARY)
 
-    im_comb_prob = ds_apply(im_comb, path_dir('datasetProb_raw'),
+    im_comb_prob = ds_apply(im_comb, path_dir('datasetFuzzy_raw'),
                             tl_data.image_transform_binary2fuzzy, 0.5)
-    im_def_prob = ds_apply(im_deform, path_dir('datasetProb_deform'),
+    im_def_prob = ds_apply(im_deform, path_dir('datasetFuzzy_deform'),
                            tl_data.add_image_fuzzy_pepper_noise, 0.5)
-    ds_apply(im_comb_prob, path_dir('datasetProb_noise'),
+    ds_apply(im_comb_prob, path_dir('datasetFuzzy_noise'),
              tl_data.add_image_fuzzy_pepper_noise, NOISE_PROB)
-    ds_apply(im_def_prob, path_dir('datasetProb_defNoise'),
+    ds_apply(im_def_prob, path_dir('datasetFuzzy_defNoise'),
              tl_data.add_image_fuzzy_pepper_noise, NOISE_PROB)
 
 

@@ -555,7 +555,7 @@ def reconstruct_samples(atlas, w_bins):
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    # w_bins = np.array(weights)
+    # w_bins = np.array(w_bins)
     w_bin_ext = np.append(np.zeros((w_bins.shape[0], 1)), w_bins, axis=1)
     atlas = np.asarray(atlas, dtype=int)
     imgs = [None] * w_bins.shape[0]

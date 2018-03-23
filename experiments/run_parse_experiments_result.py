@@ -30,7 +30,7 @@ import pandas as pd
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
-import experiments.experiment_apdl as expt_apd
+import experiments.experiment_general as e_gen
 
 NAME_INPUT_CONFIG = 'resultStat.txt'
 NAME_INPUT_RESULT = 'results.csv'
@@ -145,7 +145,7 @@ def parse_experiment_folder(path_expt, params):
     if path_config.endswith('json'):
         dict_info = json.load(open(path_config, 'r'))
     else:
-        dict_info = expt_apd.parse_config_txt(path_config)
+        dict_info = e_gen.parse_config_txt(path_config)
     logging.debug(' -> loaded params: %s', repr(dict_info.keys()))
 
     dict_info.update(count_folders_subfolders(path_expt))
@@ -206,7 +206,7 @@ def parse_experiments(params, nb_jobs=NB_THREADS):
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')
-    logging.info(expt_apd.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.isdir(params['path']), 'missing "%s"' % params['path']
 
     df_all = pd.DataFrame()

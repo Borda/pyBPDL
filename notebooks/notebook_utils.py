@@ -24,10 +24,10 @@ SYNTH_DATASETS_BINARY = ['datasetBinary_raw',
                          'datasetBinary_deform',
                          'datasetBinary_noise',
                          'datasetBinary_defNoise']
-SYNTH_DATASETS_PROB = ['datasetProb_raw',
-                       'datasetProb_deform',
-                       'datasetProb_noise',
-                       'datasetProb_defNoise']
+SYNTH_DATASETS_PROB = ['datasetFuzzy_raw',
+                       'datasetFuzzy_deform',
+                       'datasetFuzzy_noise',
+                       'datasetFuzzy_defNoise']
 DEFAULT_IMG_POSIX = '.png'
 TEMP_ATLAS_NAME = 'APDL_expt_msc_atlas_iter_'
 DEFAULT_APDL_GRAPHS = ('atlas_ARS', 'reconstruct_diff', 'time')

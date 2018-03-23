@@ -33,7 +33,7 @@ from skimage.segmentation import relabel_sequential
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
 import bpdl.metric_similarity as tl_metric
-import experiments.experiment_apdl as expt_apd
+import experiments.experiment_general as e_gen
 import experiments.run_dataset_generate as r_data
 import experiments.run_parse_experiments_result as r_parse
 
@@ -174,7 +174,7 @@ def parse_experiments(params):
     :param params: {str: ...}
     """
     logging.info('running recompute Experiments results')
-    logging.info(expt_apd.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
 
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
