@@ -38,6 +38,7 @@ test:
     - unset DISPLAY && python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
     - unset DISPLAY && python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-3/image/*.png" -out images/ovary_stage-3/gene
 
+    - rm -r results && mkdir results
     - unset DISPLAY && python experiments/run_experiments.py --type synth -in images/syntheticDataset_vX -out results
     - unset DISPLAY && python experiments/run_experiments.py --type real -in images/imaginal_discs -out results --dataset gene_small
 

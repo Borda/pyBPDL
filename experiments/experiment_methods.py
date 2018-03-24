@@ -18,7 +18,10 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.pattern_atlas as ptn_dict
 import bpdl.dictionary_learning as dl
 import bpdl.pattern_weights as ptn_weight
+import bpdl.registration as regist
 import experiments.experiment_general as expt_gen
+
+NAME_DEFORMS = 'deformations{}.npz'
 
 
 def estim_atlas_as_argmax(atlas_components, fit_result, bg_threshold=0.1):
@@ -262,6 +265,11 @@ class ExperimentBPDL_base(expt_gen.Experiment):
             'init atlas: %s & img size: %s' % \
             (repr(init_atlas.shape), repr(im_size))
         assert init_atlas.dtype == np.int, 'type: %s' % init_atlas.dtype
+        if len(np.unique(init_atlas)) == 1:
+            logging.warning('atlas init type "%s" failed '
+                            'to estimate an atlas', init_type)
+        # just to secure the maximal number of patters
+        init_atlas[0, 0, ...] = nb_patterns
         return init_atlas
 
     def _estimate_atlas_weights(self, images, params):
@@ -303,8 +311,16 @@ class ExperimentBPDL_base(expt_gen.Experiment):
 
         :param {} extras: dictionary with extra variables
         """
-        # todo, export deform
-        pass
+        if extras is None:  # in case that there are no extras...
+            return
+        if extras.get('deforms', None) is not None:
+            dict_deforms = dict(zip(self._image_names[:len(extras['deforms'])],
+                                    extras['deforms']))
+            path_npz = os.path.join(self.params.get('path_exp'),
+                                    NAME_DEFORMS.format(suffix))
+            logging.debug('exporting deformations: %s', path_npz)
+            # np.savez(open(path_npz, 'w'), **dict_deforms)
+            np.savez_compressed(open(path_npz, 'wb'), **dict_deforms)
 
     def _evaluate_extras(self, atlas, weights, extras):
         """ some extra evaluation
@@ -314,8 +330,20 @@ class ExperimentBPDL_base(expt_gen.Experiment):
         :param {} extras:
         :return {}:
         """
-        # todo, evaluate deform
-        return {}
+        stat = {}
+        if extras is None:  # in case that there are no extras...
+            return {}
+        if extras.get('deforms', None) is not None:
+            deforms = extras['deforms']
+            images_rct = ptn_dict.reconstruct_samples(atlas, weights)
+            assert len(images_rct) == len(deforms), \
+                'nb reconst. images (%i) and deformations (%i) should match' \
+                % (len(images_rct), len(deforms))
+            # apply the estimated deformation
+            images_rct = regist.warp2d_images_deformations(images_rct, deforms)
+            tag, diff = self._evaluate_reconstruct(images_rct)
+            stat['reconst. diff %s deform' % tag] = diff
+        return stat
 
 
 class ExperimentBPDL(ExperimentBPDL_base, expt_gen.ExperimentParallel):

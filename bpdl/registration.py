@@ -150,6 +150,56 @@ def warp2d_apply_deform_field(img, deform, method='linear'):
     return img_warped
 
 
+def wrapper_warp2d_image_deform(idx_img_deform, method='linear'):
+    """ wrapper for registration of input images to reconstructed as demons
+
+    :param (int, ndarray, ndarray) idx_img_deform:
+    :return:
+    """
+    idx, img, deform = idx_img_deform
+    img_warped = warp2d_apply_deform_field(img, deform, method=method)
+    return idx, img_warped
+
+
+def warp2d_images_deformations(list_images, list_deforms, nb_jobs=NB_THREADS):
+    """ deforme whole set of images to expected image domain
+
+    :param [ndarray] list_images:
+    :param ndarray list_deforms:
+    :param int nb_jobs:
+    :return: [ndarray]
+
+    >>> img = np.zeros((6, 9), dtype=int)
+    >>> img[:3, 1:5] = 1
+    >>> deform = np.ones(img.shape + (2,))
+    >>> imgs = warp2d_images_deformations([img], [deform])
+    >>> imgs  # doctest: +NORMALIZE_WHITESPACE
+    [array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+            [ 0.,  0.,  1.,  1.,  1.,  1.,  0.,  0.,  0.],
+            [ 0.,  0.,  1.,  1.,  1.,  1.,  0.,  0.,  0.],
+            [ 0.,  0.,  1.,  1.,  1.,  1.,  0.,  0.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])]
+    """
+    assert len(list_images) == len(list_deforms), \
+        'number of images (%i) and deformations (%i) have to match' \
+        % (len(list_images), len(list_deforms))
+    list_deforms = list(list_deforms)
+
+    list_imgs_wrap = [None] * len(list_images)
+    list_items = zip(range(len(list_images)), list_images, list_deforms)
+    if nb_jobs < 1:
+        nb_jobs = 1
+
+    mproc_pool = mproc.Pool(nb_jobs)
+    for idx, img_w in mproc_pool.map(wrapper_warp2d_image_deform, list_items):
+        list_imgs_wrap[idx] = img_w
+    mproc_pool.close()
+    mproc_pool.join()
+
+    return list_imgs_wrap
+
+
 def wrapper_regist_demons_images_weights(idx_img_weights, atlas, coef,
                                          params=None):
     """ wrapper for registration of input images to reconstructed as demons
@@ -191,8 +241,9 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
     >>> atlas[3:7, 6:12] = 2
     >>> w_bins = np.array([[0, 0], [0, 1], [1, 1]], dtype=bool)
     >>> imgs = ptn_atlas.reconstruct_samples(atlas, w_bins)
-    >>> deform = np.ones(atlas.shape + (2,)) * -2
-    >>> imgs[1] = warp2d_apply_deform_field(imgs[1], deform)
+    >>> deform = np.ones(atlas.shape + (2,))
+    >>> deforms = [deform * 0, deform * -2, deform * 0]
+    >>> imgs = warp2d_images_deformations(imgs, deforms)
     >>> imgs[1].astype(int)
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
@@ -206,7 +257,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
     >>> imgs_w, deforms = register_images_to_atlas_demons(imgs, atlas, w_bins,
     ...                                                   coef=0.1, nb_jobs=2)
     >>> np.sum(imgs_w[0])
-    0
+    0.0
     >>> imgs_w[1].astype(int)
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

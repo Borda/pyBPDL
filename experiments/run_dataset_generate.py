@@ -30,7 +30,7 @@ DATASET_TYPE = '2D'
 NB_SAMPLES = 50
 NB_ATM_PATTERNS = 4
 NOISE_BINARY = 0.03
-NOISE_PROB = 0.15
+NOISE_FUZZY = 0.15
 
 
 def aparse_params():
@@ -122,9 +122,9 @@ def generate_all(path_out=DEFAULT_PATH_APD,
     im_def_prob = ds_apply(im_deform, path_dir('datasetFuzzy_deform'),
                            tl_data.add_image_fuzzy_pepper_noise, 0.5)
     ds_apply(im_comb_prob, path_dir('datasetFuzzy_noise'),
-             tl_data.add_image_fuzzy_pepper_noise, NOISE_PROB)
+             tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
     ds_apply(im_def_prob, path_dir('datasetFuzzy_defNoise'),
-             tl_data.add_image_fuzzy_pepper_noise, NOISE_PROB)
+             tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
 
 
 if __name__ == "__main__":

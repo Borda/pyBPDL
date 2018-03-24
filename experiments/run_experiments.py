@@ -185,8 +185,8 @@ def main(arg_params):
 
 
 if __name__ == "__main__":
-    # logging.basicConfig(level=logging.INFO)
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
+    # logging.basicConfig(level=logging.DEBUG)
 
     arg_params = expt_gen.parse_params({})
     main(arg_params)

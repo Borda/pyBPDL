@@ -553,7 +553,6 @@ def bpdl_deform_images(imgs, atlas, weights):
     return images_warped, deforms
 
 
-
 def bpdl_pipeline(images, init_atlas=None, init_weights=None,
                   gc_coef=0.0, tol=1e-3, max_iter=25,
                   gc_reinit=True, ptn_split=True,
@@ -633,9 +632,9 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
-    # assert initAtlas is not None or type(max_nb_lbs)==int
     # initialise
     label_max = np.max(init_atlas)
+    assert label_max > 0, 'at least some patterns should be searched'
     logging.debug('max nb labels set: %i', label_max)
     atlas, w_bins = bpdl_initialisation(images, init_atlas, init_weights,
                                         out_dir, out_prefix)
@@ -664,7 +663,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
                                       label_max, gc_coef, gc_reinit, ptn_split)
         d_times['atlas update'] = time.time() - d_times['reinit. atlas']
 
-        if deform_coef is not None:
+        if deform_coef is not None and iter > 1:
             imgs_warped, deforms = bpdl_deform_images(images, atlas_new, w_bins)
 
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
@@ -684,7 +683,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     logging.info('BPDL: terminated with iter %i / %i and step diff %f <? %f',
                  len(list_diff), max_iter, list_diff[-1], tol)
     logging.debug('criterion evolved:\n %s', repr(list_diff))
-    logging.debug('measured time: %s', repr(pd.DataFrame(list_times)))
+    logging.debug('measured time: \n%s', repr(pd.DataFrame(list_times)))
     logging.info(pd.DataFrame(list_times).describe())
     # atlas = sk_image.relabel_sequential(atlas)[0]
     w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)

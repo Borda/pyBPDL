@@ -43,7 +43,9 @@ RESULTS_CSV = 'results.csv'
 FILE_LOGS = 'logging.txt'
 NAME_ATLAS = 'atlas{}'
 NAME_ENCODING = 'encoding{}.csv'
-EVAL_COLUMNS = ['atlas_ARS', 'reconstruct_diff', 'time']
+EVAL_COLUMNS = ['atlas ARS', 'reconst. diff GT', 'reconst. diff Input', 'time']
+EVAL_COLUMNS_START = ['atlas', 'reconst', 'time']
+
 
 # fixing ImportError: No module named 'copy_reg' for Python3
 if sys.version_info.major == 2:
@@ -72,8 +74,8 @@ DEFAULT_PARAMS = {
     'computer': os.uname(),
     'nb_samples': None,
     'tol': 1e-3,
-    'init_tp': 'random-mosaic',  # random, greedy, , GT-deform
-    'max_iter': 250,  # 250, 25
+    'init_tp': 'random-mosaic-2',  # random, greedy, , GT-deform
+    'max_iter': 150,  # 250, 25
     'gc_regul': 1e-9,
     'nb_labels': tl_data.NB_BIN_PATTERNS + 1,
     'nb_runs': NB_THREADS,  # 500
@@ -81,6 +83,7 @@ DEFAULT_PARAMS = {
     'ptn_split': False,
     'ptn_compact': False,
     'overlap_mj': True,
+    'deform_coef': None,
     'path_in': '',
     'path_out': '',
     'dataset': [''],
@@ -91,15 +94,15 @@ SYNTH_PATH_APD = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME)
 
 SYNTH_SUBSETS = ['raw', 'noise', 'deform', 'defNoise']
 SYNTH_SUB_DATASETS_BINARY = ['datasetBinary_' + n for n in SYNTH_SUBSETS]
-SYNTH_SUB_DATASETS_PROBA = ['datasetFuzzy_' + n for n in SYNTH_SUBSETS]
-SYNTH_SUB_DATASETS_PROBA_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d
+SYNTH_SUB_DATASETS_FUZZY = ['datasetFuzzy_' + n for n in SYNTH_SUBSETS]
+SYNTH_SUB_DATASETS_FUZZY_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d
                                   for d in tl_data.GAUSS_NOISE]
 
 SYNTH_PARAMS = DEFAULT_PARAMS.copy()
 SYNTH_PARAMS.update({
     'type': 'synth',
     'path_in': SYNTH_PATH_APD,
-    'dataset': SYNTH_SUB_DATASETS_PROBA,
+    'dataset': SYNTH_SUB_DATASETS_FUZZY,
     'path_out': PATH_RESULTS,
 })
 # SYNTH_RESULTS_NAME = 'experiments_APD'
@@ -216,7 +219,7 @@ def load_list_img_names(path_csv, path_in=''):
     :return [str]:
     """
     assert os.path.exists(path_csv), '%s' % path_csv
-    df = pd.DataFrame.from_csv(path_csv, index_col=False, header=None)
+    df = pd.read_csv(path_csv, index_col=False, header=None)
     assert len(df.columns) == 1, 'assume just single column'
     list_names = df.as_matrix()[:, 0].tolist()
     # if the input path was set and the list are just names, no complete paths
@@ -368,7 +371,7 @@ class Experiment(object):
         :param {str: ...} dict_params:
         :param bool time_stamp: mark if you want an unique folder per experiment
         """
-        assert all(n in dict_params for n in self.REQUIRED_PARAMS), \
+        assert all([n in dict_params for n in self.REQUIRED_PARAMS]), \
             'missing some required parameters'
         dict_params = simplify_params(dict_params)
 
@@ -465,6 +468,8 @@ class Experiment(object):
             self._list_img_paths = load_list_img_names(path_csv)
         else:
             self._list_img_paths = tl_data.find_images(self.path_data)
+
+        assert len(self._list_img_paths) > 0, 'no images found'
         self._load_images()
 
         # loading  if it is set
@@ -520,8 +525,8 @@ class Experiment(object):
             detail = self.__perform_once(d_params)
 
             self.df_results = self.df_results.append(detail, ignore_index=True)
-            logging.debug('partial results: %s', repr(detail))
             # just partial export
+            logging.debug('partial results: %s', repr(detail))
             tqdm_bar.update()
 
     def _estimate_atlas_weights(self, images, params):
@@ -567,18 +572,19 @@ class Experiment(object):
 
         logging.debug('estimated atlas of size %s and labels %s',
                       repr(atlas.shape), repr(np.unique(atlas).tolist()))
-        logging.debug('estimated weights of size %s and summing %s',
-                      repr(weights.shape), repr(np.sum(weights, axis=0)))
 
-        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+        weights_all = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
                    for img in self._images]
-        weights = np.array(weights)
+        weights_all = np.array(weights_all)
+
+        logging.debug('estimated weights of size %s and summing %s',
+                      repr(weights_all.shape), repr(np.sum(weights_all, axis=0)))
 
         self._export_atlas(atlas, suffix=detail['name_suffix'])
-        self._export_coding(weights, suffix=detail['name_suffix'])
+        self._export_coding(weights_all, suffix=detail['name_suffix'])
         self._export_extras(extras, suffix=detail['name_suffix'])
 
-        detail.update(self.__evaluate(atlas, weights))
+        detail.update(self.__evaluate(atlas, weights_all))
         detail.update(self._evaluate_extras(atlas, weights, extras))
 
 
@@ -594,6 +600,7 @@ class Experiment(object):
         tl_data.export_image(self.params.get('path_exp'), atlas, n_img)
         path_atlas_rgb = os.path.join(self.params.get('path_exp'),
                                       n_img + '_rgb.png')
+        logging.debug('exporting RGB atlas: %s', path_atlas_rgb)
         plt.imsave(path_atlas_rgb, atlas, cmap=plt.cm.jet)
 
     def _export_coding(self, weights, suffix=''):
@@ -602,14 +609,16 @@ class Experiment(object):
         :param ndarray weights:
         :param str suffix:
         """
-        n_csv = NAME_ENCODING.format(suffix)
-        path_csv = os.path.join(self.params.get('path_exp'), n_csv)
         if not hasattr(self, '_image_names'):
             self._image_names = [str(i) for i in range(weights.shape[0])]
         df = pd.DataFrame(data=weights, index=self._image_names[:len(weights)])
         df.columns = ['ptn {:02d}'.format(i + 1)
                       for i in range(len(df.columns))]
         df.index.name = 'image'
+
+        path_csv = os.path.join(self.params.get('path_exp'),
+                                NAME_ENCODING.format(suffix))
+        logging.debug('exporting encoding: %s', path_csv)
         df.to_csv(path_csv)
 
     def _export_extras(self, extras, suffix=''):
@@ -619,6 +628,43 @@ class Experiment(object):
         """
         pass
 
+    def __evaluate_atlas(self, atlas):
+        """ Evaluate atlas
+
+        :param ndarray atlas:
+        :return float:
+        """
+        if hasattr(self, '_gt_atlas'):
+            logging.debug('... compute Atlas static')
+            assert self._gt_atlas.shape == atlas.shape, 'atlases do not match'
+            ars = metrics.adjusted_rand_score(self._gt_atlas.ravel(), atlas.ravel())
+        else:
+            ars = None
+        return ars
+
+    def _evaluate_reconstruct(self, images_rct):
+        """ Evaluate the reconstructed images to GT if exists
+         or just input images as difference sum
+
+        :param [ndarray] images_rct: reconstructed images
+        :return (str, float):
+        """
+        # error estimation from original reconstruction
+        if hasattr(self, '_gt_images') and images_rct is not None:
+            logging.debug('compute reconstruction - GT images')
+            images_gt = self._gt_images[:len(images_rct)]
+            diff = np.asarray(images_gt) - np.asarray(images_rct)
+            nb_pixels = float(np.prod(diff.shape))
+            diff_norm = np.sum(abs(diff)) / nb_pixels
+            return 'GT', diff_norm
+        elif hasattr(self, '_images') and images_rct is not None:
+            logging.debug('compute reconstruction - Input images')
+            images = self._images[:len(images_rct)]
+            diff = np.asarray(images) - np.asarray(images_rct)
+            nb_pixels = float(np.prod(diff.shape))
+            diff_norm = np.sum(abs(diff)) / nb_pixels
+            return 'Input', diff_norm
+
     def __evaluate(self, atlas, weights):
         """ Compute the statistic for GT and estimated atlas and reconst. images
 
@@ -627,28 +673,11 @@ class Experiment(object):
         :return {str: ...}:
         """
         stat = {}
-        logging.debug('compute static - %s', hasattr(self, '_gt_atlas'))
-        if hasattr(self, '_gt_atlas'):
-            assert self._gt_atlas.shape == atlas.shape, \
-                'GT %s and estimation %s do not match' \
-                % (repr(self._gt_atlas.shape), repr(atlas.shape))
-            stat['atlas ARS'] = metrics.adjusted_rand_score(self._gt_atlas.ravel(),
-                                                            atlas.ravel())
-        logging.debug('compute reconstruction - %s', hasattr(self, '_gt_images'))
+        stat['atlas ARS'] = self.__evaluate_atlas(atlas)
+
         images_rct = ptn_dict.reconstruct_samples(atlas, weights)
-        # error estimation from original reconstruction
-        if hasattr(self, '_gt_images') and images_rct is not None:
-            # images_rct = ptn_dict.reconstruct_samples(self.atlas, self.weights)
-            # images_rct = self._binarize_img_reconstruction(images_rct)
-            images_gt = self._gt_images[:len(images_rct)]
-            diff = np.asarray(images_gt) - np.asarray(images_rct)
-            nb_pixels = float(np.prod(diff.shape))
-            stat['reconstruct diff GT'] = np.sum(abs(diff)) / nb_pixels
-        elif hasattr(self, '_images') and images_rct is not None:
-            images = self._images[:len(images_rct)]
-            diff = np.asarray(images) - np.asarray(images_rct)
-            nb_pixels = float(np.prod(diff.shape))
-            stat['reconstruct diff'] = np.sum(abs(diff)) / nb_pixels
+        tag, diff = self._evaluate_reconstruct(images_rct)
+        stat['reconst. diff %s' % tag] = diff
         return stat
 
     def _evaluate_extras(self, atlas, weights, extras):
@@ -670,7 +699,10 @@ class Experiment(object):
 
         if hasattr(self, 'df_results') and not self.df_results.empty:
             df_stat = self.df_results.describe()
-            df_stat = df_stat[[c for c in EVAL_COLUMNS if c in df_stat.columns]]
+            # df_stat = df_stat[[c for c in EVAL_COLUMNS if c in df_stat.columns]]
+            cols = [c for c in df_stat.columns
+                    if any([c.startswith(cc) for cc in EVAL_COLUMNS_START])]
+            df_stat = df_stat[cols]
             with open(self._path_stat, 'a') as fp:
                 fp.write('\n' * 3 + 'RESULTS: \n' + '=' * 9)
                 fp.write('\n{}'.format(df_stat))

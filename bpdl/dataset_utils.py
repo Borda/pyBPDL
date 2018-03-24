@@ -1019,7 +1019,7 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
     """
     path_csv = os.path.join(path_base, name_csv)
     assert os.path.exists(path_csv), 'missing %s' % path_csv
-    df = pd.DataFrame().from_csv(path_csv)
+    df = pd.read_csv(path_csv, index_col=0)
     # load according a list
     if img_names is not None:
         df = df[df['name'].isin(img_names)]

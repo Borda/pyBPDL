@@ -120,7 +120,7 @@ def parse_experiment_folder(path_expt, params):
     path_results = os.path.join(path_expt, params['name_results'])
     assert path_results.endswith('.csv'), '%s' % path_results
     assert os.path.exists(path_results), 'missing result: %s' % path_results
-    df_res = pd.DataFrame().from_csv(path_results)
+    df_res = pd.read_csv(path_results, index_col=0)
     index_name = df_res.index.name
     df_res[index_name] = df_res.index
 
@@ -143,7 +143,8 @@ def parse_experiment_folder(path_expt, params):
         # try to find the mest match among patterns / labels
         atlas = tl_metric.relabel_max_overlap_unique(atlas_gt, atlas)
         # recompute the similarity measure
-        dict_measure = tl_metric.compute_classif_metrics(atlas_gt.ravel(), atlas.ravel())
+        dict_measure = tl_metric.compute_classif_metrics(atlas_gt.ravel(),
+                                                         atlas.ravel())
         dict_measure = {'atlas %s' % k: dict_measure[k] for k in dict_measure}
         dict_row.update(dict_measure)
         df_res_new = df_res_new.append(dict_row, ignore_index=True)
@@ -171,11 +172,12 @@ def try_parse_folder(path_expt, params):
 def parse_experiments(params):
     """ with specific input parameters wal over result folder and parse it
 
-    :param params: {str: ...}
+    :param {str: ...} params:
     """
     logging.info('running recompute Experiments results')
     logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
+    nb_jobs = params.get('nb_jobs', NB_THREADS)
 
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
                  if os.path.isdir(p)]
@@ -184,11 +186,11 @@ def parse_experiments(params):
                                    params=params)
     tqdm_bar = tqdm.tqdm(total=len(path_dirs))
 
-    if params['nb_jobs'] > 1:
-        logging.debug('perform_sequence in %i threads', params['nb_jobs'])
-        mproc_pool = mproc.Pool(params['nb_jobs'])
+    if nb_jobs > 1:
+        logging.debug('perform_sequence in %i threads', nb_jobs)
+        mproc_pool = mproc.Pool(nb_jobs)
         for _ in mproc_pool.imap_unordered(wrapper_parse_folder,
-                                                   path_dirs):
+                                           path_dirs):
             tqdm_bar.update()
         mproc_pool.close()
         mproc_pool.join()

@@ -89,7 +89,7 @@ def parse_results_csv_summary(path_result, cols_sel, func_stat):
     """
     dict_result = {}
     df_res = load_results_csv(path_result, cols_sel)
-    if df_res is None:
+    if df_res is None or len(df_res) == 0:
         return dict_result
     for col in df_res.columns:
         if df_res[col].dtype == int or df_res[col].dtype == float:
@@ -98,7 +98,7 @@ def parse_results_csv_summary(path_result, cols_sel, func_stat):
     return dict_result
 
 
-def load_results_csv(path_result, cols_select):
+def load_results_csv(path_result, cols_select=None):
     """ load file with results and over specific cols aor all do an statistic
 
     :param str path_result:
@@ -109,7 +109,9 @@ def load_results_csv(path_result, cols_select):
         logging.warning('result file "%s" does not exist!', path_result)
         return None
     assert path_result.endswith('.csv'), '%s' % path_result
-    df_res = pd.DataFrame().from_csv(path_result, index_col=None)
+    df_res = pd.read_csv(path_result, index_col=None)
+    df_res.drop([c for c in df_res.columns if c.startswith('Unnamed:')],
+                axis=1, inplace=True)
     if cols_select is not None:
         cols_select = [c for c in df_res.columns]
         df_res = df_res[cols_select]
@@ -118,16 +120,17 @@ def load_results_csv(path_result, cols_select):
 
 def load_multiple_results(path_expt, func_stat, params):
     df_results = pd.DataFrame()
+    result_cols = params.get('result_columns', None)
     for name_results in params['name_results']:
         path_results = os.path.join(path_expt, name_results)
         if func_stat is not None:
             dict_res = parse_results_csv_summary(path_results,
-                                                 params['result_columns'],
+                                                 result_cols,
                                                  func_stat)
             df_res = pd.DataFrame().from_dict(dict_res, orient='index').T
             df_results = df_results.join(df_res, how='outer')
         else:
-            df_res = load_results_csv(path_results, params['result_columns'])
+            df_res = load_results_csv(path_results, result_cols)
             df_results = pd.concat([df_results, df_res])
     return df_results
 
@@ -148,7 +151,7 @@ def parse_experiment_folder(path_expt, params):
         dict_info = e_gen.parse_config_txt(path_config)
     logging.debug(' -> loaded params: %s', repr(dict_info.keys()))
 
-    dict_info.update(count_folders_subfolders(path_expt))
+    dict_info.update(count_folders_subdirs(path_expt))
     df_info = pd.DataFrame().from_dict(dict_info, orient='index').T
     try:
         func_stat = DICT_STATISTIC_FUNC.get(params['func_stat'], None)
@@ -188,7 +191,7 @@ def try_parse_experiment_folder(path_expt, params):
     return df_folder
 
 
-def append_folder(df_all, df_folder):
+def append_df_folder(df_all, df_folder):
     try:
         # df = pd.concat([df, df_folder], ignore_index=True)
         df_all = df_all.append(df_folder, ignore_index=True)
@@ -198,16 +201,16 @@ def append_folder(df_all, df_folder):
     return df_all
 
 
-def parse_experiments(params, nb_jobs=NB_THREADS):
+def parse_experiments(params):
     """ with specific input parameters wal over result folder and parse it
 
     :param {str: any} params:
-    :param int nb_jobs:
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')
     logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.isdir(params['path']), 'missing "%s"' % params['path']
+    nb_jobs = params.get('nb_jobs', NB_THREADS)
 
     df_all = pd.DataFrame()
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
@@ -221,7 +224,7 @@ def parse_experiments(params, nb_jobs=NB_THREADS):
         mproc_pool = mproc.Pool(nb_jobs)
         for df_folder in mproc_pool.imap_unordered(wrapper_parse_folder,
                                                    path_dirs):
-            df_all = append_folder(df_all, df_folder)
+            df_all = append_df_folder(df_all, df_folder)
             tqdm_bar.update()
         mproc_pool.close()
         mproc_pool.join()
@@ -229,7 +232,7 @@ def parse_experiments(params, nb_jobs=NB_THREADS):
         for path_expt in path_dirs:
             logging.debug('folder %s', path_expt)
             df_folder = try_parse_experiment_folder(path_expt, params)
-            df_all = append_folder(df_all, df_folder)
+            df_all = append_df_folder(df_all, df_folder)
             tqdm_bar.update()
 
     if isinstance(params['name_results'], list):
@@ -237,14 +240,16 @@ def parse_experiments(params, nb_jobs=NB_THREADS):
                                 for n in params['name_results'])
     else:
         name_results = os.path.splitext(params['name_results'])[0]
-    csv_name = TEMPLATE_NAME_OVERALL_RESULT % name_results
-    path_csv = os.path.join(params['path'], csv_name)
+
+    df_all.reset_index(inplace=True)
+    path_csv = os.path.join(params['path'],
+                            TEMPLATE_NAME_OVERALL_RESULT % name_results)
     logging.info('export results as %s', path_csv)
     df_all.to_csv(path_csv, index=False)
     return df_all
 
 
-def count_folders_subfolders(path_expt):
+def count_folders_subdirs(path_expt):
     """ count number and files in sub-folders
 
     :param str path_expt:
@@ -253,8 +258,10 @@ def count_folders_subfolders(path_expt):
     list_dirs = [p for p in glob.glob(os.path.join(path_expt, '*'))
                  if os.path.isdir(p)]
     list_sub_dirs = [len(glob.glob(os.path.join(p, '*'))) for p in list_dirs]
-    dict_counts = {'folders': len(list_dirs),
-                   'files @dir': np.mean(list_sub_dirs)}
+    dict_counts = {
+        'folders': len(list_dirs),
+        'files @dir': np.mean(list_sub_dirs) if len(list_sub_dirs) > 0 else 0
+    }
     return dict_counts
 
 
@@ -263,6 +270,6 @@ if __name__ == '__main__':
     logging.info('running...')
 
     params = parse_arg_params(PARAMS)
-    parse_experiments(params, nb_jobs=params['nb_jobs'])
+    parse_experiments(params)
 
     logging.info('DONE')
