@@ -552,10 +552,18 @@ class Experiment(object):
             nb_samples = int(len(self._images) * nb_samples)
         images = self._images[:nb_samples]
 
-        # try:
-        t = time.time()
-        atlas, weights, extras = self._estimate_atlas_weights(images, detail)
-        detail['time'] = time.time() - t
+        try:
+            t = time.time()
+            atlas, weights, extras = self._estimate_atlas_weights(images, detail)
+            detail['time'] = time.time() - t
+        except Exception:  # todo, optionaly remove this try/catch
+            logging.error('FAIL estimate atlas for %s with %s',
+                          str(self.__class__), repr(detail))
+            logging.error(traceback.format_exc())
+            atlas = np.zeros_like(self._images[0])
+            weights = np.zeros((len(self._images), 0))
+            extras = None
+            detail['time'] = -0.
 
         logging.debug('estimated atlas of size %s and labels %s',
                       repr(atlas.shape), repr(np.unique(atlas).tolist()))
@@ -573,8 +581,6 @@ class Experiment(object):
         detail.update(self.__evaluate(atlas, weights))
         detail.update(self._evaluate_extras(atlas, weights, extras))
 
-        # except Exception:
-        #     logging.error(traceback.format_exc())
 
         return detail
 
@@ -601,7 +607,8 @@ class Experiment(object):
         if not hasattr(self, '_image_names'):
             self._image_names = [str(i) for i in range(weights.shape[0])]
         df = pd.DataFrame(data=weights, index=self._image_names[:len(weights)])
-        df.columns = ['ptn {:02d}'.format(lb + 1) for lb in df.columns]
+        df.columns = ['ptn {:02d}'.format(i + 1)
+                      for i in range(len(df.columns))]
         df.index.name = 'image'
         df.to_csv(path_csv)
 

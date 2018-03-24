@@ -35,7 +35,7 @@ def test_experiments_soa_synth(params=r_expt.SYNTH_PARAMS):
 
     for n in r_expt.METHODS:
         cls_expt = r_expt.METHODS[n]
-        logging.info('testing %s by %s', n, cls_expt.__class__.__name__)
+        logging.info('testing %s by %s', n, str(cls_expt))
         expt = cls_expt(params)
         expt.run(gt=True, iter_params={'run': range(params['nb_runs'])})
         del expt
@@ -56,7 +56,7 @@ def test_experiments_soa_real(params=r_expt.REAL_PARAMS):
 
     for n in r_expt.METHODS_BASE:
         cls_expt = r_expt.METHODS_BASE[n]
-        logging.info('testing %s by %s', n, cls_expt.__class__.__name__)
+        logging.info('testing %s by %s', n, str(cls_expt))
         expt = cls_expt(params)
         expt.run(gt=False, iter_params={'nb_labels': [3, 5, 9]})
         del expt

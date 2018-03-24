@@ -28,10 +28,6 @@ def estim_atlas_as_argmax(atlas_components, fit_result, bg_threshold=0.1):
     :param float bg_threshold: setting the backround
     :return: np.array<height, width>
     """
-    # if there is not pattern or only one
-    if atlas_components.shape[0] <= 1:
-        return np.zeros(atlas_components.shape[0:], dtype=int)
-
     ptn_used = np.sum(np.abs(fit_result), axis=0) > 0
     # filter just used patterns
     atlas_components = atlas_components[ptn_used, :]
@@ -282,28 +278,24 @@ class ExperimentBPDL_base(expt_gen.Experiment):
         # prefix = 'expt_{}'.format(p['init_tp'])
         path_out = os.path.join(params['path_exp'],
                                 'debug' + params['name_suffix'])
-        try:
-            atlas, weights, deforms = dl.bpdl_pipeline(
-                                        images,
-                                        init_atlas=init_atlas,
-                                        tol=params['tol'],
-                                        gc_reinit=params['gc_reinit'],
-                                        gc_coef=params['gc_regul'],
-                                        max_iter=params['max_iter'],
-                                        ptn_split=params['ptn_split'],
-                                        ptn_compact=params['ptn_compact'],
-                                        overlap_major=params['overlap_mj'],
-                                        deform_coef=params.get('deform_coef', None),
-                                        out_dir=path_out)  # , out_prefix=prefix
-            assert atlas.max() == weights.shape[1], \
-                'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
-            extras = {'deforms': deforms}
-        except Exception:
-            logging.error('FAILED, no atlas estimated!')
-            logging.error(traceback.format_exc())
-            atlas = np.zeros_like(self._images[0])
-            weights = np.zeros((len(self._images), 0))
-            extras = None
+
+        atlas, weights, deforms = dl.bpdl_pipeline(
+                                    images,
+                                    init_atlas=init_atlas,
+                                    tol=params['tol'],
+                                    gc_reinit=params['gc_reinit'],
+                                    gc_coef=params['gc_regul'],
+                                    max_iter=params['max_iter'],
+                                    ptn_split=params['ptn_split'],
+                                    ptn_compact=params['ptn_compact'],
+                                    overlap_major=params['overlap_mj'],
+                                    deform_coef=params.get('deform_coef', None),
+                                    out_dir=path_out)  # , out_prefix=prefix
+
+        assert atlas.max() == weights.shape[1], \
+            'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
+        extras = {'deforms': deforms}
+
         return atlas, weights, extras
 
     def _export_extras(self, extras, suffix=''):
