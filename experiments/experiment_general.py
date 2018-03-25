@@ -162,7 +162,7 @@ def parse_arg_params(parser):
     """ parse basic args and return as dictionary
 
     :param obj parser: argparse
-    :return: {str: ...}
+    :return {str: ...}:
     """
     args = vars(parser.parse_args())
     # remove not filled parameters
@@ -187,7 +187,7 @@ def parse_params(default_params):
     """ parse arguments from command line
 
     :param {str: ...} default_params:
-    :return: {str: ...}
+    :return {str: ...}:
     """
     parser = create_args_parser(default_params)
     params = copy_dict(default_params)

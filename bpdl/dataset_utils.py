@@ -125,7 +125,7 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
     :param float coef: deformation
     :param (int, int) grid_size: size of deformation grid
     :param rand_seed: random initialization
-    :return:
+    :return obj:
 
     >>> tf = create_elastic_deform_2d((100, 100))
     >>> type(tf)
@@ -216,7 +216,7 @@ def generate_rand_center_radius(img, ratio, rand_seed=None):
     :param ndarray img: np.array<height, width>
     :param float ratio:
     :param rand_seed: random initialization
-    :return (int, ), (float, ):
+    :return ((int, ), (float, )):
 
     >>> generate_rand_center_radius(np.zeros((50, 50)), 0.2, rand_seed=0)
     ([27, 15], [8.5, 6.5])
@@ -241,7 +241,7 @@ def draw_rand_ellipse(img, ratio=0.1, color=255, rand_seed=None):
     :param float ratio: defining size of the ellipse to the image plane
     :param int color: value (0, 255) of an image intensity
     :param rand_seed: random initialization
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> img = draw_rand_ellipse(np.zeros((10, 15)), ratio=0.3, color=1, rand_seed=0)
     >>> img.astype(int)
@@ -271,7 +271,7 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     :param ndarray img: np.array<depth, height, width> image / volume
     :param int clr: value (0, 255) of an image intensity
     :param rand_seed: random initialization
-    :return: np.array<depth, height, width>
+    :return ndarray: np.array<depth, height, width>
 
     >>> img = draw_rand_ellipsoid(np.zeros((10, 10, 5)), clr=255, rand_seed=0)
     >>> img[..., 3].astype(int)
@@ -322,7 +322,7 @@ def extract_image_largest_element(img_binary, labeled=None):
     then keep just the largest segment and rest set as 0
 
     :param ndarray img_binary: np.array<height, width> image of values {0, 1}
-    :return: np.array<height, width> of values {0, 1}
+    :return ndarray: np.array<height, width> of values {0, 1}
 
     >>> img = np.zeros((7, 15), dtype=int)
     >>> img[1:4, 5:10] = 1
@@ -361,7 +361,7 @@ def atlas_filter_larges_components(atlas):
     """
 
     :param ndarray atlas: np.array<height, width> image
-    :return: np.array<height, width>, [np.array<height, width>]
+    :return (ndarray, [ndarray]): np.array<height, width>, [np.array<height, width>]
 
     >>> atlas = np.zeros((7, 15), dtype=int)
     >>> atlas[1:4, 5:10] = 1
@@ -414,7 +414,7 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     :param str temp_img_name: use template for pattern names
     :param int nb_patterns: number of patterns / labels
     :param (int, int) im_size: image size
-    :return: [np.array<height, width>] independent patters in the dictionary
+    :return ndarray: [np.array<height, width>] independent patters in the dictionary
 
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> path_dir = create_clean_folder(path_dir)
@@ -466,7 +466,7 @@ def dictionary_generate_rnd_pattern(path_out=None,
     :param int nb_patterns: number of patterns / labels
     :param (int, int) im_size: image size
     :param rand_seed: random initialization
-    :return: [np.array<height, width>] list of independent patters in the dict.
+    :return ndarray: [np.array<height, width>] list of independent patters in the dict.
 
     >>> _list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8),
     ...                                                  rand_seed=0)
@@ -509,7 +509,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     :param str out_dir: name of directory
     :param float ptn_ration: number in range (0, 1)
     :param rand_seed: random initialization
-    :return: int, np.array, str, [int]
+    :return (int, ndarray, str, [int]):
 
     >>> img1 = np.zeros((6, 15), dtype=int)
     >>> img1[2:5, 5:10] = 1
@@ -562,7 +562,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
         an input observation / image
     :param int nb_jobs: number of running jobs
     :param rand_seed: random initialization
-    :return: [np.array<height, width>], df<nb_imgs, nb_lbs>
+    :return (ndarray, DF): [np.array<height, width>], df<nb_imgs, nb_lbs>
 
     >>> img1 = np.zeros((6, 15), dtype=int)
     >>> img1[2:5, 5:10] = 1
@@ -623,7 +623,7 @@ def add_image_binary_noise(im, ration=0.1, rand_seed=None):
     :param ndarray im: np.array<height, width> input binary image
     :param float ration: number (0, 1) means 0 = no noise
     :param rand_seed: random initialization
-    :return: np.array<height, width> binary image
+    :return ndarray: np.array<height, width> binary image
 
     >>> img = np.zeros((5, 15), dtype=int)
     >>> img[1:4, 3:7] = 1
@@ -721,7 +721,7 @@ def wrapper_apply_function(i_img, func, coef, out_dir):
     :param func:
     :param float coef:
     :param str out_dir:
-    :return: int, np.array<height, width>
+    :return (int, ndarray): int, np.array<height, width>
     """
     i, img = i_img
     img_def = func(img, coef)
@@ -739,7 +739,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     :param str out_dir: path to the results directory
     :param float coef: a param describing the how much it is deformed (0 = None)
     :param int nb_jobs: number of jobs running in parallel
-    :return: [np.array<height, width>]
+    :return ndarray: [np.array<height, width>]
 
     >>> img = np.zeros((10, 5))
     >>> dir_name = 'sample_dataset_dir'
@@ -785,7 +785,7 @@ def image_transform_binary2fuzzy(im, coef=0.1):
 
     :param ndarray im: np.array<height, width> input binary image
     :param float coef: float, influence hoe strict the boundary between F-B is
-    :return: np.array<height, width> float image
+    :return ndarray: np.array<height, width> float image
 
     >>> img = np.zeros((5, 15), dtype=int)
     >>> img[1:4, 3:7] = 1
@@ -817,7 +817,7 @@ def add_image_fuzzy_pepper_noise(im, ration=0.1, rand_seed=None):
     :param ndarray im: np.array<height, width> input float image
     :param float ration: number means 0 = no noise
     :param rand_seed: random initialization
-    :return: np.array<height, width> float image
+    :return ndarray: np.array<height, width> float image
 
     >>> img = np.zeros((5, 9), dtype=int)
     >>> img[1:4, 2:7] = 1
@@ -847,7 +847,7 @@ def add_image_fuzzy_gauss_noise(im, sigma=0.1, rand_seed=None):
     :param ndarray im: np.array<height, width> input float image
     :param float sigma: float where 0 = no noise
     :param rand_seed: random initialization
-    :return: np.array<height, width> float image
+    :return ndarray: np.array<height, width> float image
 
     >>> img = np.zeros((5, 9), dtype=int)
     >>> img[1:4, 2:7] = 1
@@ -872,7 +872,7 @@ def wrapper_load_images(list_path_img):
     """ wrapper for multiprocessing loading
 
     :param [str] list_path_img:
-    :return: [(str, np.array<height, width>)]
+    :return ((str, ndarray)): np.array<height, width>
     """
     logging.debug('parallel loading %i images', len(list_path_img))
     list_names_imgs = map(load_image, list_path_img)
@@ -912,7 +912,7 @@ def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
     :param [str] img_paths: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
     :param int nb_jobs: number of running jobs
-    :return [np.array], [str]:
+    :return ([np.array], [str]):
     """
     assert all(os.path.exists(p) for p in img_paths)
     img_paths = sorted(img_paths)[:nb_spls]
@@ -947,7 +947,7 @@ def load_image(path_img, fuzzy_val=True):
 
     :param str path_img:
     :param bool fuzzy_val: weather normalise values in range (0, 1)
-    :return str, np.array<height, width>:
+    :return (str, ndarray): np.array<height, width>
 
     PNG image
     >>> img_name = 'testing_image'
@@ -1004,7 +1004,7 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
     :param str path_base: path to the results directory
     :param str name_csv: name of file with weights
     :param [str] img_names: list of image names
-    :return: np.array<nb_imgs, nb_lbs>
+    :return ndarray: np.array<nb_imgs, nb_lbs>
 
     >>> np.random.seed(0)
     >>> name_csv = 'sample_weigths.csv'
@@ -1039,7 +1039,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
 
     :param str path_dir: name of dataset
     :param str img_temp_name:
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> dir_name = 'sample_atlas'
     >>> os.mkdir(dir_name)
@@ -1218,7 +1218,7 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
 def create_simple_atlas():
     """ create a simple atlas with split 3 patterns
 
-    :return np.array:
+    :return ndarray:
 
     >>> create_simple_atlas()
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -1253,7 +1253,7 @@ def create_sample_images(atlas):
     """ create 3 simple images according simple atlas with 3 patterns
 
     :param np.array atlas:
-    :return [np.array]:
+    :return [ndarray]:
 
     >>> atlas = create_simple_atlas()
     >>> im1, im2, im3 = create_sample_images(atlas)

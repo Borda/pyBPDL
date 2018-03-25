@@ -17,7 +17,7 @@ def initialise_weights_random(nb_imgs, nb_patterns, ratio_select=0.2, rand_seed=
     :param float ratio_select: number <0, 1> defining how many should be set on,
         1 means all and 0 means none
     :param rand_seed: random initialization
-    :return: np.array<nb_imgs, nb_labels>
+    :return ndarray: np.array<nb_imgs, nb_labels>
 
     >>> initialise_weights_random(5, 3, rand_seed=0)
     array([[ 0.,  0.,  1.,  0.],
@@ -42,7 +42,7 @@ def convert_weights_binary2indexes(weights):
     """ convert binary matrix oof weights to list of indexes o activated ptns
 
     :param np.array<nb_imgs, nb_lbs> weights:
-    :return: [[int, ]]
+    :return [[int, ]]:
 
     >>> weights = np.array([[ 0,  0,  1,  0],
     ...                     [ 0,  0,  0,  1],
@@ -71,7 +71,7 @@ def weights_image_atlas_overlap_major(img, atlas):
     """
     :param ndarray img: image np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
-    :return: [int] * nb_lbs of values {0, 1}
+    :return [int]: [int] * nb_lbs of values {0, 1}
 
     >>> atlas = np.zeros((8, 10), dtype=int)
     >>> atlas[:3, 0:4] = 1
@@ -99,7 +99,7 @@ def weights_image_atlas_overlap_partial(img, atlas):
     """
     :param ndarray img: image np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
-    :return: [int] * nb_lbs of values {0, 1}
+    :return [int]: [int] * nb_lbs of values {0, 1}
 
     >>> atlas = np.zeros((8, 10), dtype=int)
     >>> atlas[:3, 0:4] = 1
@@ -132,7 +132,7 @@ def weights_image_atlas_overlap_threshold(img, atlas, threshold=1.):
     :param ndarray img: image np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
     :param float threshold: represent the ration between overlapping and non pixels
-    :return: [int] * nb_lbs of values {0, 1}
+    :return [int]: [int] * nb_lbs of values {0, 1}
     """
     # logging.debug('weights input image according given atlas')
     # simple weight
@@ -161,7 +161,7 @@ def weights_label_atlas_overlap_threshold(imgs, atlas, label, threshold=1.):
     :param ndarray atlas: image np.array<height, width>
     :param int label:
     :param float threshold: represent the ration between overlapping and non pixels
-    :return: np.array<nb_imgs> of values {0, 1}
+    :return ndarray: np.array<nb_imgs> of values {0, 1}
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1

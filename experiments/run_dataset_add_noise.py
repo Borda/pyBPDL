@@ -34,7 +34,7 @@ BASE_IMAGE_SET = 'datasetFuzzy_raw'
 def args_parser():
     """ create simple arg parser with default values (input, results, dataset)
 
-    :return: argparse
+    :return obj: argparse
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--path', type=str, required=True,

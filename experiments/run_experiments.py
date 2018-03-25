@@ -86,7 +86,7 @@ def experiment_pipeline_alpe_showcase(path_out):
 
     :param path_in: str
     :param path_out: str
-    :return:
+    :return (ndarray, ndarray):
     """
     path_atlas = os.path.join(expt_gen.SYNTH_PATH_APD,
                               tl_data.DIR_NAME_DICTIONARY)

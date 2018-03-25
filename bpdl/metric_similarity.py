@@ -86,7 +86,7 @@ def compute_labels_overlap_matrix(seg1, seg2):
 
     :param seg1: np.array<height, width>
     :param seg2: np.array<height, width>
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> seg1 = np.zeros((7, 15), dtype=int)
     >>> seg1[1:4, 5:10] = 3
@@ -301,7 +301,7 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     :param [str] metric_averages:
     :param [int] y_true:
     :param [int] y_pred:
-    :return: {str: float}
+    :return {str: float}:
 
     >>> y_true = np.array([0] * 3 + [1] * 5)
     >>> y_pred = np.array([0] * 5 + [1] * 3)

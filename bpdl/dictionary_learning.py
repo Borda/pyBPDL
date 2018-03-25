@@ -108,7 +108,7 @@ def compute_positive_cost_images_weights(imgs, ptn_weights):
     """
     :param [ndarray] imgs: list of np.array<height, width> input images
     :param ndarray ptn_weights: matrix np.array<nb_imgs, nb_lbs> composed from wight vectors
-    :return: np.array<height, width, nb_lbs>
+    :return ndarray: np.array<height, width, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -203,7 +203,7 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
     :param [np.array<height, width>] imgs: list of input binary images
     :param np.array<nb_imgs, nb_lbs> ptn_weights: binary ptn selection
     :param float coef: coefficient for graphcut
-    :return:
+    :return [int]:
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -258,7 +258,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
     :param float coef: coefficient for graphcut
     :param ndarray init_atlas: init labeling  np.array<nb_seg, 1>
         while None it take the arg ming of the unary costs
-    :return np.array<nb_seg, 1>:
+    :return ndarray: np.array<nb_seg, 1>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -392,7 +392,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     :param str out_prefix:
     :param str out_dir: path to the results directory
     :param rand_seed: random initialization
-    :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -461,7 +461,7 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
     :param [ndarray] imgs: list of images np.array<height, width>
     :param ndarray atlas: used atlas of np.array<height, width>
     :param bool overlap_major: whether it has majority overlap the pattern
-    :return: np.array<nb_imgs, nb_lbs>
+    :return ndarray: np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -512,7 +512,7 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_sp
     :param float gc_coef: graph cut regularisation
     :param bool gc_reinit: weather use atlas from previous step as init for act.
     :param bool ptn_split:
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -576,7 +576,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     :param bool overlap_major: whether it has majority overlap the pattern
     :param str out_prefix:
     :param str out_dir: path to the results directory
-    :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1

@@ -37,7 +37,7 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
     :param ndarray img_ref:
     :param float smooth_sigma:
     :param {} params:
-    :return:
+    :return (ndarray, ndarray):
 
     >>> img_ref = np.zeros((10, 10), dtype=int)
     >>> img_ref[2:6, 1:7] = 1

@@ -27,7 +27,7 @@ def init_atlas_random(im_size, nb_patterns, rand_seed=None):
     :param (int, int) im_size: size of image
     :param int nb_patterns: number of labels
     :param rand_seed: random initialization
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> init_atlas_random((6, 12), 4, rand_seed=0)
     array([[1, 4, 2, 1, 4, 4, 4, 4, 2, 4, 2, 3],
@@ -51,7 +51,7 @@ def init_atlas_grid(im_size, nb_patterns, rand_seed=None):
     :param (int, int) im_size: size of image
     :param int nb_patterns: number of pattern in the atlas to be set
     :param rand_seed: random initialisation
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> init_atlas_grid((6, 12), 4, rand_seed=0)
     array([[3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4],
@@ -88,7 +88,7 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     :param int nb_patterns: number of pattern in the atlas to be set
     :param float coef:
     :param rand_seed: random initialization
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> init_atlas_mosaic((8, 12), 4, rand_seed=0)
     array([[3, 3, 3, 4, 4, 4, 2, 2, 2, 1, 1, 1],
@@ -146,7 +146,7 @@ def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
     :param int nb_patterns: number of pattern in the atlas to be set
     :param str bg_type: set weather the Otsu backround should be filled randomly
     :param float bg_threshold: threshold foe binarisation
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -252,7 +252,7 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
     :param [ndarray] imgs: list of input images np.array<height, width>
     :param int nb_patterns: number of pattern in the atlas to be set
     :param float bg_threshhold: threshold foe binarisation
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -314,7 +314,7 @@ def init_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
-    :return np.array: estimated atlas
+    :return ndarray: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -360,7 +360,7 @@ def init_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
-    :return np.array: estimated atlas
+    :return ndarray: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -407,7 +407,7 @@ def init_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
-    :return np.array: estimated atlas
+    :return ndarray: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -452,7 +452,7 @@ def init_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
-    :return np.array: estimated atlas
+    :return ndarray: estimated atlas
 
     >>> np.random.seed(0)
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -502,7 +502,7 @@ def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
     :param float coef:
     :param (int, int) grid_size:
     :param rand_seed: random initialization
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> img = np.zeros((8, 12))
     >>> img[:3, 1:5] = 1
@@ -527,7 +527,7 @@ def reconstruct_samples(atlas, w_bins):
 
     :param ndarray atlas: input atlas np.array<height, width>
     :param ndarray w_bins: np.array<nb_imgs, nb_lbs>
-    :return: [np.array<height, width>]
+    :return [ndarray]: [np.array<height, width>]
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -576,7 +576,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     :param [int] diffs: list of differences among input and reconstruct images
     :param bool ptn_compact: enforce compactness of patterns
     :param float thr_fuzzy:
-    :return: np.array<height, width> binary single pattern
+    :return ndarray: np.array<height, width> binary single pattern
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -649,7 +649,7 @@ def insert_new_pattern(imgs, imgs_reconst, atlas, label,
     :param [ndarray] imgs_reconst: list of reconstructed images np.array<height, width>
     :param ndarray atlas: np.array<height, width>
     :param bool ptn_compact: enforce compactness of patterns
-    :return: np.array<height, width> updated atlas
+    :return ndarray: np.array<height, width> updated atlas
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -688,7 +688,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     :param ndarray atlas: image np.array<height, width>
     :param int label_max: set max number of components
     :param bool ptn_compact: enforce compactness of patterns
-    :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -759,7 +759,7 @@ def atlas_split_indep_ptn(atlas, label_max):
 
     :param ndarray atlas: image np.array<height, width>
     :param int label_max:
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1

@@ -36,7 +36,7 @@ def args_parse_params(params):
     """ create simple arg parser with default values (input, output)
 
     :param {str: ...} dict_params:
-    :return: object argparse<...>
+    :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-in', '--path_in', type=str, required=True,

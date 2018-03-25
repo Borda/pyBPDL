@@ -36,7 +36,7 @@ NOISE_FUZZY = 0.15
 def aparse_params():
     """
     SEE: https://docs.python.org/3/library/argparse.html
-    :return:
+    :return obj:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--path_out', type=str, required=False,
@@ -67,6 +67,9 @@ def view_func_params(frame=inspect.currentframe(), path_out=''):
     :param frame:
     :param path_out:
     :return:
+
+    >>> view_func_params()  # doctest: +ELLIPSIS
+    {...}
     """
     args, _, _, values = inspect.getargvalues(frame)
     logging.info('PARAMETERS: \n%s',

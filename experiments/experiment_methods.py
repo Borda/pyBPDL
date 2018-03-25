@@ -29,7 +29,7 @@ def estim_atlas_as_argmax(atlas_components, fit_result, bg_threshold=0.1):
 
     :param [ndarray] atlas_components:
     :param float bg_threshold: setting the backround
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
     """
     ptn_used = np.sum(np.abs(fit_result), axis=0) > 0
     # filter just used patterns
@@ -51,7 +51,7 @@ def estim_atlas_as_unique_sum(atlas_ptns):
     """
 
     :param [] atlas_ptns:
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
     """
     atlas = np.sum(np.abs(atlas_ptns), axis=0)
     atlas /= np.max(atlas)
@@ -64,7 +64,7 @@ def binarize_img_reconstruction(img_rct, thr=0.5):
 
     :param img_rct: np.array<nb_spl, w, h>
     :param float thr:
-    :return:
+    :return ndarray:
     """
     img_rct_bin = [None] * img_rct.shape[0]
     for i, im in enumerate(img_rct.tolist()):
@@ -82,7 +82,7 @@ class ExperimentLinearCombineBase(expt_gen.Experiment):
         results and patterns
 
         :param ndarray imgs_vec: np.array<nb_imgs, height*width>
-        :return:
+        :return (obj, ndarray, ndarray):
         """
         estimator, components, fit_result = None, np.array([0]), np.array([0])
         return estimator, components, fit_result
@@ -91,7 +91,7 @@ class ExperimentLinearCombineBase(expt_gen.Experiment):
         """ perform the linear combination and reformulate the outputs
 
         :param imgs_vec: np.array<nb_imgs, height*width>
-        :return:
+        :return (obj, ndarray, ndarray):
         """
         try:
             estimator, components, fit_result = \
@@ -231,7 +231,7 @@ class ExperimentBPDL_base(expt_gen.Experiment):
 
         :param int nb_labels:
         :param str init_type:
-        :return: np.array<w, h>
+        :return ndarray: np.array<w, h>
         """
         im_size = self._images[0].shape
         logging.debug('INIT atlas - nb labels: %s and type: %s',
@@ -277,7 +277,7 @@ class ExperimentBPDL_base(expt_gen.Experiment):
 
         :param int i: index of try
         :param init_atlas: np.array<w, h>
-        :return: np.array, np.array
+        :return (ndarray, ndarray):
         """
         logging.debug(' -> estimate atlas...')
         logging.debug(expt_gen.string_dict(params, desc='PARAMETERS'))
