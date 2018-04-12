@@ -42,20 +42,20 @@ install:
   - pip install nose>=1.3.7 coverage codecov pytest>=3.0.5
 
 script:
-  - mkdir data && mkdir results
+  - mkdir results
   # - nosetests --with-xunit --xunit-file=shippable/testresults/nosetests.xml
   - nosetests bpdl -v --exe --with-doctest --with-coverage --cover-package=bpdl
   - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
-  - python experiments/run_dataset_add_noise.py -p images
+  - python experiments/run_dataset_add_noise.py -p data_images
   - nosetests experiments -v --exe --with-doctest --with-xunit --xunit-file=shippable/testresults/nosetests.xml
 
-  - python experiments/run_cut_minimal_images.py -in "images/imaginal_discs/gene/*.png" -out images/imaginal_discs/gene_cut
-  - python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
-  - python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-3/image/*.png" -out images/ovary_stage-3/gene
+  - python experiments/run_cut_minimal_images.py -in "data_images/imaginal_discs/gene/*.png" -out data_images/imaginal_discs/gene_cut
+  - python experiments/run_extract_fuzzy_activation.py -in "data_images/ovary_stage-2/image/*.png" -out data_images/ovary_stage-2/gene
+  - python experiments/run_extract_fuzzy_activation.py -in "data_images/ovary_stage-3/image/*.png" -out data_images/ovary_stage-3/gene
 
   - rm -r results && mkdir results
-  - python experiments/run_experiments.py --type synth -in images/syntheticDataset_vX -out results
-  - python experiments/run_experiments.py --type real -in images/imaginal_discs -out results --dataset gene_small
+  - python experiments/run_experiments.py --type synth -in data_images/syntheticDataset_vX -out results
+  - python experiments/run_experiments.py --type real -in data_images/imaginal_discs -out results --dataset gene_small
 
   - python experiments/run_parse_experiments_result.py -p results -res results.csv
   - python experiments/run_recompute_experiments_result.py -p results

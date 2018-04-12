@@ -3,8 +3,8 @@ cut the minimal image size over whole set
 
 EXAMPLES:
 >> python run_cut_minimal_images.py \
-    -in "images/imaginal_discs/gene/*.png" \
-    -out images/imaginal_discs/gene_cut
+    -in "data_images/imaginal_discs/gene/*.png" \
+    -out data_images/imaginal_discs/gene_cut
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -26,9 +26,9 @@ import bpdl.dataset_utils as tl_data
 NB_THREADS = int(mproc.cpu_count() * .75)
 NAME_JSON_BBOX = 'cut_bounding_box.json'
 PARAMS = {
-    'path_in': os.path.join(tl_data.update_path('images/imaginal_discs/gene'),
+    'path_in': os.path.join(tl_data.update_path('data_images/imaginal_discs/gene'),
                             '*.png'),
-    'path_out': tl_data.update_path('images/imaginal_discs/gene_cut'),
+    'path_out': tl_data.update_path('data_images/imaginal_discs/gene_cut'),
 }
 
 

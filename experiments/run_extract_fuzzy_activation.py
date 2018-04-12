@@ -3,8 +3,8 @@ Extracting the gene activation in case it is separate image channel
 
 
 >>  python run_extract_fuzzy_activation.py \
-    -in "../images/ovary_stage-2/image/*.png" \
-    -out ../images/ovary_stage-2/gene
+    -in "../data_images/ovary_stage-2/image/*.png" \
+    -out ../data_images/ovary_stage-2/gene
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -33,8 +33,8 @@ import experiments.run_cut_minimal_images as r_cut
 
 NB_THREADS = int(mproc.cpu_count() * .75)
 PARAMS = {
-    'path_in': os.path.join(tl_data.update_path('images/ovary_stage-3/image'), '*.png'),
-    'path_out': tl_data.update_path('images/ovary_stage-3/gene'),
+    'path_in': os.path.join(tl_data.update_path('data_images/ovary_stage-3/image'), '*.png'),
+    'path_out': tl_data.update_path('data_images/ovary_stage-3/gene'),
 }
 
 

@@ -505,7 +505,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     """ generate the new sample from list of pattern with specific ration
 
     :param int idx: index
-    :param [np.array] im_ptns: images with patterns
+    :param [ndarray] im_ptns: images with patterns
     :param str out_dir: name of directory
     :param float ptn_ration: number in range (0, 1)
     :param rand_seed: random initialization
@@ -902,7 +902,7 @@ def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
     :param [str] img_paths: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
     :param int nb_jobs: number of running jobs
-    :return ([np.array], [str]):
+    :return ([ndarray], [str]):
     """
     assert all(os.path.exists(p) for p in img_paths)
     img_paths = sorted(img_paths)[:nb_spls]

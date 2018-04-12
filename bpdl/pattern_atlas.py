@@ -12,7 +12,7 @@ from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
 import numpy as np
 
-import bpdl.dataset_utils as data
+import bpdl.dataset_utils as tl_data
 import bpdl.pattern_weights as ptn_weight
 
 REINIT_PATTERN_COMPACT = True
@@ -310,7 +310,7 @@ def convert_lin_comb_patterns_2_atlas(atlas_components, used_components,
 def init_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
-    :param [np.array] imgs: list of input images
+    :param [ndarray] imgs: list of input images
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
@@ -356,7 +356,7 @@ def init_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
 def init_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
-    :param [np.array] imgs: list of input images
+    :param [ndarray] imgs: list of input images
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
@@ -403,7 +403,7 @@ def init_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
 def init_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
-    :param [np.array] imgs: list of input images
+    :param [ndarray] imgs: list of input images
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
@@ -448,7 +448,7 @@ def init_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
 def init_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     """ estimating initial atlas using SoA method based on linear combinations
 
-    :param [np.array] imgs: list of input images
+    :param [ndarray] imgs: list of input images
     :param int nb_patterns: number of pattern in the atlas to be set
     :param int nb_iter: max number of iterations
     :param float bg_threshold:
@@ -518,7 +518,8 @@ def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     logging.debug('initialise atlas by deforming original one')
-    res = data.image_deform_elastic(atlas, coef, grid_size, rand_seed=rand_seed)
+    res = tl_data.image_deform_elastic(atlas, coef, grid_size,
+                                       rand_seed=rand_seed)
     return np.array(res, dtype=np.int)
 
 
@@ -631,7 +632,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
         im_diff = morphology.closing(im_diff, morphology.disk(1))
         labels = None
     # find largest connected component
-    img_ptn = data.extract_image_largest_element(im_diff, labels)
+    img_ptn = tl_data.extract_image_largest_element(im_diff, labels)
     # ptn_size = np.sum(ptn) / float(np.product(ptn.shape))
     # if ptn_size < 0.01:
     #     logging.debug('new patterns was too small %f', ptn_size)

@@ -15,7 +15,7 @@ from IPython.html.widgets import DropdownWidget as w_s
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
 
-PATH_DATA_SYNTH = tl_data.update_path('images')
+PATH_DATA_SYNTH = tl_data.update_path('data_images')
 SYNTH_DATASET = 'syntheticDataset_vX'
 # PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
 #  = 'atomicPatternDictionary_v0'

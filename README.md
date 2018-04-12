@@ -107,17 +107,17 @@ For the activation extraction we used [pyImSegm](https://github.com/Borda/pyImSe
 For extracting gene activations we used unsupervised segmentation because the colour appearing variate among images so we segment the gene in each image indipendetly.
 
 <!-- 
-![imaginal disk](images/imaginal_discs/image/insitu109365.png)
-![segmentation](images/imaginal_discs/segm_rgb/insitu109365.png) 
-![gene activation](images/imaginal_discs/gene/insitu109365.png) 
+![imaginal disk](data_images/imaginal_discs/image/insitu109365.png)
+![segmentation](data_images/imaginal_discs/segm_rgb/insitu109365.png) 
+![gene activation](data_images/imaginal_discs/gene/insitu109365.png) 
 -->
 
 To cut the set of images to the minimal size with reasonable infomation (basicaly removing bacround starting from image boundaries) you can use following scirpt
 
 ```bash
 python experiments/run_cut_minimal_images.py \
-    -in "images/imaginal_discs/gene/*.png" \
-    -out images/imaginal_discs/gene_cut -thr 0.001
+    -in "data_images/imaginal_discs/gene/*.png" \
+    -out data_images/imaginal_discs/gene_cut -thr 0.001
 ```
 
 
@@ -127,18 +127,18 @@ Here the gene activation is presented in separate channel - green. so we just ta
 
 ```bash
 python experiments/run_extract_fuzzy_activation.py \
-    -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
+    -in "data_images/ovary_stage-2/image/*.png" -out data_images/ovary_stage-2/gene
 ```
 
 Ovary in development stage 2
 
-![ovary stage 2](images/ovary_stage-2/image/insitu5938.png)
-![gene activation s2](images/ovary_stage-2/gene/insitu5938.png)
+![ovary stage 2](data_images/ovary_stage-2/image/insitu5938.png)
+![gene activation s2](data_images/ovary_stage-2/gene/insitu5938.png)
 
 Ovary in development stage 3
 
-![ovary stage 3](images/ovary_stage-3/image/insitu11033.png)
-![gene activation s3](images/ovary_stage-3/gene/insitu11033.png)
+![ovary stage 3](data_images/ovary_stage-3/image/insitu11033.png)
+![gene activation s3](data_images/ovary_stage-3/gene/insitu11033.png)
 
 
 ---

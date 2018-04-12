@@ -25,22 +25,22 @@ dependencies:
 
 test:
   pre:
-    - mkdir data && mkdir results
+    - mkdir results
 #    - python setup.py build_ext --inplace
     - mkdir -p $CIRCLE_TEST_REPORTS
     - unset DISPLAY && python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
-    - unset DISPLAY && python experiments/run_dataset_add_noise.py -p images
+    - unset DISPLAY && python experiments/run_dataset_add_noise.py -p data_images
 
   override:
     - unset DISPLAY && coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/pytest_junit.xml
 
-    - unset DISPLAY && python experiments/run_cut_minimal_images.py -in "images/imaginal_discs/gene/*.png" -out images/imaginal_discs/gene_cut
-    - unset DISPLAY && python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-2/image/*.png" -out images/ovary_stage-2/gene
-    - unset DISPLAY && python experiments/run_extract_fuzzy_activation.py -in "images/ovary_stage-3/image/*.png" -out images/ovary_stage-3/gene
+    - unset DISPLAY && python experiments/run_cut_minimal_images.py -in "data_images/imaginal_discs/gene/*.png" -out data_images/imaginal_discs/gene_cut
+    - unset DISPLAY && python experiments/run_extract_fuzzy_activation.py -in "data_images/ovary_stage-2/image/*.png" -out data_images/ovary_stage-2/gene
+    - unset DISPLAY && python experiments/run_extract_fuzzy_activation.py -in "data_images/ovary_stage-3/image/*.png" -out data_images/ovary_stage-3/gene
 
     - rm -r results && mkdir results
-    - unset DISPLAY && python experiments/run_experiments.py --type synth -in images/syntheticDataset_vX -out results
-    - unset DISPLAY && python experiments/run_experiments.py --type real -in images/imaginal_discs -out results --dataset gene_small
+    - unset DISPLAY && python experiments/run_experiments.py --type synth -in data_images/syntheticDataset_vX -out results
+    - unset DISPLAY && python experiments/run_experiments.py --type real -in data_images/imaginal_discs -out results --dataset gene_small
 
     - unset DISPLAY && python experiments/run_parse_experiments_result.py -p results -res results.csv
     - unset DISPLAY && python experiments/run_recompute_experiments_result.py -p results
