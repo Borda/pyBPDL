@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import ndimage, stats
-from skimage import io, draw, transform, filters
+from skimage import io, draw, transform
 from PIL import Image
 
 NB_THREADS = mproc.cpu_count()
@@ -140,7 +140,7 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
     for i in range(2):
         rnd = np.random.random((mesh_src.shape[0], 1)) - 0.5
         mesh_dst[:, i] += rnd[:, 0] * (im_size[i] / grid_size[i] * coef)
-    mesh_dst = filters.gaussian(mesh_dst, 0.1)
+        mesh_dst[:, i] = ndimage.filters.gaussian_filter1d(mesh_dst[:, i], 0.1)
     # logging.debug(dst)
     tform = transform.PiecewiseAffineTransform()
     tform.estimate(mesh_src, mesh_dst)
@@ -582,35 +582,32 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     >>> df_weights  # doctest: +NORMALIZE_WHITESPACE
                   ptn_01  ptn_02
     image
-    sample_00000     0.0     1.0
-    sample_00001     0.0     1.0
-    sample_00002     0.0     1.0
-    sample_00003     0.0     1.0
-    sample_00004     0.0     1.0
+    sample_00000       0       1
+    sample_00001       0       1
+    sample_00002       0       1
+    sample_00003       0       1
+    sample_00004       0       1
     """
     logging.info('generate a Binary dataset composed from %i samples  '
                  'and ration pattern occlusion %f', nb_samples, ptn_ration)
     if out_dir is not None:
         create_clean_folder(out_dir)
-    df_weights = pd.DataFrame()
     im_spls = [None] * nb_samples
-    mproc_pool = mproc.Pool(nb_jobs)
     logging.debug('running in %i threads...', nb_jobs)
-    tqdm_bar = tqdm.tqdm(total=nb_samples)
-    wrapper_generate = partial(generate_rand_patterns_occlusion,
-                               im_ptns=im_ptns, out_dir=out_dir,
-                               ptn_ration=ptn_ration, rand_seed=rand_seed)
-    for idx, im, im_name, ptn_weights in mproc_pool.imap_unordered(
-                                            wrapper_generate, range(nb_samples)):
-        im_spls[idx] = im
-        df_weights = df_weights.append(pd.Series([im_name] + ptn_weights),
-                                       ignore_index=True)
+    _wrapper_generate = partial(generate_rand_patterns_occlusion,
+                                im_ptns=im_ptns, out_dir=out_dir,
+                                ptn_ration=ptn_ration, rand_seed=rand_seed)
+    _ptn_names = lambda n: [COLUMN_NAME.format(i + 1) for i in range(n)]
 
-        tqdm_bar.update(1)
-    mproc_pool.close()
-    mproc_pool.join()
-    df_weights.columns = ['image'] + [COLUMN_NAME.format(i + 1)
-                                      for i in range(len(df_weights.columns) - 1)]
+    ld_weights = []
+    for idx, im, im_name, ptn_weights in wrap_execute_parallel(
+            _wrapper_generate, range(nb_samples), nb_jobs):
+        im_spls[idx] = im
+        d_weights = dict(zip(_ptn_names(len(ptn_weights)), ptn_weights))
+        d_weights.update({'image': im_name})
+        ld_weights.append(d_weights)
+
+    df_weights = pd.DataFrame(ld_weights)
     df_weights.sort_values(['image'], inplace=True)
     df_weights.set_index('image', inplace=True)
     logging.debug(df_weights.head())
@@ -764,17 +761,10 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     create_clean_folder(out_dir)
 
     imgs_new = [None] * len(imgs)
-    mproc_pool = mproc.Pool(nb_jobs)
     logging.debug('running in %i threads...', nb_jobs)
-    tqdm_bar = tqdm.tqdm(total=len(imgs))
-    for i, im in mproc_pool.imap_unordered(partial(wrapper_apply_function,
-                                                   func=func, coef=coef,
-                                                   out_dir=out_dir),
-                                           enumerate(imgs)):
+    _apply_fn = partial(wrapper_apply_function, func=func, coef=coef, out_dir=out_dir)
+    for i, im in wrap_execute_parallel(_apply_fn, enumerate(imgs), nb_jobs):
         imgs_new[i] = im
-        tqdm_bar.update(1)
-    mproc_pool.close()
-    mproc_pool.join()
 
     return imgs_new
 
@@ -1107,15 +1097,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
         names = range(len(imgs))
 
     mp_set = [(path_out, im, names[i]) for i, im in enumerate(imgs)]
-    if nb_jobs > 1:
-        logging.debug('running in %i threads...', nb_jobs)
-        mproc_pool = mproc.Pool(nb_jobs)
-        mproc_pool.map(wrapper_export_image, mp_set)
-        mproc_pool.close()
-        mproc_pool.join()
-    else:
-        logging.debug('running in single thread...')
-        map(wrapper_export_image, mp_set)
+    list(wrap_execute_parallel(wrapper_export_image, mp_set))
 
 
 def wrapper_export_image(mp_set):
@@ -1289,3 +1271,46 @@ def create_sample_images(atlas):
     im3[atlas > 2] = 0
     im3[im3 > 0] = 1
     return im1, im2, im3
+
+
+def wrap_execute_parallel(wrap_func, iterate_vals, nb_jobs=NB_THREADS,
+                          desc='', ordered=False):
+    """ wrapper for execution parallel of single thread as for...
+
+    :param wrap_func: function which will be excited in the iterations
+    :param [] iterate_vals: list or iterator which will ide in iterations
+    :param int nb_jobs: number og jobs running in parallel
+    :param str desc: description for the bar,
+        if it is set None, bar is suppressed
+    :param bool ordered: whether enforce ordering in the parallelism
+
+    >>> [o for o in wrap_execute_parallel(lambda x: x ** 2, range(5),
+    ...                                   nb_jobs=1, ordered=True)]
+    [0, 1, 4, 9, 16]
+    >>> [o for o in wrap_execute_parallel(sum, [[0, 1]] * 5, nb_jobs=2, desc=None)]
+    [1, 1, 1, 1, 1]
+    """
+    iterate_vals = list(iterate_vals)
+
+    if desc is not None:
+        tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
+    else:
+        tqdm_bar = None
+
+    if nb_jobs > 1:
+        logging.debug('perform sequential in %i threads', nb_jobs)
+        pool = mproc.Pool(nb_jobs)
+
+        pooling = pool.imap if ordered else pool.imap_unordered
+
+        for out in pooling(wrap_func, iterate_vals):
+            yield out
+            if tqdm_bar is not None:
+                tqdm_bar.update()
+        pool.close()
+        pool.join()
+    else:
+        for out in map(wrap_func, iterate_vals):
+            yield out
+            if tqdm_bar is not None:
+                tqdm_bar.update()

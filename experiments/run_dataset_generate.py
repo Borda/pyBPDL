@@ -107,26 +107,27 @@ def generate_all(path_out=DEFAULT_PATH_APD,
                                                 nb_patterns=nb_patterns)
     assert len(im_dict) > 0, 'dictionary has contain at least one pattern'
 
-    im_comb, df_weights = tl_data.dataset_binary_combine_patterns(im_dict,
-                                                                  path_dir('datasetBinary_raw'), nb_samples)
+    im_comb, df_weights = tl_data.dataset_binary_combine_patterns(
+        im_dict, path_dir('datasetBinary_raw'), nb_samples)
     df_weights.to_csv(os.path.join(path_out, NAME_WEIGHTS))
 
-    ds_apply = partial(tl_data.dataset_apply_image_function, nb_jobs=nb_jobs)
+    _warp_ds_apply = partial(tl_data.dataset_apply_image_function,
+                             nb_jobs=nb_jobs)
 
-    im_deform = ds_apply(im_comb, path_dir('datasetBinary_deform'),
+    im_deform = _warp_ds_apply(im_comb, path_dir('datasetBinary_deform'),
                          tl_data.image_deform_elastic)
-    ds_apply(im_comb, path_dir('datasetBinary_noise'),
+    _warp_ds_apply(im_comb, path_dir('datasetBinary_noise'),
              tl_data.add_image_binary_noise, NOISE_BINARY)
-    ds_apply(im_deform, path_dir('datasetBinary_defNoise'),
+    _warp_ds_apply(im_deform, path_dir('datasetBinary_defNoise'),
              tl_data.add_image_binary_noise, NOISE_BINARY)
 
-    im_comb_prob = ds_apply(im_comb, path_dir('datasetFuzzy_raw'),
+    im_comb_prob = _warp_ds_apply(im_comb, path_dir('datasetFuzzy_raw'),
                             tl_data.image_transform_binary2fuzzy, 0.5)
-    im_def_prob = ds_apply(im_deform, path_dir('datasetFuzzy_deform'),
+    im_def_prob = _warp_ds_apply(im_deform, path_dir('datasetFuzzy_deform'),
                            tl_data.add_image_fuzzy_pepper_noise, 0.5)
-    ds_apply(im_comb_prob, path_dir('datasetFuzzy_noise'),
+    _warp_ds_apply(im_comb_prob, path_dir('datasetFuzzy_noise'),
              tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
-    ds_apply(im_def_prob, path_dir('datasetFuzzy_defNoise'),
+    _warp_ds_apply(im_def_prob, path_dir('datasetFuzzy_defNoise'),
              tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
 
 

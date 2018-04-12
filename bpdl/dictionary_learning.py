@@ -683,8 +683,9 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     logging.info('BPDL: terminated with iter %i / %i and step diff %f <? %f',
                  len(list_diff), max_iter, list_diff[-1], tol)
     logging.debug('criterion evolved:\n %s', repr(list_diff))
-    logging.debug('measured time: \n%s', repr(pd.DataFrame(list_times)))
-    logging.info(pd.DataFrame(list_times).describe())
+    df_time = pd.DataFrame(list_times)
+    logging.debug('measured time: \n%s', repr(df_time))
+    logging.info('times: \n%s', df_time.describe())
     # atlas = sk_image.relabel_sequential(atlas)[0]
     w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
               for img in imgs_warped]

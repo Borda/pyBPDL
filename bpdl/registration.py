@@ -17,6 +17,7 @@ from dipy.align.imwarp import SymmetricDiffeomorphicRegistration
 from dipy.align.metrics import SSDMetric
 
 import bpdl.pattern_atlas as ptn_atlas
+import bpdl.dataset_utils as tl_data
 
 NB_THREADS = int(mproc.cpu_count() * .8)
 DEAMONS_PARAMS = dict(
@@ -188,14 +189,9 @@ def warp2d_images_deformations(list_images, list_deforms, nb_jobs=NB_THREADS):
 
     list_imgs_wrap = [None] * len(list_images)
     list_items = zip(range(len(list_images)), list_images, list_deforms)
-    if nb_jobs < 1:
-        nb_jobs = 1
-
-    mproc_pool = mproc.Pool(nb_jobs)
-    for idx, img_w in mproc_pool.map(wrapper_warp2d_image_deform, list_items):
+    for idx, img_w in tl_data.wrap_execute_parallel(wrapper_warp2d_image_deform,
+                                                    list_items, nb_jobs):
         list_imgs_wrap[idx] = img_w
-    mproc_pool.close()
-    mproc_pool.join()
 
     return list_imgs_wrap
 
@@ -284,20 +280,11 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
     list_deform = [None] * len(list_weights)
     list_items = zip(range(len(list_images)), list_images, list_weights)
 
-    if nb_jobs > 1:
-        wrapper_register = partial(wrapper_regist_demons_images_weights,
-                                   atlas=atlas, coef=coef, params=params)
-        mproc_pool = mproc.Pool(nb_jobs)
-        for idx, img_w, deform in mproc_pool.map(wrapper_register, list_items):
-            list_imgs_wrap[idx] = img_w
-            list_deform[idx] = deform
-        mproc_pool.close()
-        mproc_pool.join()
-    else:
-        for item in list_items:
-            idx, img_w, deform = wrapper_regist_demons_images_weights(
-                item, atlas, coef, params)
-            list_imgs_wrap[idx] = img_w
-            list_deform[idx] = deform
+    _wrapper_register = partial(wrapper_regist_demons_images_weights,
+                                atlas=atlas, coef=coef, params=params)
+    for idx, img_w, deform in tl_data.wrap_execute_parallel(_wrapper_register,
+                                                            list_items,nb_jobs):
+        list_imgs_wrap[idx] = img_w
+        list_deform[idx] = deform
 
     return list_imgs_wrap, list_deform

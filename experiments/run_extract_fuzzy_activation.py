@@ -22,7 +22,6 @@ if os.environ.get('DISPLAY', '') == '':
     logging.warning('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import tqdm
 import numpy as np
 from skimage import filters
 # from sklearn.mixture import GaussianMixture
@@ -86,14 +85,9 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
 
     list_img_paths = glob.glob(path_pattern_in)
     logging.info('found images: %i', len(list_img_paths))
-    wrapper_extract = partial(extract_activation, path_out=path_out)
 
-    tqdm_bar = tqdm.tqdm(total=len(list_img_paths))
-    mproc_pool = mproc.Pool(nb_jobs)
-    for _ in mproc_pool.map(wrapper_extract, list_img_paths):
-        tqdm_bar.update()
-    mproc_pool.close()
-    mproc_pool.join()
+    _wrapper_extract = partial(extract_activation, path_out=path_out)
+    list(tl_data.wrap_execute_parallel(_wrapper_extract, list_img_paths, nb_jobs))
 
 
 if __name__ == '__main__':

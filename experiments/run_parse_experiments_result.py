@@ -216,24 +216,11 @@ def parse_experiments(params):
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
                  if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
-    wrapper_parse_folder = partial(try_parse_experiment_folder, params=params)
-    tqdm_bar = tqdm.tqdm(total=len(path_dirs))
 
-    if nb_jobs > 1:
-        logging.debug('perform_sequence in %i threads', nb_jobs)
-        mproc_pool = mproc.Pool(nb_jobs)
-        for df_folder in mproc_pool.imap_unordered(wrapper_parse_folder,
-                                                   path_dirs):
-            df_all = append_df_folder(df_all, df_folder)
-            tqdm_bar.update()
-        mproc_pool.close()
-        mproc_pool.join()
-    else:
-        for path_expt in path_dirs:
-            logging.debug('folder %s', path_expt)
-            df_folder = try_parse_experiment_folder(path_expt, params)
-            df_all = append_df_folder(df_all, df_folder)
-            tqdm_bar.update()
+    _wrapper_parse_folder = partial(try_parse_experiment_folder, params=params)
+    for df_folder in tl_data.wrap_execute_parallel(_wrapper_parse_folder,
+                                                   path_dirs, nb_jobs):
+        df_all = append_df_folder(df_all, df_folder)
 
     if isinstance(params['name_results'], list):
         name_results = '_'.join(os.path.splitext(n)[0]

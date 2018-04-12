@@ -18,8 +18,6 @@ import argparse
 import multiprocessing as mproc
 from functools import partial
 
-import tqdm
-
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
 
@@ -94,14 +92,9 @@ def dataset_add_noise(path_in, path_out, noise_level,
     else:
         logging.warning('the output dir already exists')
 
-    wrapper_image_noise = partial(add_noise_image, path_in=path_in,
-                                  path_out=path_out, noise_level=noise_level)
-
-    logging.debug('running in %i threads...', nb_jobs)
-    mproc_pool = mproc.Pool(nb_jobs)
-    tqdm_bar = tqdm.tqdm(total=len(name_imgs))
-    for x in mproc_pool.imap_unordered(wrapper_image_noise, name_imgs):
-        tqdm_bar.update()
+    _wrapper_noise = partial(add_noise_image, path_in=path_in,
+                             path_out=path_out, noise_level=noise_level)
+    list(tl_data.wrap_execute_parallel(_wrapper_noise, name_imgs, nb_jobs))
 
     logging.info('DONE')
 

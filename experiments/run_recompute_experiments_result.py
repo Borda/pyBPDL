@@ -19,11 +19,11 @@ import multiprocessing as mproc
 from functools import partial
 
 import matplotlib
+
 if os.environ.get('DISPLAY', '') == '':
     logging.warning('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import tqdm
 import numpy as np
 import pandas as pd
 import matplotlib.pylab as plt
@@ -64,7 +64,7 @@ def load_atlas(path_atlas):
 def export_atlas_overlap(atlas_gt, atlas, path_out_img, fig_size=FIGURE_SIZE):
     fig, ax = plt.subplots(figsize=(fig_size, fig_size))
     ax.imshow(atlas, alpha=0.5, interpolation='nearest', cmap=plt.cm.jet)
-    ax.contour(atlas_gt, levels=np.unique(atlas_gt), linewidth=2, cmap=plt.cm.jet)
+    ax.contour(atlas_gt, levels=np.unique(atlas_gt), linewidths=2, cmap=plt.cm.jet)
 
     ax.axis('off')
     ax.axes.get_xaxis().set_ticklabels([])
@@ -182,23 +182,10 @@ def parse_experiments(params):
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
                  if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
-    wrapper_parse_folder = partial(try_parse_folder,
-                                   params=params)
-    tqdm_bar = tqdm.tqdm(total=len(path_dirs))
 
-    if nb_jobs > 1:
-        logging.debug('perform_sequence in %i threads', nb_jobs)
-        mproc_pool = mproc.Pool(nb_jobs)
-        for _ in mproc_pool.imap_unordered(wrapper_parse_folder,
-                                           path_dirs):
-            tqdm_bar.update()
-        mproc_pool.close()
-        mproc_pool.join()
-    else:
-        for path_expt in path_dirs:
-            logging.debug('folder %s', path_expt)
-            try_parse_folder(path_expt, params)
-            tqdm_bar.update()
+    _wrapper_parse_folder = partial(try_parse_folder,
+                                    params=params)
+    list(tl_data.wrap_execute_parallel(_wrapper_parse_folder, path_dirs, nb_jobs))
 
 
 if __name__ == '__main__':
