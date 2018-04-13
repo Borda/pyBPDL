@@ -107,7 +107,7 @@ def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
     :param str path_expt: path to experiment folder
-    :param {str: any} params:
+    :param {str: ...} params:
     """
     assert os.path.isdir(path_expt), 'missing EXPERIMENT: %s' % path_expt
 

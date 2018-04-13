@@ -118,18 +118,12 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     block = np.ones(block_size.astype(np.int))
     vec = list(range(1, max_label + 1)) * int(np.ceil(coef))
     logging.debug('block size is %s', repr(block.shape))
-    for label in range(max_label):
+    rows = []
+    for label in range(0, max_label):
         idx = np.random.permutation(vec)[:max_label]
-        for k in range(max_label):
-            b = block.copy() * idx[k]
-            if k == 0:
-                row = b
-            else:
-                row = np.hstack((row, b))
-        if label == 0:
-            mosaic = row
-        else:
-            mosaic = np.vstack((mosaic, row))
+        row = np.hstack([block.copy() * idx[k] for k in range(max_label)])
+        rows.append(row)
+    mosaic = np.vstack(rows)
     logging.debug('generated mosaic %s with labeling %s',
                   repr(mosaic.shape), repr(np.unique(mosaic).tolist()))
     img_init = mosaic[:im_size[0], :im_size[1]]
@@ -174,9 +168,10 @@ def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
            [1, 1, 2, 3, 5, 3, 1, 4, 3, 3, 1, 2]])
     """
     logging.debug('initialise atlas for %i labels from %i images of shape %s '
-                  'with Otsu-Watershed', nb_patterns, len(imgs), repr(imgs[0].shape))
+                  'with Otsu-Watershed', nb_patterns, len(imgs),
+                  repr(imgs[0].shape))
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian(img_sum, 1)
+    img_gauss = filters.gaussian_filter(img_sum, 1)
     # http://scikit-image.org/docs/dev/auto_examples/plot_otsu.html
     thresh = filters.threshold_otsu(img_gauss)
     img_otsu = (img_gauss >= thresh)
@@ -245,7 +240,7 @@ def detect_peaks(image, struct=(2, 2)):
 
 
 def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
-                                        bg_threshhold=0.5):
+                                  bg_threshhold=0.5):
     """ do some simple operations to get better initialisation
     1] sum over all images, 2]watershed
 
@@ -270,9 +265,10 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     logging.debug('initialise atlas for %i labels from %i images of shape %s '
-                  'with Gauss-Watershed', nb_patterns, len(imgs), repr(imgs[0].shape))
+                  'with Gauss-Watershed', nb_patterns, len(imgs),
+                  repr(imgs[0].shape))
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian(img_sum, 1)
+    img_gauss = filters.gaussian_filter(img_sum, 1)
     seeds = detect_peaks(img_gauss)
     # http://scikit-image.org/docs/dev/auto_examples/plot_watershed.html
     labels = morphology.watershed(-img_gauss, seeds)
@@ -494,7 +490,7 @@ def init_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
 
 
 def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
-                                     rand_seed=None):
+                               rand_seed=None):
     """ take the orginal atlas and use geometrical deformation
     to generate new deformed atlas
 
@@ -572,7 +568,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     by any label in actual atlas, remove collision with actual atlas
 
     :param [ndarray] imgs: list of input images np.array<height, width>
-    :param [ndarray] imgs_reconst: list of reconstructed images np.array<height, width>
+    :param [ndarray] imgs_reconst: list of reconstructed images np.array<h, w>
     :param ndarray atlas: np.array<height, width>
     :param [int] diffs: list of differences among input and reconstruct images
     :param bool ptn_compact: enforce compactness of patterns
@@ -637,7 +633,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     # if ptn_size < 0.01:
     #     logging.debug('new patterns was too small %f', ptn_size)
     #     ptn = data.extract_image_largest_element(im_diff)
-    img_ptn = (img_ptn == True)
+    img_ptn = (img_ptn == 1)
     # img_ptn = np.logical_and(img_ptn == True, atlas == 0)
     return img_ptn
 
@@ -647,7 +643,7 @@ def insert_new_pattern(imgs, imgs_reconst, atlas, label,
     """ with respect to atlas empty spots inset new patterns
 
     :param [ndarray] imgs: list of input images np.array<height, width>
-    :param [ndarray] imgs_reconst: list of reconstructed images np.array<height, width>
+    :param [ndarray] imgs_reconst: list of reconstructed images np.array<h, w>
     :param ndarray atlas: np.array<height, width>
     :param bool ptn_compact: enforce compactness of patterns
     :return ndarray: np.array<height, width> updated atlas
@@ -675,7 +671,7 @@ def insert_new_pattern(imgs, imgs_reconst, atlas, label,
     im_ptn = prototype_new_pattern(imgs, imgs_reconst, diffs, atlas, ptn_compact)
     # logging.debug('new im_ptn: {}'.format(np.sum(im_ptn) / np.prod(im_ptn.shape)))
     # plt.imshow(im_ptn), plt.title('im_ptn'), plt.show()
-    atlas[im_ptn == True] = label
+    atlas[im_ptn == 1] = label
     logging.debug('area of new pattern %i is %i', label, np.sum(atlas == label))
     return atlas
 

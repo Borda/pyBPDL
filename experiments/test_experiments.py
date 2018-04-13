@@ -6,7 +6,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 import os
 import sys
-import copy
 import logging
 import glob
 
@@ -82,7 +81,7 @@ def test_experiments_bpdl(dict_params=r_expt.SYNTH_PARAMS):
 
     :param {str: any} dict_params:
     """
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.DEBUG)
     # experiment_pipeline_alpe_showcase()
     params = e_gen.simplify_params(dict_params)
     params.update(PARAMS_TEST_SYNTH_UPDATE)

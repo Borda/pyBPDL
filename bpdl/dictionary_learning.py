@@ -107,7 +107,8 @@ def compute_relative_penalty_images_weights(imgs, weights):
 def compute_positive_cost_images_weights(imgs, ptn_weights):
     """
     :param [ndarray] imgs: list of np.array<height, width> input images
-    :param ndarray ptn_weights: matrix np.array<nb_imgs, nb_lbs> composed from wight vectors
+    :param ndarray ptn_weights: matrix np.array<nb_imgs, nb_lbs> composed
+        from wight vectors
     :return ndarray: np.array<height, width, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
@@ -502,7 +503,8 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
     return np.array(w_bins)
 
 
-def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_split):
+def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
+                      ptn_split):
     """ single iteration of the block coordinate descent algo
 
     :param [ndarray] imgs: list of images np.array<height, width>
@@ -549,12 +551,13 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_sp
 
 def bpdl_deform_images(imgs, atlas, weights):
     logging.debug('... perform register images onto atlas')
-    images_warped, deforms = regist.register_images_to_atlas_demons(imgs, atlas, weights)
+    images_warped, deforms = regist.register_images_to_atlas_demons(imgs, atlas,
+                                                                    weights)
     return images_warped, deforms
 
 
 def bpdl_pipeline(images, init_atlas=None, init_weights=None,
-                  gc_coef=0.0, tol=1e-3, max_iter=25,
+                  gc_regul=0.0, tol=1e-3, max_iter=25,
                   gc_reinit=True, ptn_split=True,
                   overlap_major=False, ptn_compact=True,
                   deform_coef=None,
@@ -563,10 +566,10 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     algo with graphcut...
 
     :param float deform_coef: regularise the deformation
-    :param [ndarray] imgs: list of images np.array<height, width>
+    :param [ndarray] images: list of images np.array<height, width>
     :param ndarray init_atlas: used atlas of np.array<height, width>
     :param ndarray init_weights: weights np.array<nb_imgs, nb_lbs>
-    :param float gc_coef: graph cut regularisation
+    :param float gc_regul: graph cut regularisation
     :param float tol: stop if the diff between two conseq steps
         is less then this given threshold. eg for -1 never until max nb iters
     :param int max_iter: max namber of iteration
@@ -645,10 +648,10 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     if max_iter < 1:  # set at least single iteration
         max_iter = 1
 
-    for iter in range(max_iter):
+    for it in range(max_iter):
         d_times = {}
         if len(np.unique(atlas)) == 1:
-            logging.warning('.. iter: %i, no labels in the atlas %s', iter,
+            logging.warning('.. iter: %i, no labels in the atlas %s', it,
                             repr(np.unique(atlas).tolist()))
         # 1: update WEIGHTS
         t = time.time()
@@ -660,10 +663,10 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
         d_times['reinit. atlas'] = time.time() - d_times['weights update']
         # 3: update the ATLAS
         atlas_new = bpdl_update_atlas(imgs_warped, atlas_reinit, w_bins,
-                                      label_max, gc_coef, gc_reinit, ptn_split)
+                                      label_max, gc_regul, gc_reinit, ptn_split)
         d_times['atlas update'] = time.time() - d_times['reinit. atlas']
 
-        if deform_coef is not None and iter > 1:
+        if deform_coef is not None and it > 1:
             imgs_warped, deforms = bpdl_deform_images(images, atlas_new, w_bins)
 
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
@@ -672,8 +675,8 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
         list_times.append(d_times)
         atlas = sk_image.relabel_sequential(atlas_new)[0]
 
-        logging.debug('-> iter. #%i with Atlas diff %f', (iter + 1), step_diff)
-        export_visual_atlas(iter + 1, out_dir, atlas, out_prefix)
+        logging.debug('-> iter. #%i with Atlas diff %f', (it + 1), step_diff)
+        export_visual_atlas(it + 1, out_dir, atlas, out_prefix)
 
         # STOPPING criterion
         if step_diff <= tol and len(np.unique(atlas)) > 1:

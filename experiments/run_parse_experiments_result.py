@@ -24,7 +24,6 @@ import logging
 import multiprocessing as mproc
 from functools import partial
 
-import tqdm
 import numpy as np
 import pandas as pd
 

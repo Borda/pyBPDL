@@ -1,5 +1,5 @@
 """
-run experiments with Stat-of-the-art methods
+experiments with Stat-of-the-Art methods
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -41,7 +41,7 @@ def estim_atlas_as_argmax(atlas_components, fit_result, bg_threshold=0.1):
     atlas[atlas_mean < bg_threshold] = 0
 
     assert atlas.shape == atlas_components[0].shape, \
-        'dimension mix - atlas: %s atlas_ptns: %s' \
+        'dimension mix - atlas: %s atlas_patterns: %s' \
         % (atlas.shape, atlas_components.shape)
 
     return atlas
@@ -124,7 +124,7 @@ class ExperimentLinearCombineBase(expt_gen.Experiment):
 
 
 class ExperimentFastICA_base(ExperimentLinearCombineBase):
-    """
+    """ Fast ICA
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html
     """
 
@@ -138,12 +138,14 @@ class ExperimentFastICA_base(ExperimentLinearCombineBase):
         return estimator, components, fit_result
 
 
-class ExperimentFastICA(ExperimentFastICA_base, expt_gen.ExperimentParallel):
+class ExperimentFastICA(ExperimentFastICA_base,
+                        expt_gen.ExperimentParallel):
+    """ parallel version of Fast ICA  """
     pass
 
 
 class ExperimentSparsePCA_base(ExperimentLinearCombineBase):
-    """
+    """ Sparse PCA
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html
     """
 
@@ -156,12 +158,14 @@ class ExperimentSparsePCA_base(ExperimentLinearCombineBase):
         return estimator, components, fit_result
 
 
-class ExperimentSparsePCA(ExperimentSparsePCA_base, expt_gen.ExperimentParallel):
+class ExperimentSparsePCA(ExperimentSparsePCA_base,
+                          expt_gen.ExperimentParallel):
+    """ parallel version of Sparse PCA  """
     pass
 
 
 class ExperimentDictLearn_base(ExperimentLinearCombineBase):
-    """
+    """ Dictionary Learning
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html
     """
 
@@ -177,12 +181,14 @@ class ExperimentDictLearn_base(ExperimentLinearCombineBase):
         return estimator, components, fit_result
 
 
-class ExperimentDictLearn(ExperimentDictLearn_base, expt_gen.ExperimentParallel):
+class ExperimentDictLearn(ExperimentDictLearn_base,
+                          expt_gen.ExperimentParallel):
+    """ parallel version of Dictionary Learning  """
     pass
 
 
 class ExperimentNMF_base(ExperimentLinearCombineBase):
-    """
+    """ NMF
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html
     """
 
@@ -195,7 +201,9 @@ class ExperimentNMF_base(ExperimentLinearCombineBase):
         return estimator, components, fit_result
 
 
-class ExperimentNMF(ExperimentNMF_base, expt_gen.ExperimentParallel):
+class ExperimentNMF(ExperimentNMF_base,
+                    expt_gen.ExperimentParallel):
+    """ parallel version of NMF  """
     pass
 
 
@@ -220,6 +228,8 @@ DICT_ATLAS_INIT = {
     'soa-tune-PCA': partial(ptn_dict.init_atlas_sparse_pca, nb_iter=150),
     'soa-tune-DL': partial(ptn_dict.init_atlas_dict_learn, nb_iter=150),
 }
+LIST_BPDL_PARAMS = ['tol', 'gc_reinit', 'gc_regul', 'max_iter',
+                    'ptn_split', 'ptn_compact', 'overlap_major']
 
 
 class ExperimentBPDL_base(expt_gen.Experiment):
@@ -275,9 +285,9 @@ class ExperimentBPDL_base(expt_gen.Experiment):
     def _estimate_atlas_weights(self, images, params):
         """ set all params and run the atlas estimation in try mode
 
-        :param int i: index of try
-        :param init_atlas: np.array<w, h>
-        :return (ndarray, ndarray):
+        :param ndarray images: np.array<w, h>
+        :param {str: ...} params:
+        :return (ndarray, ndarray, {}):
         """
         logging.debug(' -> estimate atlas...')
         logging.debug(expt_gen.string_dict(params, desc='PARAMETERS'))
@@ -287,18 +297,12 @@ class ExperimentBPDL_base(expt_gen.Experiment):
         path_out = os.path.join(params['path_exp'],
                                 'debug' + params['name_suffix'])
 
-        atlas, weights, deforms = dl.bpdl_pipeline(
-                                    images,
-                                    init_atlas=init_atlas,
-                                    tol=params['tol'],
-                                    gc_reinit=params['gc_reinit'],
-                                    gc_coef=params['gc_regul'],
-                                    max_iter=params['max_iter'],
-                                    ptn_split=params['ptn_split'],
-                                    ptn_compact=params['ptn_compact'],
-                                    overlap_major=params['overlap_mj'],
-                                    deform_coef=params.get('deform_coef', None),
-                                    out_dir=path_out)  # , out_prefix=prefix
+        bpdl_params = {k: params[k] for k in params if k in LIST_BPDL_PARAMS}
+        bpdl_params['deform_coef'] = params.get('deform_coef', None)
+        atlas, weights, deforms = dl.bpdl_pipeline(images,
+                                                   init_atlas=init_atlas,
+                                                   out_dir=path_out,
+                                                   **bpdl_params)
 
         assert atlas.max() == weights.shape[1], \
             'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
@@ -346,8 +350,7 @@ class ExperimentBPDL_base(expt_gen.Experiment):
         return stat
 
 
-class ExperimentBPDL(ExperimentBPDL_base, expt_gen.ExperimentParallel):
-    """
-    parallel version of APDL
-    """
+class ExperimentBPDL(ExperimentBPDL_base,
+                     expt_gen.ExperimentParallel):
+    """ parallel version of BPDL  """
     pass

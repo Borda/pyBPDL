@@ -71,7 +71,7 @@ PATH_DATA_REAL_OVARY = os.path.join(tl_data.update_path('data_images'), 'ovary_s
 PATH_RESULTS = tl_data.update_path('results')
 DEFAULT_PARAMS = {
     'type': None,
-    'computer': os.uname(),
+    'computer': repr(os.uname()),
     'nb_samples': None,
     'tol': 1e-3,
     'init_tp': 'random-mosaic-2',  # random, greedy, , GT-deform
@@ -82,7 +82,7 @@ DEFAULT_PARAMS = {
     'gc_reinit': True,
     'ptn_split': False,
     'ptn_compact': False,
-    'overlap_mj': True,
+    'overlap_major': True,
     'deform_coef': None,
     'path_in': '',
     'path_out': '',
@@ -265,7 +265,7 @@ def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True
     if os.path.exists(path_config) and not skip_load:
         logging.debug('loading saved params from file "%s"', CONFIG_JSON)
         params = json.load(open(path_config, 'r'))
-    params.update({'computer': os.uname(),
+    params.update({'computer': repr(os.uname()),
                    'path_exp': path_expt})
     logging.debug('saving params to file "%s"', CONFIG_JSON)
     with open(path_config, 'w') as f:
@@ -328,17 +328,17 @@ def copy_dict(d):
     return d_new
 
 
-def generate_atlas_suffix(d_params):
+def generate_conf_suffix(d_params):
     """ generating suffix strung according given params
 
     :param {} d_params: dictionary
     :return str:
 
     >>> params = {'my_Param': 15}
-    >>> generate_atlas_suffix(params)
+    >>> generate_conf_suffix(params)
     '_my-Param=15'
     >>> params.update({'new_Param': 'abc'})
-    >>> generate_atlas_suffix(params)
+    >>> generate_conf_suffix(params)
     '_my-Param=15_new-Param=abc'
     """
     suffix = '_'
@@ -510,7 +510,7 @@ class Experiment(object):
         else:
             logging.debug('perform single configuration')
             detail = self.__perform_once({})
-            self.df_results = pd.DataFrame(detail)
+            self.df_results = pd.DataFrame([detail])
 
     def __perform_sequence(self):
         """ Iteratively change a single experiment parameter with the same data
@@ -549,7 +549,7 @@ class Experiment(object):
         """
         detail = copy_dict(self.params)
         detail.update(copy_dict(d_params))
-        detail['name_suffix'] = generate_atlas_suffix(d_params)
+        detail['name_suffix'] = generate_conf_suffix(d_params)
 
         # in case you chose only a subset of images
         nb_samples = detail.get('nb_samples', None)
@@ -672,12 +672,12 @@ class Experiment(object):
         :param [ndarray] weights: np.array<nb_samples, nb_patterns>
         :return {str: ...}:
         """
-        stat = {}
-        stat['atlas ARS'] = self.__evaluate_atlas(atlas)
-
         images_rct = ptn_dict.reconstruct_samples(atlas, weights)
         tag, diff = self._evaluate_reconstruct(images_rct)
-        stat['reconst. diff %s' % tag] = diff
+        stat = {
+            'atlas ARS': self.__evaluate_atlas(atlas),
+            'reconst. diff %s' % tag: diff
+        }
         return stat
 
     def _evaluate_extras(self, atlas, weights, extras):
@@ -729,7 +729,7 @@ class ExperimentParallel(Experiment):
         """ initialise parameters and nb jobs in parallel
 
         :param {str: ...} dict_params:
-        :param int nb_jobs:
+        :param bool time_stamp:
         """
         super(ExperimentParallel, self).__init__(dict_params, time_stamp)
         self.nb_jobs = dict_params.get('nb_jobs', NB_THREADS)

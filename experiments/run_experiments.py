@@ -29,12 +29,8 @@ import os
 import sys
 import gc, time
 import logging
-import traceback
 
 import numpy as np
-from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
-from skimage import segmentation
-import tqdm
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.dataset_utils as tl_data
@@ -84,7 +80,6 @@ GRAPHCUT_REGUL = [0., 1e-9, 1e-3]
 def experiment_pipeline_alpe_showcase(path_out):
     """ an simple show case to prove that the particular steps are computed
 
-    :param path_in: str
     :param path_out: str
     :return (ndarray, ndarray):
     """

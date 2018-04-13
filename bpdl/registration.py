@@ -20,6 +20,9 @@ import bpdl.pattern_atlas as ptn_atlas
 import bpdl.dataset_utils as tl_data
 
 NB_THREADS = int(mproc.cpu_count() * .8)
+
+LIST_SDR_PARAMS = ['metric', 'level_iters', 'step_length', 'ss_sigma_factor',
+                   'opt_tol', 'inv_iter', 'inv_tol', 'callback']
 DEAMONS_PARAMS = dict(
     step_length=1.,
     level_iters=[5, 10],
@@ -67,29 +70,27 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
            [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-    >>> img_warp, map = register_demons_sym_diffeom(img_sense, img_ref)
+    >>> img_warp, m = register_demons_sym_diffeom(img_sense, img_ref)
     >>> np.round(img_warp.astype(float), 1)  # doctest: +NORMALIZE_WHITESPACE
     array([[ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
            [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
            [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
-           [ 0. ,  0. ,  0.9,  1. ,  0.9,  0.7,  0.3,  0.1,  0. ,  0. ],
-           [ 0. ,  0. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ],
-           [ 0. ,  0. ,  0.9,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ],
-           [ 0. ,  0. ,  0.7,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ],
-           [ 0. ,  0. ,  0.5,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ],
-           [ 0. ,  0. ,  0.2,  0.6,  0.6,  0.7,  0.8,  0.9,  0.9,  1. ],
+           [ 0. ,  0. ,  0. ,  0.3,  0.2,  0. ,  0. ,  0. ,  0. ,  0. ],
+           [ 0. ,  0. ,  0.2,  1. ,  1. ,  1. ,  0.8,  0.6,  0.7,  0.8],
+           [ 0. ,  0. ,  0.2,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ],
+           [ 0. ,  0. ,  0.2,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ],
+           [ 0. ,  0. ,  0.2,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ,  1. ],
+           [ 0. ,  0. ,  0.1,  0.7,  0.8,  0.9,  1. ,  1. ,  1. ,  1. ],
            [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ]])
     """
     if img_ref.max() == 0 or img_sense.max() == 0:
         logging.debug('one of the images is zeros')
         return img_sense.copy(), np.zeros(img_ref.shape + (2,))
 
-    sdr = SymmetricDiffeomorphicRegistration(metric=SSDMetric(img_ref.ndim),
-                                             step_length=params['step_length'],
-                                             level_iters=params['level_iters'],
-                                             inv_iter=params['inv_iter'],
-                                             ss_sigma_factor=params['ss_sigma_factor'],
-                                             opt_tol=params['opt_tol'])
+    sdr_params = {k: params[k] for k in params if k in LIST_SDR_PARAMS}
+    sdr = SmoothSymmetricDiffeomorphicRegistration(metric=SSDMetric(img_ref.ndim),
+                                                   smooth_sigma=smooth_sigma,
+                                                   **sdr_params)
     sdr.verbosity = VerbosityLevels.NONE
 
     t = time.time()
@@ -97,10 +98,11 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
     logging.debug('demons took: %d s', time.time() - t)
 
     t = time.time()
-    map = sdr.moving_to_ref
+    mapping = sdr.moving_to_ref
     # map.forward = filters.gaussian_filter(map.forward, sigma=smooth_sigma)
-    map.backward = filters.gaussian_filter(map.backward, sigma=smooth_sigma)
-    img_warped = map.transform_inverse(img_sense, 'linear')
+    mapping.backward = filters.gaussian_filter(mapping.backward,
+                                               sigma=smooth_sigma)
+    img_warped = mapping.transform_inverse(img_sense, 'linear')
 
     mapping_atlas = filters.gaussian_filter(sdr.static_to_ref.backward,
                                             sigma=smooth_sigma)
@@ -203,7 +205,7 @@ def wrapper_regist_demons_images_weights(idx_img_weights, atlas, coef,
     :param (int, ndarray, ndarray) idx_img_weights:
     :param ndarray atlas:
     :param float coef:
-    :param {str: } params:
+    :param {str: ...} params:
     :return:
     """
     idx, img, w = idx_img_weights
@@ -214,7 +216,8 @@ def wrapper_regist_demons_images_weights(idx_img_weights, atlas, coef,
 
     if params is None:
         params = DEAMONS_PARAMS
-    img_warp, deform = register_demons_sym_diffeom(img, img_reconst, coef, params)
+    img_warp, deform = register_demons_sym_diffeom(img, img_reconst,
+                                                   coef, params)
 
     return idx, img_warp, deform
 
@@ -228,7 +231,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
     :param ndarray atlas:
     :param ndarray list_weights:
     :param float coef:
-    :param {str:} params:
+    :param {str: ...} params:
     :param int nb_jobs:
     :return: [ndarray], [ndarray]
 
@@ -283,8 +286,64 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
     _wrapper_register = partial(wrapper_regist_demons_images_weights,
                                 atlas=atlas, coef=coef, params=params)
     for idx, img_w, deform in tl_data.wrap_execute_parallel(_wrapper_register,
-                                                            list_items,nb_jobs):
+                                                            list_items, nb_jobs):
         list_imgs_wrap[idx] = img_w
         list_deform[idx] = deform
 
     return list_imgs_wrap, list_deform
+
+
+class SmoothSymmetricDiffeomorphicRegistration(SymmetricDiffeomorphicRegistration):
+
+    def __init__(self, metric, smooth_sigma=0.5, **kwargs):
+        super(SmoothSymmetricDiffeomorphicRegistration, self).__init__(metric,
+                                                                       **kwargs)
+        self.smooth_sigma = smooth_sigma
+
+    def update(self, current_displacement, new_displacement,
+               disp_world2grid, time_scaling):
+        """Composition of the current displacement field with the given field
+
+        Interpolates new displacement at the locations defined by
+        current_displacement. Equivalently, computes the composition C of the
+        given displacement fields as C(x) = B(A(x)), where A is
+        current_displacement and B is new_displacement. This function is
+        intended to be used with deformation fields of the same sampling
+        (e.g. to be called by a registration algorithm).
+
+        Parameters
+        ----------
+        current_displacement : array, shape (R', C', 2) or (S', R', C', 3)
+            the displacement field defining where to interpolate
+            new_displacement
+        new_displacement : array, shape (R, C, 2) or (S, R, C, 3)
+            the displacement field to be warped by current_displacement
+        disp_world2grid : array, shape (dim+1, dim+1)
+            the space-to-grid transform associated with the displacements'
+            grid (we assume that both displacements are discretized over the
+            same grid)
+        time_scaling : float
+            scaling factor applied to d2. The effect may be interpreted as
+            moving d1 displacements along a factor (`time_scaling`) of d2.
+
+        Returns
+        -------
+        updated : array, shape (the same as new_displacement)
+            the warped displacement field
+        mean_norm : the mean norm of all vectors in current_displacement
+        """
+        sq_field = np.sum((np.array(current_displacement) ** 2), -1)
+        mean_norm = np.sqrt(sq_field).mean()
+
+        # smoothing the forward/backward step
+        new_displacement = filters.gaussian_filter(new_displacement,
+                                                   sigma=self.smooth_sigma)
+
+        # We assume that both displacement fields have the same
+        # grid2world transform, which implies premult_index=Identity
+        # and premult_disp is the world2grid transform associated with
+        # the displacements' grid
+        self.compose(current_displacement, new_displacement, None,
+                     disp_world2grid, time_scaling, current_displacement)
+
+        return np.array(current_displacement), np.array(mean_norm)

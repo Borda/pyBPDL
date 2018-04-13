@@ -201,7 +201,7 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
            [0, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
     assert seg_ref.shape == seg_relabel.shape, 'shapes: %s and %s' \
-                   % (repr(seg_ref.shape), repr(seg_relabel.shape))
+                            % (repr(seg_ref.shape), repr(seg_relabel.shape))
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
 
     lut = [-1] * (np.max(seg_relabel) + 1)
@@ -276,10 +276,11 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
            [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
     assert seg_ref.shape == seg_relabel.shape, 'shapes: %s and %s' \
-                       % (repr(seg_ref.shape), repr(seg_relabel.shape))
+                            % (repr(seg_ref.shape), repr(seg_relabel.shape))
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
     # ref_ptn_size = np.bincount(seg_ref.ravel())
-    # overlap = overlap.astype(float) / np.tile(ref_ptn_size, (overlap.shape[1], 1)).T
+    # overlap = overlap.astype(float) \
+    #                   / np.tile(ref_ptn_size, (overlap.shape[1], 1)).T
     # overlap = np.nan_to_num(overlap)
     max_axis = 1 if overlap.shape[0] > overlap.shape[1] else 0
     if keep_bg:
@@ -330,7 +331,7 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     """
     y_pred = np.array(y_pred)
     assert y_true.shape == y_pred.shape, 'shapes: %s and %s' \
-                     % (repr(y_true.shape), repr(y_pred.shape))
+                                 % (repr(y_true.shape), repr(y_pred.shape))
     uq_y_true = np.unique(y_true)
     logging.debug('unique lbs true: %s, predict %s',
                   repr(uq_y_true), repr(np.unique(y_pred)))
