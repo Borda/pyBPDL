@@ -88,7 +88,7 @@ def test_experiments_bpdl(dict_params=r_expt.SYNTH_PARAMS):
 
     logging.info('RUN: ExperimentBPDL-base')
     expt = e_mthd.ExperimentBPDL_base(params)
-    expt.run(gt=True, iter_params={'deform_coef': [None, 1]})
+    expt.run(gt=True, iter_params={'deform_coef': [None, 0.05, 1]})
     del expt
 
     # negate default params

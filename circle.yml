@@ -29,6 +29,7 @@ jobs:
         - run: python experiments/run_parse_experiments_result.py -p results -res results.csv
         - run: python experiments/run_recompute_experiments_result.py -p results
         - run: python experiments/run_parse_experiments_result.py -p results -res results_NEW.csv
+
         # POST-TEST
         - run: python setup.py install --user
         - run: coverage report && coverage xml -o test-reports/coverage.xml

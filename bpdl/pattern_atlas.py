@@ -732,12 +732,11 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     # add one while indexes does not cover 0 - bg
     logging.debug('total nb labels: %i', label_max)
     atlas_new = atlas.copy()
-    for label in range(1, label_max + 1):
+    labels_empty = [lb for lb in range(1, label_max + 1)
+                    if np.sum(w_bins[:, lb - 1]) == 0]
+    logging.debug('reinit. following labels: %s', repr(labels_empty))
+    for label in labels_empty:
         w_index = label - 1
-        w_sum = np.sum(w_bins[:, w_index])
-        logging.debug('reinit. label: %i with weight sum %i', label, w_sum)
-        if w_sum > 0:
-            continue
         imgs_reconst = reconstruct_samples(atlas_new, w_bins)
         atlas_new = insert_new_pattern(imgs, imgs_reconst, atlas_new, label,
                                        ptn_compact)
@@ -747,7 +746,8 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
         lim_repopulate = 1. / label_max
         w_bins[:, w_index] = ptn_weight.weights_label_atlas_overlap_threshold(
                                         imgs, atlas_new, label, lim_repopulate)
-        logging.debug('w_bins after: %i', np.sum(w_bins[:, w_index]))
+        logging.debug('reinit. label: %i with w_bins after: %i',
+                      label, np.sum(w_bins[:, w_index]))
     return atlas_new, w_bins
 
 

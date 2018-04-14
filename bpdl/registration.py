@@ -33,7 +33,7 @@ DEAMONS_PARAMS = dict(
 
 
 def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
-                                params=DEAMONS_PARAMS):
+                                params=DEAMONS_PARAMS, verbose=False):
     """ Register the image and reconstruction from atlas
     on the end we smooth the final deformation by a gaussian filter
 
@@ -41,6 +41,7 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
     :param ndarray img_ref:
     :param float smooth_sigma:
     :param {} params:
+    :param bool verbose: whether show debug time measurements
     :return (ndarray, ndarray):
 
     >>> img_ref = np.zeros((10, 10), dtype=int)
@@ -95,7 +96,8 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
 
     t = time.time()
     sdr.optimize(img_ref, img_sense)
-    logging.debug('demons took: %d s', time.time() - t)
+    if verbose:
+        logging.debug('demons took: %d s', time.time() - t)
 
     t = time.time()
     mapping = sdr.moving_to_ref
@@ -106,7 +108,8 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
 
     mapping_atlas = filters.gaussian_filter(sdr.static_to_ref.backward,
                                             sigma=smooth_sigma)
-    logging.debug('smoothing and warping took: %d s', time.time() - t)
+    if verbose:
+        logging.debug('smoothing and warping took: %d s', time.time() - t)
 
     return img_warped, mapping_atlas
 
@@ -191,8 +194,8 @@ def warp2d_images_deformations(list_images, list_deforms, nb_jobs=NB_THREADS):
 
     list_imgs_wrap = [None] * len(list_images)
     list_items = zip(range(len(list_images)), list_images, list_deforms)
-    for idx, img_w in tl_data.wrap_execute_parallel(wrapper_warp2d_image_deform,
-                                                    list_items, nb_jobs):
+    for idx, img_w in tl_data.wrap_execute_parallel(
+                wrapper_warp2d_image_deform, list_items, nb_jobs, desc=None):
         list_imgs_wrap[idx] = img_w
 
     return list_imgs_wrap
@@ -222,7 +225,7 @@ def wrapper_regist_demons_images_weights(idx_img_weights, atlas, coef,
     return idx, img_warp, deform
 
 
-def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
+def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1.,
                                     params=None, nb_jobs=NB_THREADS):
     """ register whole set of images to estimated atlas and weights
     IDEA: think about parallel registration per sets as for loading images
@@ -285,8 +288,8 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights, coef=1,
 
     _wrapper_register = partial(wrapper_regist_demons_images_weights,
                                 atlas=atlas, coef=coef, params=params)
-    for idx, img_w, deform in tl_data.wrap_execute_parallel(_wrapper_register,
-                                                            list_items, nb_jobs):
+    for idx, img_w, deform in tl_data.wrap_execute_parallel(
+                            _wrapper_register, list_items, nb_jobs, desc=None):
         list_imgs_wrap[idx] = img_w
         list_deform[idx] = deform
 

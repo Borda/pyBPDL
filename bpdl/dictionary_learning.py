@@ -35,6 +35,10 @@ import bpdl.registration as regist
 UNARY_BACKGROUND = 1
 NB_GRAPH_CUT_ITER = 5
 TEMPLATE_NAME_ATLAS = 'APDL_{}_{}_iter_{:04d}'
+LIST_BPDL_STEPS = ['weights update',
+                   'reinit. atlas',
+                   'atlas update',
+                   'deform images']
 
 # TRY: init: spatial clustering
 # TRY: init: use ICA
@@ -549,10 +553,12 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
     return atlas_new
 
 
-def bpdl_deform_images(imgs, atlas, weights):
-    logging.debug('... perform register images onto atlas')
-    images_warped, deforms = regist.register_images_to_atlas_demons(imgs, atlas,
-                                                                    weights)
+def bpdl_deform_images(imgs, atlas, weights, deform_coef):
+    # coef = deform_coef * np.sqrt(np.prod(imgs.shape))
+    coef = deform_coef * min(imgs[0].shape)
+    logging.debug('... perform register images onto atlas with coef: %f', coef)
+    images_warped, deforms = regist.register_images_to_atlas_demons(
+                                                    imgs, atlas, weights, coef)
     return images_warped, deforms
 
 
@@ -645,30 +651,32 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     list_times = []
     imgs_warped = images
     deforms = None
-    if max_iter < 1:  # set at least single iteration
-        max_iter = 1
+    max_iter = max(1, max_iter)  # set at least single iteration
 
     for it in range(max_iter):
-        d_times = {}
         if len(np.unique(atlas)) == 1:
             logging.warning('.. iter: %i, no labels in the atlas %s', it,
                             repr(np.unique(atlas).tolist()))
+        times = [time.time()]
         # 1: update WEIGHTS
-        t = time.time()
         w_bins = bpdl_update_weights(imgs_warped, atlas, overlap_major)
-        d_times['weights update'] = time.time() - t
+        times.append(time.time())
         # 2: reinitialise empty patterns
         atlas_reinit, w_bins = ptn_dict.reinit_atlas_likely_patterns(
             imgs_warped, w_bins, atlas, label_max, ptn_compact)
-        d_times['reinit. atlas'] = time.time() - d_times['weights update']
+        times.append(time.time())
         # 3: update the ATLAS
         atlas_new = bpdl_update_atlas(imgs_warped, atlas_reinit, w_bins,
                                       label_max, gc_regul, gc_reinit, ptn_split)
-        d_times['atlas update'] = time.time() - d_times['reinit. atlas']
+        times.append(time.time())
+        # 4: optional deformations
+        if deform_coef is not None and it > 0:
+            imgs_warped, deforms = bpdl_deform_images(images, atlas_new,
+                                                      w_bins, deform_coef)
+            times.append(time.time())
 
-        if deform_coef is not None and it > 1:
-            imgs_warped, deforms = bpdl_deform_images(images, atlas_new, w_bins)
-
+        times = [times[i] - times[i-1] for i in range(1, len(times))]
+        d_times = dict(zip(LIST_BPDL_STEPS[:len(times)], times))
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
         # step_diff = np.sum(abs(atlas - atlas_new)) / float(np.product(atlas.shape))
         list_diff.append(step_diff)
