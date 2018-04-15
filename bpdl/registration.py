@@ -71,7 +71,7 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
            [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-    >>> img_warp, m = register_demons_sym_diffeom(img_sense, img_ref)
+    >>> img_warp, m = register_demons_sym_diffeom(img_sense, img_ref, verbose=True)
     >>> np.round(img_warp.astype(float), 1)  # doctest: +NORMALIZE_WHITESPACE
     array([[ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
            [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
@@ -160,7 +160,7 @@ def wrapper_warp2d_image_deform(idx_img_deform, method='linear'):
     """ wrapper for registration of input images to reconstructed as demons
 
     :param (int, ndarray, ndarray) idx_img_deform:
-    :return:
+    :return (int, ndarray):
     """
     idx, img, deform = idx_img_deform
     img_warped = warp2d_apply_deform_field(img, deform, method=method)

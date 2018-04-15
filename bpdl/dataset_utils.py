@@ -111,6 +111,15 @@ def io_imsave(path_img, img):
 
     :param str path_img:
     :param ndarray img:
+
+    >>> img = np.zeros((50, 75))
+    >>> p_img = 'sample_image.png'
+    >>> io_imsave(p_img, img)
+    >>> io_imread(p_img).shape
+    (50, 75)
+    >>> image_open(p_img).size
+    (75, 50)
+    >>> os.remove(p_img)
     """
     log_level = logging.getLogger().getEffectiveLevel()
     logging.getLogger().setLevel(logging.INFO)
@@ -468,8 +477,10 @@ def dictionary_generate_rnd_pattern(path_out=None,
     :param rand_seed: random initialization
     :return ndarray: [np.array<height, width>] list of independent patters in the dict.
 
-    >>> _list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8),
-    ...                                                  rand_seed=0)
+    >>> p_dir = 'sample_rnd_pattern'
+    >>> os.mkdir(p_dir)
+    >>> _list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3,
+    ...                         im_size=(10, 8), path_out=p_dir, rand_seed=0)
     >>> len(_list_img_paths)
     3
     >>> _list_img_paths[1]
@@ -483,6 +494,7 @@ def dictionary_generate_rnd_pattern(path_out=None,
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0]], dtype=uint8)
+    >>> shutil.rmtree(p_dir, ignore_errors=True)
     """
     logging.info('generate Dict. composed from %i patterns and img. size %s',
                  nb_patterns, repr(im_size))
