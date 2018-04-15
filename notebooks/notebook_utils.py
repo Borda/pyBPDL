@@ -1,33 +1,37 @@
-import os, sys, glob
+import os
+import sys
+import glob
+# import time
 import logging
 
 import numpy as np
 import pandas as pd
-from skimage import io
+from skimage import io, draw
 import matplotlib.pylab as plt
+# import SimpleITK as sitk
 # from collections import Counter
 from IPython.html import widgets
 from IPython.display import display
-from IPython.html.widgets import ToggleButtonsWidget as w_tb
-from IPython.html.widgets import IntSliderWidget as w_is
-from IPython.html.widgets import DropdownWidget as w_s
+# from IPython.html.widgets import ToggleButtonsWidget as w_tb
+# from IPython.html.widgets import IntSliderWidget as w_is
+# from IPython.html.widgets import DropdownWidget as w_s
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.dataset_utils as tl_data
+import bpdl.data_utils as tl_data
 
-PATH_DATA_SYNTH = tl_data.update_path('images')
+PATH_DATA_SYNTH = tl_data.update_path('data_images')
 SYNTH_DATASET = 'syntheticDataset_vX'
-PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
-SYNTH_DATASET = 'atomicPatternDictionary_v0'
+# PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
+#  = 'atomicPatternDictionary_v0'
 DEFAULT_PATH = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET)
 SYNTH_DATASETS_BINARY = ['datasetBinary_raw',
                          'datasetBinary_deform',
                          'datasetBinary_noise',
                          'datasetBinary_defNoise']
-SYNTH_DATASETS_PROB = ['datasetProb_raw',
-                       'datasetProb_deform',
-                       'datasetProb_noise',
-                       'datasetProb_defNoise']
+SYNTH_DATASETS_FUZZY = ['datasetFuzzy_raw',
+                        'datasetFuzzy_deform',
+                        'datasetFuzzy_noise',
+                        'datasetFuzzy_defNoise']
 DEFAULT_IMG_POSIX = '.png'
 TEMP_ATLAS_NAME = 'APDL_expt_msc_atlas_iter_'
 DEFAULT_APDL_GRAPHS = ('atlas_ARS', 'reconstruct_diff', 'time')
@@ -46,13 +50,14 @@ def load_dataset(path_dataset):
 
 
 def show_sample_data_as_imgs(imgs, im_shape, nb_rows=5, nb_cols=3, bool_clr=False):
+    plt.figure()
     nb_rows = min(nb_rows, np.ceil(len(imgs) / float(nb_cols)))
     plt.figure(figsize=(3 * nb_cols, 2.5 * nb_rows))
     nb_spls = min(nb_rows * nb_cols, len(imgs))
     for i in range(int(nb_spls)):
         im = imgs[i, :].reshape(im_shape)
         # u_px = Counter(im)
-        unique_px = sorted(np.unique(im), reverse=True)
+        # unique_px = sorted(np.unique(im), reverse=True)
         plt.subplot(nb_rows, nb_cols, i + 1)
         if bool_clr:
             plt.imshow(im, interpolation='nearest'), plt.colorbar()
@@ -88,7 +93,7 @@ def bpdl_w_update_param(w_params, uq_params):
             try:
                 float(uq_params[n][0])
                 vals = ['v_'+str(v) for v in uq_params[n]]
-            except:
+            except Exception:
                 vals = uq_params[n]
             w_params[n].options = dict(zip(vals, uq_params[n]))
             if len(uq_params[n]) == 1:
@@ -108,21 +113,27 @@ def round_range_val(df_data, params, name):
 
 
 def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
+    from IPython.html.widgets import ToggleButtonsWidget as w_tb
+    from IPython.html.widgets import IntSliderWidget as w_is
+    from IPython.html.widgets import DropdownWidget as w_s
+
     w_source = {n: w_s(options=dist_vars[n], description=n, )
               for n in ['dataset', 'sub_dataset']}
     w_param = {n: w_tb(options=dist_vars[n], description=n)
                for n in ['gc_reinit', 'init_tp', 'ptn_split', 'gc_regul']}
     w_range = {n: w_is(min=0, max=0, description=n)
                for n in ['nb_lbs', 'samples']}
+
     def colect_params():
         params = {n: w_source[n].value for n in w_source}
         params.update({n: w_param[n].value for n in w_param})
         params.update({n: w_range[n].value for n in w_range})
         round_range_val(df_data, params, 'nb_lbs')
         return params
+
     def show_results(**kwargs):
         params = colect_params()
-        print 'params:', params
+        print ('params:', params)
         # disable options with single value
         dict_source = {n: w_source[n].value for n in w_source}
         uq_param = filter_df_unique(df_data, dict_source, w_param)
@@ -134,6 +145,7 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
         df_filter, uq_range['samples'] = find_experiment(df_data, filter_param)
         bpdl_w_update_range(w_range, uq_range)
         bpdl_show_results(df_filter, uq_range['samples'], params['samples'], tp)
+
     # show the interact
     widgets.interact(show_results, w=w_source['dataset'])
     widgets.interact(show_results, w=w_source['sub_dataset'])
@@ -238,13 +250,13 @@ def filter_df_results_4_plotting(df_select, iter_var='nb_labels',
     dict_samples = {}
     logging.info('number of selected: %i', len(df_select))
     df_res = pd.DataFrame()
-    # print 'version', df_select['version'].unique().tolist()
+    # print ('version', df_select['version'].unique().tolist())
     for v, df_gr0 in df_select.groupby(n_group):
         dict_samples[v] = {}
-        # print 'method', df_select['method'].unique().tolist()
+        # print ('method', df_select['method'].unique().tolist())
         for v1, df_gr1 in df_gr0.groupby(n_class):
             nb_samples = []
-            # print iter_var, df_select[iter_var].unique().tolist()
+            # print (iter_var, df_select[iter_var].unique().tolist())
             d = {n_group: v, n_class: v1}
             d_vals = {col: [] for col in cols + [iter_var]}
             for v2, df_gr2 in df_gr1.groupby(iter_var):
@@ -260,3 +272,59 @@ def filter_df_results_4_plotting(df_select, iter_var='nb_labels',
                  repr(df_res.columns.tolist()))
     logging.info('over samples: %s', repr(dict_samples))
     return df_res, dict_samples
+
+
+# REGISTRATIONS
+# ==============================================================================
+
+
+def generate_synth_image_pair_simple():
+    # STATIC IMAGE - from atlas
+    img_static = np.zeros((128, 128), dtype=int)
+    x, y = draw.ellipse(60, 70, 50, 30, shape=img_static.shape)
+    img_static[x, y] = 1
+    # MOVING IMAGE - sensed
+    img_moving = np.zeros(img_static.shape, dtype=int)
+    x, y = draw.ellipse(70, 60, 20, 50, shape=img_moving.shape)
+    img_moving[x, y] = 1
+    return img_static, img_moving
+
+
+def generate_synth_image_pair_double():
+    # STATIC IMAGE - from atlas
+    img_static = np.zeros((128, 128), dtype=int)
+    x, y = draw.ellipse(40, 60, 20, 50, shape=img_static.shape)
+    img_static[x, y] = 1
+    x, y = draw.ellipse(90, 70, 30, 40, shape=img_static.shape)
+    img_static[x, y] = 1
+    # MOVING IMAGE - sensed
+    img_moving = np.zeros(img_static.shape, dtype=int)
+    x, y = draw.ellipse(60, 70, 40, 50, shape=img_moving.shape)
+    img_moving[x, y] = 1
+    return img_static, img_moving
+
+
+def show_registered_overlap(img_warped, img_target, img_initial):
+    plt.figure()
+    plt.subplot(1, 3, 1)
+    plt.title('Warped image')
+    plt.imshow(img_warped)
+    plt.subplot(1, 3, 2)
+    plt.title('W -> goal (gr.)')
+    im_overlap = np.rollaxis(np.array([img_warped, img_target,
+                                       np.zeros(img_target.shape)]), 0, 3)
+    plt.imshow(im_overlap)
+    plt.subplot(1, 3, 3)
+    plt.title('W <- init. (red)')
+    im_overlap = np.rollaxis(np.array([img_initial, img_warped,
+                                       np.zeros(img_target.shape)]), 0, 3)
+    plt.imshow(im_overlap)
+
+
+def show_registered_deformation(deform_field):
+    plt.figure()
+    for i, c in enumerate(['X', 'Y']):
+        plt.subplot(1, 2, i + 1)
+        plt.title('deformation ' + c)
+        plt.imshow(deform_field[:, :, i], interpolation='nearest')
+        plt.colorbar()

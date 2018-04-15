@@ -11,11 +11,12 @@ __pycache__/
 libs/
 
 # temporary structure
-data/
 build/
 output/
 results/
 temporary/
+temp/
+.nfs*
 
 # PyCharm
 .idea/

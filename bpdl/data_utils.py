@@ -3,27 +3,32 @@ The basic module for generating synthetic images and also loading / exporting
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-from __future__ import absolute_import
+
+# from __future__ import absolute_import
 import os
+import re
 import glob
 import logging
+import shutil
+import warnings
 import itertools
 import multiprocessing as mproc
 from functools import partial
-import shutil
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-if os.environ.get('DISPLAY','') == '':
-    logging.warning('No display found. Using non-interactive Agg backend')
+if os.environ.get('DISPLAY', '') == '' \
+        and matplotlib.rcParams['backend'] != 'agg':
+    # logging.warning('No display found. Using non-interactive Agg backend.')
+    # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
 import tqdm
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy import ndimage
-from skimage import io, draw, transform, filters
+from scipy import ndimage, stats
+from skimage import io, draw, transform
 from PIL import Image
 
 NB_THREADS = mproc.cpu_count()
@@ -41,6 +46,7 @@ DIR_NAME_DICTIONARY = 'dictionary'
 CSV_NAME_WEIGHTS = 'binary_weights.csv'
 DEFAULT_NAME_DATASET = 'datasetBinary_raw'
 COLUMN_NAME = 'ptn_{:02d}'
+GAUSS_NOISE = [0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001]
 
 
 def update_path(path_file, lim_depth=5, absolute=True):
@@ -63,12 +69,69 @@ def update_path(path_file, lim_depth=5, absolute=True):
     elif path_file.startswith('~'):
         path_file = os.path.expanduser(path_file)
     else:
-        for depth in range(lim_depth):
-            if os.path.exists(path_file): break
+        for _ in range(lim_depth):
+            if os.path.exists(path_file):
+                break
             path_file = os.path.join('..', path_file)
     if absolute:
         path_file = os.path.abspath(path_file)
     return path_file
+
+
+def io_imread(path_img):
+    """ just a wrapper to suppers debug messages from the PIL function
+    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+
+    :param str path_img:
+    :return ndarray:
+    """
+    log_level = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.INFO)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        img = io.imread(path_img)
+    logging.getLogger().setLevel(log_level)
+    return img
+
+
+def image_open(path_img):
+    """ just a wrapper to suppers debug messages from the PIL function
+    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+
+    :param str path_img:
+    :return Image:
+    """
+    log_level = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.INFO)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        img = Image.open(path_img)
+    logging.getLogger().setLevel(log_level)
+    return img
+
+
+def io_imsave(path_img, img):
+    """ just a wrapper to suppers debug messages from the PIL function
+    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+
+    :param str path_img:
+    :param ndarray img:
+
+    >>> img = np.zeros((50, 75))
+    >>> p_img = 'sample_image.png'
+    >>> io_imsave(p_img, img)
+    >>> io_imread(p_img).shape
+    (50, 75)
+    >>> image_open(p_img).size
+    (75, 50)
+    >>> os.remove(p_img)
+    """
+    log_level = logging.getLogger().getEffectiveLevel()
+    logging.getLogger().setLevel(logging.INFO)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        io.imsave(path_img, img)
+    logging.getLogger().setLevel(log_level)
 
 
 def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=None):
@@ -76,8 +139,9 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
 
     :param (int, int) im_size: image size 2D or 3D
     :param float coef: deformation
-    :param (int, int) grid_size: size of deformation frid
-    :return:
+    :param (int, int) grid_size: size of deformation grid
+    :param rand_seed: random initialization
+    :return obj:
 
     >>> tf = create_elastic_deform_2d((100, 100))
     >>> type(tf)
@@ -92,7 +156,7 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
     for i in range(2):
         rnd = np.random.random((mesh_src.shape[0], 1)) - 0.5
         mesh_dst[:, i] += rnd[:, 0] * (im_size[i] / grid_size[i] * coef)
-    mesh_dst = filters.gaussian(mesh_dst, 0.1)
+        mesh_dst[:, i] = ndimage.filters.gaussian_filter1d(mesh_dst[:, i], 0.1)
     # logging.debug(dst)
     tform = transform.PiecewiseAffineTransform()
     tform.estimate(mesh_src, mesh_dst)
@@ -105,6 +169,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     :param ndarray im: image np.array<height, width>
     :param float coef: a param describing the how much it is deformed (0 = None)
     :param (int, int) grid_size: is size of elastic grid for deformation
+    :param rand_seed: random initialization
     :return ndarray: np.array<height, width>
 
     >>> img = np.zeros((10, 15), dtype=int)
@@ -139,7 +204,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
     """
     logging.debug('deform image plane by elastic transform with grid %s',
-                 repr(grid_size))
+                  repr(grid_size))
     # logging.debug(im.shape)
     im_size = im.shape[-2:]
     tform = create_elastic_deform_2d(im_size, coef, grid_size, rand_seed)
@@ -156,6 +221,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
         img = np.array(im_stack)
     else:
         logging.error('not supported image dimension - %s' % repr(im.shape))
+        img = im.copy()
     img = np.array(img, dtype=np.uint8)
     return img
 
@@ -165,7 +231,8 @@ def generate_rand_center_radius(img, ratio, rand_seed=None):
 
     :param ndarray img: np.array<height, width>
     :param float ratio:
-    :return (int, ), (float, ):
+    :param rand_seed: random initialization
+    :return ((int, ), (float, )):
 
     >>> generate_rand_center_radius(np.zeros((50, 50)), 0.2, rand_seed=0)
     ([27, 15], [8.5, 6.5])
@@ -189,7 +256,8 @@ def draw_rand_ellipse(img, ratio=0.1, color=255, rand_seed=None):
     :param ndarray img: np.array<height, width> while None, create empty one
     :param float ratio: defining size of the ellipse to the image plane
     :param int color: value (0, 255) of an image intensity
-    :return: np.array<height, width>
+    :param rand_seed: random initialization
+    :return ndarray: np.array<height, width>
 
     >>> img = draw_rand_ellipse(np.zeros((10, 15)), ratio=0.3, color=1, rand_seed=0)
     >>> img.astype(int)
@@ -218,7 +286,8 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     :param float ratio: defining size of the ellipse to the image plane
     :param ndarray img: np.array<depth, height, width> image / volume
     :param int clr: value (0, 255) of an image intensity
-    :return: np.array<depth, height, width>
+    :param rand_seed: random initialization
+    :return ndarray: np.array<depth, height, width>
 
     >>> img = draw_rand_ellipsoid(np.zeros((10, 10, 5)), clr=255, rand_seed=0)
     >>> img[..., 3].astype(int)
@@ -236,9 +305,9 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     logging.debug('draw an ellipse to an image with value %i', clr)
     center, radius = generate_rand_center_radius(img, ratio, rand_seed)
     vec_dims = [np.arange(0, img.shape[i]) - center[i] for i in range(img.ndim)]
-    Z, X, Y = np.meshgrid(*vec_dims, indexing='ij')
+    mesh_z, mesh_x, mesh_y = np.meshgrid(*vec_dims, indexing='ij')
     a, b, c = radius
-    dist = (Z ** 2 / a ** 2) + (X ** 2 / b ** 2) + (Y ** 2 / c ** 2)
+    dist = (mesh_z ** 2 / a ** 2) + (mesh_x ** 2 / b ** 2) + (mesh_y ** 2 / c ** 2)
     img[dist < 1.] = clr
     return img
 
@@ -269,7 +338,7 @@ def extract_image_largest_element(img_binary, labeled=None):
     then keep just the largest segment and rest set as 0
 
     :param ndarray img_binary: np.array<height, width> image of values {0, 1}
-    :return: np.array<height, width> of values {0, 1}
+    :return ndarray: np.array<height, width> of values {0, 1}
 
     >>> img = np.zeros((7, 15), dtype=int)
     >>> img[1:4, 5:10] = 1
@@ -308,7 +377,7 @@ def atlas_filter_larges_components(atlas):
     """
 
     :param ndarray atlas: np.array<height, width> image
-    :return: np.array<height, width>, [np.array<height, width>]
+    :return (ndarray, [ndarray]): np.array<height, width>, [np.array<height, width>]
 
     >>> atlas = np.zeros((7, 15), dtype=int)
     >>> atlas[1:4, 5:10] = 1
@@ -342,7 +411,8 @@ def atlas_filter_larges_components(atlas):
         im[atlas == idx] = 1
         # remove all smaller unconnected elements
         im = extract_image_largest_element(im)
-        if np.sum(im) == 0: continue
+        if np.sum(im) == 0:
+            continue
         imgs_patterns.append(im)
         # add them to the final arlas
         atlas_new[im == 1] = i + 1
@@ -360,14 +430,14 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     :param str temp_img_name: use template for pattern names
     :param int nb_patterns: number of patterns / labels
     :param (int, int) im_size: image size
-    :return: [np.array<height, width>] independent patters in the dictionary
+    :return ndarray: [np.array<height, width>] independent patters in the dictionary
 
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> path_dir = create_clean_folder(path_dir)
     >>> imgs_patterns = dictionary_generate_atlas(path_dir)
     >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
-    logging.info('generate an Atlas composed from %i patterns and image size %s',
+    logging.info('generate Atlas composed from %i patterns and image size %s',
                  nb_patterns, repr(im_size))
     out_dir = os.path.join(path_out, dir_name)
     create_clean_folder(out_dir)
@@ -391,8 +461,9 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
             plt.imshow(atlas_def[int(atlas_def.shape[0] / 2)])
         plt.show()
     atlas_new, imgs_patterns = atlas_filter_larges_components(atlas_def)
-    plt.imsave(os.path.join(path_out, 'atlas_rgb.png'), atlas_new, cmap=plt.cm.jet)
-    export_image(out_dir, atlas_new, 'atlas')
+    plt.imsave(os.path.join(path_out, 'atlas_rgb.png'), atlas_new,
+               cmap=plt.cm.jet)
+    export_image(out_dir, atlas_new, 'atlas', stretch_range=False)
     for i, img in enumerate(imgs_patterns):
         export_image(out_dir, img, i, temp_img_name)
     return imgs_patterns
@@ -412,12 +483,15 @@ def dictionary_generate_rnd_pattern(path_out=None,
     :param int nb_patterns: number of patterns / labels
     :param (int, int) im_size: image size
     :param rand_seed: random initialization
-    :return: [np.array<height, width>] list of independent patters in the dict.
+    :return ndarray: [np.array<height, width>] list of independent patters in the dict.
 
-    >>> list_imgs = dictionary_generate_rnd_pattern(nb_patterns=3, im_size=(10, 8), rand_seed=0)
-    >>> len(list_imgs)
+    >>> p_dir = 'sample_rnd_pattern'
+    >>> os.mkdir(p_dir)
+    >>> _list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3,
+    ...                         im_size=(10, 8), path_out=p_dir, rand_seed=0)
+    >>> len(_list_img_paths)
     3
-    >>> list_imgs[1]
+    >>> _list_img_paths[1]
     array([[  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
@@ -428,19 +502,20 @@ def dictionary_generate_rnd_pattern(path_out=None,
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0]], dtype=uint8)
+    >>> shutil.rmtree(p_dir, ignore_errors=True)
     """
     logging.info('generate Dict. composed from %i patterns and img. size %s',
                  nb_patterns, repr(im_size))
     if path_out is not None:
-        out_dir = os.path.join(path_out, dir_name)
-        create_clean_folder(out_dir)
+        path_out = os.path.join(path_out, dir_name)
+        create_clean_folder(path_out)
     list_imgs = []
     for i in range(nb_patterns):
         im = draw_rand_ellipse(np.zeros(im_size, dtype=np.uint8), rand_seed=rand_seed)
         im = image_deform_elastic(im, rand_seed=rand_seed)
         list_imgs.append(im)
         if path_out is not None:
-            export_image(out_dir, im, i, temp_img_name)
+            export_image(path_out, im, i, temp_img_name)
     return list_imgs
 
 
@@ -450,11 +525,11 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     """ generate the new sample from list of pattern with specific ration
 
     :param int idx: index
-    :param [np.array] im_ptns: images with patterns
+    :param [ndarray] im_ptns: images with patterns
     :param str out_dir: name of directory
     :param float ptn_ration: number in range (0, 1)
     :param rand_seed: random initialization
-    :return: int, np.array, str, [int]
+    :return (int, ndarray, str, [int]):
 
     >>> img1 = np.zeros((6, 15), dtype=int)
     >>> img1[2:5, 5:10] = 1
@@ -507,7 +582,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
         an input observation / image
     :param int nb_jobs: number of running jobs
     :param rand_seed: random initialization
-    :return: [np.array<height, width>], df<nb_imgs, nb_lbs>
+    :return (ndarray, DF): [np.array<height, width>], df<nb_imgs, nb_lbs>
 
     >>> img1 = np.zeros((6, 15), dtype=int)
     >>> img1[2:5, 5:10] = 1
@@ -527,39 +602,57 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     >>> df_weights  # doctest: +NORMALIZE_WHITESPACE
                   ptn_01  ptn_02
     image
-    sample_00000     0.0     1.0
-    sample_00001     0.0     1.0
-    sample_00002     0.0     1.0
-    sample_00003     0.0     1.0
-    sample_00004     0.0     1.0
+    sample_00000       0       1
+    sample_00001       0       1
+    sample_00002       0       1
+    sample_00003       0       1
+    sample_00004       0       1
     """
     logging.info('generate a Binary dataset composed from %i samples  '
-                'and ration pattern occlusion %f', nb_samples, ptn_ration)
+                 'and ration pattern occlusion %f', nb_samples, ptn_ration)
     if out_dir is not None:
         create_clean_folder(out_dir)
-    df_weights = pd.DataFrame()
     im_spls = [None] * nb_samples
-    mproc_pool = mproc.Pool(nb_jobs)
+    im_names = [None] * nb_samples
+    im_weights = [None] * nb_samples
     logging.debug('running in %i threads...', nb_jobs)
-    tqdm_bar = tqdm.tqdm(total=nb_samples)
-    wrapper_generate = partial(generate_rand_patterns_occlusion,
-                               im_ptns=im_ptns, out_dir=out_dir,
-                               ptn_ration=ptn_ration, rand_seed=rand_seed)
-    for idx, im, im_name, ptn_weights in mproc_pool.imap_unordered(
-                                            wrapper_generate, range(nb_samples)):
+    _wrapper_generate = partial(generate_rand_patterns_occlusion,
+                                im_ptns=im_ptns, out_dir=out_dir,
+                                ptn_ration=ptn_ration, rand_seed=rand_seed)
+    for idx, im, im_name, ptn_weights in wrap_execute_parallel(
+            _wrapper_generate, range(nb_samples), nb_jobs):
         im_spls[idx] = im
-        df_weights = df_weights.append(pd.Series([im_name] + ptn_weights),
-                                       ignore_index=True)
+        im_names[idx] = im_name
+        im_weights[idx] = ptn_weights
 
-        tqdm_bar.update(1)
-    mproc_pool.close()
-    mproc_pool.join()
-    df_weights.columns = ['image'] + [COLUMN_NAME.format(i + 1)
-                                      for i in range(len(df_weights.columns) - 1)]
-    df_weights.sort_values(['image'], inplace=True)
-    df_weights.set_index('image', inplace=True)
+    df_weights = format_table_weights(im_names, im_weights)
     logging.debug(df_weights.head())
     return im_spls, df_weights
+
+
+def format_table_weights(list_names, list_weights,
+                         index_name='image', col_name=COLUMN_NAME):
+    """ formate the output table with patterns
+
+    :param list_names:
+    :param list_weights:
+    :return:
+
+    >>> df = format_table_weights(['aaa', 'bbb', 'ccc'], [[0, 1], [1, 0]])
+    >>> df  # doctest: +NORMALIZE_WHITESPACE
+           ptn_01  ptn_02
+    image
+    aaa         0       1
+    bbb         1       0
+    """
+    nb = min(len(list_names), len(list_weights))
+    df = pd.DataFrame(data=list_weights[:nb],
+                      index=list_names[:nb])
+    df.columns = [col_name.format(i + 1)
+                  for i in range(len(df.columns))]
+    df.index.name = index_name
+    df.sort_index(inplace=True)
+    return df
 
 
 def add_image_binary_noise(im, ration=0.1, rand_seed=None):
@@ -568,7 +661,7 @@ def add_image_binary_noise(im, ration=0.1, rand_seed=None):
     :param ndarray im: np.array<height, width> input binary image
     :param float ration: number (0, 1) means 0 = no noise
     :param rand_seed: random initialization
-    :return: np.array<height, width> binary image
+    :return ndarray: np.array<height, width> binary image
 
     >>> img = np.zeros((5, 15), dtype=int)
     >>> img[1:4, 3:7] = 1
@@ -620,6 +713,15 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
            [ 1. ,  0.8,  0.5,  0.8,  0.1,  0.7,  0.1,  1. ,  0.5,  0.4],
            [ 0.3,  0.8,  0.5,  0.6,  0. ,  0.6,  0.6,  0.6,  1. ,  0.7],
            [ 0.4,  0.4,  0.7,  0.1,  0.7,  0.7,  0.2,  0.1,  0.3,  0.4]])
+    >>> img = np.random.randint(0, 9, [5, 10])
+    >>> path_img = export_image('.', img, 'testing-image', stretch_range=False)
+    >>> name, im = load_image(path_img, fuzzy_val=False)
+    >>> im
+    array([[4, 4, 6, 4, 4, 3, 4, 4, 8, 4],
+           [3, 7, 5, 5, 0, 1, 5, 3, 0, 5],
+           [0, 1, 2, 4, 2, 0, 3, 2, 0, 7],
+           [5, 0, 2, 7, 2, 2, 3, 3, 2, 3],
+           [4, 1, 2, 1, 4, 6, 8, 2, 3, 0]], dtype=uint8)
     >>> os.remove(path_img)
 
     Image - TIFF
@@ -640,19 +742,18 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     if not isinstance(im_name, str):
         im_name = name_template.format(im_name)
     path_img = os.path.join(path_out, im_name)
-    logging.debug(' .. saving image %s with %s to "%s"', repr(img.shape),
-                  repr(np.unique(img)), path_img)
+    logging.debug(' .. saving image of size %s type %s to "%s"', repr(img.shape),
+                  repr(img.dtype), path_img)
     if img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 3):
         if stretch_range and img.max() > 0:
             img = img / float(img.max()) * 255
-        # io.imsave(path_img, im_norm)
         path_img += '.png'
-        Image.fromarray(img.astype(np.uint8)).save(path_img)
+        io_imsave(path_img, img.astype(np.uint8))
     elif img.ndim == 3:
         if stretch_range and img.max() > 0:
             img = img / float(img.max()) * 255 ** 2
         path_img += '.tiff'
-        io.imsave(path_img, img)
+        io_imsave(path_img, img)
         # tif = libtiff.TIFF.open(path_img, mode='w')
         # tif.write_image(img_clip.astype(np.uint16))
     else:
@@ -667,7 +768,7 @@ def wrapper_apply_function(i_img, func, coef, out_dir):
     :param func:
     :param float coef:
     :param str out_dir:
-    :return: int, np.array<height, width>
+    :return (int, ndarray): int, np.array<height, width>
     """
     i, img = i_img
     img_def = func(img, coef)
@@ -685,21 +786,22 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     :param str out_dir: path to the results directory
     :param float coef: a param describing the how much it is deformed (0 = None)
     :param int nb_jobs: number of jobs running in parallel
-    :return: [np.array<height, width>]
+    :return ndarray: [np.array<height, width>]
 
     >>> img = np.zeros((10, 5))
     >>> dir_name = 'sample_dataset_dir'
-    >>> dataset_apply_image_function([img], dir_name, image_deform_elastic)
+    >>> im = dataset_apply_image_function([img], dir_name, image_deform_elastic)
+    >>> im  # doctest: +NORMALIZE_WHITESPACE
     [array([[0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0]], dtype=uint8)]
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0]], dtype=uint8)]
     >>> os.path.isdir(dir_name)
     True
     >>> shutil.rmtree(dir_name, ignore_errors=True)
@@ -709,28 +811,21 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     create_clean_folder(out_dir)
 
     imgs_new = [None] * len(imgs)
-    mproc_pool = mproc.Pool(nb_jobs)
     logging.debug('running in %i threads...', nb_jobs)
-    tqdm_bar = tqdm.tqdm(total=len(imgs))
-    for i, im in mproc_pool.imap_unordered(partial(wrapper_apply_function,
-                                                   func=func, coef=coef,
-                                                   out_dir=out_dir),
-                                           enumerate(imgs)):
+    _apply_fn = partial(wrapper_apply_function, func=func, coef=coef, out_dir=out_dir)
+    for i, im in wrap_execute_parallel(_apply_fn, enumerate(imgs), nb_jobs):
         imgs_new[i] = im
-        tqdm_bar.update(1)
-    mproc_pool.close()
-    mproc_pool.join()
 
     return imgs_new
 
 
-def image_transform_binary2prob(im, coef=0.1):
+def image_transform_binary2fuzzy(im, coef=0.1):
     """ convert a binary image to probability while computing distance function
     on the binary function (contours)
 
     :param ndarray im: np.array<height, width> input binary image
     :param float coef: float, influence hoe strict the boundary between F-B is
-    :return: np.array<height, width> float image
+    :return ndarray: np.array<height, width> float image
 
     >>> img = np.zeros((5, 15), dtype=int)
     >>> img[1:4, 3:7] = 1
@@ -740,33 +835,33 @@ def image_transform_binary2prob(im, coef=0.1):
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-    >>> img_prob = image_transform_binary2prob(img, coef=0.1)
-    >>> np.round(img_prob[2, :], 2).tolist() # doctest: +NORMALIZE_WHITESPACE
+    >>> img_fuzzy = image_transform_binary2fuzzy(img, coef=0.1)
+    >>> np.round(img_fuzzy[2, :], 2).tolist() # doctest: +NORMALIZE_WHITESPACE
     [0.43, 0.45, 0.48, 0.52, 0.55, 0.55, 0.52, 0.48, 0.45, 0.43, 0.4, 0.38,
      0.35, 0.33, 0.31]
     """
     logging.debug('... transform binary image to probability')
     im_dist = ndimage.distance_transform_edt(im)
     im_dist -= ndimage.distance_transform_edt(1 - im)
-    im_prob = 1. / (1. + np.exp(-coef * im_dist))
+    im_fuzzy = 1. / (1. + np.exp(-coef * im_dist))
     # plt.subplot(1,3,1), plt.imshow(im)
     # plt.subplot(1,3,2), plt.imshow(im_dist)
-    # plt.subplot(1,3,3), plt.imshow(im_prob)
+    # plt.subplot(1,3,3), plt.imshow(im_fuzzy)
     # plt.show()
-    return im_prob
+    return im_fuzzy
 
 
-def add_image_prob_pepper_noise(im, ration=0.1, rand_seed=None):
+def add_image_fuzzy_pepper_noise(im, ration=0.1, rand_seed=None):
     """ generate and add a continues noise to an image
 
     :param ndarray im: np.array<height, width> input float image
     :param float ration: number means 0 = no noise
     :param rand_seed: random initialization
-    :return: np.array<height, width> float image
+    :return ndarray: np.array<height, width> float image
 
     >>> img = np.zeros((5, 9), dtype=int)
     >>> img[1:4, 2:7] = 1
-    >>> img = add_image_prob_pepper_noise(img, ration=0.5, rand_seed=0)
+    >>> img = add_image_fuzzy_pepper_noise(img, ration=0.5, rand_seed=0)
     >>> np.round(img, 2)
     array([[ 0.1 ,  0.43,  0.21,  0.09,  0.15,  0.29,  0.12,  0.  ,  0.  ],
            [ 0.23,  0.  ,  0.94,  0.86,  1.  ,  1.  ,  1.  ,  0.  ,  0.  ],
@@ -786,17 +881,17 @@ def add_image_prob_pepper_noise(im, ration=0.1, rand_seed=None):
     return im_noise
 
 
-def add_image_prob_gauss_noise(im, sigma=0.1, rand_seed=None):
+def add_image_fuzzy_gauss_noise(im, sigma=0.1, rand_seed=None):
     """ generate and add a continues noise to an image
 
     :param ndarray im: np.array<height, width> input float image
     :param float sigma: float where 0 = no noise
     :param rand_seed: random initialization
-    :return: np.array<height, width> float image
+    :return ndarray: np.array<height, width> float image
 
     >>> img = np.zeros((5, 9), dtype=int)
     >>> img[1:4, 2:7] = 1
-    >>> img = add_image_prob_gauss_noise(img, sigma=0.5, rand_seed=0)
+    >>> img = add_image_fuzzy_gauss_noise(img, sigma=0.5, rand_seed=0)
     >>> np.round(img, 2)
     array([[ 0.88,  0.2 ,  0.49,  1.  ,  0.93,  0.  ,  0.48,  0.  ,  0.  ],
            [ 0.21,  0.07,  1.  ,  1.  ,  1.  ,  1.  ,  1.  ,  0.75,  0.  ],
@@ -817,7 +912,7 @@ def wrapper_load_images(list_path_img):
     """ wrapper for multiprocessing loading
 
     :param [str] list_path_img:
-    :return: [(str, np.array<height, width>)]
+    :return ((str, ndarray)): np.array<height, width>
     """
     logging.debug('parallel loading %i images', len(list_path_img))
     list_names_imgs = map(load_image, list_path_img)
@@ -842,8 +937,8 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     logging.debug('searching in folder (%s) <- "%s"',
                   os.path.exists(path_dir), path_dir)
     paths_img_most = []
-    for im_posix in img_extensions:
-        path_search = os.path.join(path_dir, im_pattern + im_posix)
+    for im_suffix in img_extensions:
+        path_search = os.path.join(path_dir, im_pattern + im_suffix)
         paths_img = glob.glob(path_search)
         logging.debug('images found %i for search "%s"', len(paths_img), path_search)
         if len(paths_img) > len(paths_img_most):
@@ -851,23 +946,23 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     return paths_img_most
 
 
-def dataset_load_images(path_imgs, nb_spls=None, nb_jobs=1):
+def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
     """ load complete dataset or just a subset
 
-    :param [str] path_imgs: path to the images
+    :param [str] img_paths: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
     :param int nb_jobs: number of running jobs
-    :return [np.array], [str]:
+    :return ([ndarray], [str]):
     """
-    assert all(os.path.exists(p) for p in path_imgs)
-    path_imgs = sorted(path_imgs)[:nb_spls]
-    logging.debug('number samples %i in dataset', len(path_imgs))
+    assert all(os.path.exists(p) for p in img_paths)
+    img_paths = sorted(img_paths)[:nb_spls]
+    logging.debug('number samples %i in dataset', len(img_paths))
     if nb_jobs > 1:
         logging.debug('running in %i threads...', nb_jobs)
-        nb_load_blocks = len(path_imgs) / float(BLOCK_NB_LOAD_IMAGES)
+        nb_load_blocks = len(img_paths) / float(BLOCK_NB_LOAD_IMAGES)
         nb_load_blocks = int(np.ceil(nb_load_blocks))
         logging.debug('estimated %i loading blocks', nb_load_blocks)
-        block_paths_img = (path_imgs[i::nb_load_blocks]
+        block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
 
         mproc_pool = mproc.Pool(nb_jobs)
@@ -880,19 +975,19 @@ def dataset_load_images(path_imgs, nb_spls=None, nb_jobs=1):
         im_names, imgs = zip(*names_imgs)
     else:
         logging.debug('running in single thread...')
-        names_imgs = [load_image(p) for p in path_imgs]
+        names_imgs = [load_image(p) for p in img_paths]
         logging.debug('split the resulting tuples')
         im_names, imgs = zip(*names_imgs)
-    assert len(path_imgs) == len(imgs)
+    assert len(img_paths) == len(imgs), 'not all images was loaded'
     return imgs, im_names
 
 
-def load_image(path_img, prob_val=True):
+def load_image(path_img, fuzzy_val=True):
     """ loading image
 
     :param str path_img:
-    :param bool bool_val: weather normalise values in range (0, 1)
-    :return str, np.array<height, width>:
+    :param bool fuzzy_val: weather normalise values in range (0, 1)
+    :return (str, ndarray): np.array<height, width>
 
     PNG image
     >>> img_name = 'testing_image'
@@ -902,7 +997,7 @@ def load_image(path_img, prob_val=True):
     './testing_image.png'
     >>> os.path.exists(path_img)
     True
-    >>> _, img_new = load_image(path_img, prob_val=False)
+    >>> _, img_new = load_image(path_img, fuzzy_val=False)
     >>> np.array_equal(img, img_new)
     True
     >>> os.remove(path_img)
@@ -915,35 +1010,30 @@ def load_image(path_img, prob_val=True):
     './testing_image.tiff'
     >>> os.path.exists(path_img)
     True
-    >>> _, img_new = load_image(path_img, prob_val=False)
+    >>> _, img_new = load_image(path_img, fuzzy_val=False)
     >>> img_new.shape
     (5, 20, 20)
     >>> np.array_equal(img, img_new)
     True
     >>> os.remove(path_img)
     """
-    assert os.path.exists(path_img), path_img
+    assert os.path.exists(path_img), 'missing: %s' % path_img
     n_img, img_ext = os.path.splitext(os.path.basename(path_img))
 
-    # to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
-    l_lvl = logging.getLogger().getEffectiveLevel()
-    logging.getLogger().setLevel(logging.INFO)
-
     if img_ext in ['.tif', '.tiff']:
-        img = io.imread(path_img)
+        img = io_imread(path_img)
         # im = libtiff.TiffFile().get_tiff_array()
         # img = np.empty(im.shape)
         # for i in range(img.shape[0]):
         #     img[i, :, :] = im[i]
         # img = np.array(img.tolist())
     else:
-        img = io.imread(path_img)
+        img = io_imread(path_img)
         # img = np.array(Image.open(path_img))
 
     # return to original logging level
-    logging.getLogger().setLevel(l_lvl)
 
-    if prob_val and img.max() > 0:
+    if fuzzy_val and img.max() > 0:
         img = (img / float(img.max()))
     return n_img, img
 
@@ -953,7 +1043,8 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
 
     :param str path_base: path to the results directory
     :param str name_csv: name of file with weights
-    :return: np.array<nb_imgs, nb_lbs>
+    :param [str] img_names: list of image names
+    :return ndarray: np.array<nb_imgs, nb_lbs>
 
     >>> np.random.seed(0)
     >>> name_csv = 'sample_weigths.csv'
@@ -968,7 +1059,7 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
     """
     path_csv = os.path.join(path_base, name_csv)
     assert os.path.exists(path_csv), 'missing %s' % path_csv
-    df = pd.DataFrame().from_csv(path_csv)
+    df = pd.read_csv(path_csv, index_col=0)
     # load according a list
     if img_names is not None:
         df = df[df['name'].isin(img_names)]
@@ -988,7 +1079,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
 
     :param str path_dir: name of dataset
     :param str img_temp_name:
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> dir_name = 'sample_atlas'
     >>> os.mkdir(dir_name)
@@ -1005,7 +1096,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
     """
     path_imgs = find_images(path_dir, im_pattern=img_temp_name)
     imgs, _ = dataset_load_images(path_imgs)
-    assert len(imgs) > 0
+    assert len(imgs) > 0, 'no images on input'
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
         atlas[im == 1] = i+1
@@ -1026,7 +1117,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
     >>> os.mkdir(path_dir)
     >>> dataset_export_images(path_dir, images, nb_jobs=2)
     >>> path_imgs = find_images(path_dir)
-    >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=1)
+    >>> _, _ = dataset_load_images(path_imgs, nb_jobs=1)
     >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=2)
     >>> len(imgs)
     36
@@ -1056,32 +1147,96 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
         names = range(len(imgs))
 
     mp_set = [(path_out, im, names[i]) for i, im in enumerate(imgs)]
-    if nb_jobs > 1:
-        logging.debug('running in %i threads...', nb_jobs)
-        mproc_pool = mproc.Pool(nb_jobs)
-        mproc_pool.map(wrapper_export_image, mp_set)
-        mproc_pool.close()
-        mproc_pool.join()
-    else:
-        logging.debug('running in single thread...')
-        map(wrapper_export_image, mp_set)
+    list(wrap_execute_parallel(wrapper_export_image, mp_set))
 
 
 def wrapper_export_image(mp_set):
     export_image(*mp_set)
 
 
-# def dataset_convert_nifti(path_in, path_out, img_posix=IMAGE_POSIX):
-#     """ having a datset of png images conver them into nifti images
+def convert_numerical(s):
+    """ try to convert a string tu numerical
+
+    :param str s: input string
+    :return:
+
+    >>> convert_numerical('-1')
+    -1
+    >>> convert_numerical('-2.0')
+    -2.0
+    >>> convert_numerical('.1')
+    0.1
+    >>> convert_numerical('-0.')
+    -0.0
+    >>> convert_numerical('abc58')
+    'abc58'
+    """
+    re_int = re.compile(r"^[-]?\d+$")
+    re_float1 = re.compile(r"^[-]?\d+.\d*$")
+    re_float2 = re.compile(r"^[-]?\d*.\d+$")
+
+    if re_int.match(str(s)) is not None:
+        return int(s)
+    elif re_float1.match(str(s)) is not None:
+        return float(s)
+    elif re_float2.match(str(s)) is not None:
+        return float(s)
+    else:
+        return s
+
+
+def generate_gauss_2d(mean, std, im_size=None, norm=None):
+    """ Generating a Gaussian distribution in 2D image
+
+    :param float norm: normalise the maximal value
+    :param [int] mean: mean position
+    :param [[int]] std: STD
+    :param (int, int) im_size: optional image size
+    :return ndarray:
+
+    >>> im = generate_gauss_2d([4, 5], [[1, 0], [0, 2]], (8, 10), norm=1.)
+    >>> np.round(im, 1)  # doctest: +NORMALIZE_WHITESPACE
+    array([[ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
+           [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
+           [ 0. ,  0. ,  0. ,  0.1,  0.1,  0.1,  0.1,  0.1,  0. ,  0. ],
+           [ 0. ,  0.1,  0.2,  0.4,  0.5,  0.6,  0.5,  0.4,  0.2,  0.1],
+           [ 0. ,  0.1,  0.3,  0.6,  0.9,  1. ,  0.9,  0.6,  0.3,  0.1],
+           [ 0. ,  0.1,  0.2,  0.4,  0.5,  0.6,  0.5,  0.4,  0.2,  0.1],
+           [ 0. ,  0. ,  0. ,  0.1,  0.1,  0.1,  0.1,  0.1,  0. ,  0. ],
+           [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ]])
+    >>> im = generate_gauss_2d([2, 3], [[1., 0], [0, 1.2]])
+    >>> np.round(im, 2)  # doctest: +NORMALIZE_WHITESPACE
+    array([[ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ],
+           [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
+           [ 0.01,  0.03,  0.09,  0.13,  0.09,  0.03,  0.01,  0.  ],
+           [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
+           [ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ]])
+    """
+    covar = np.array(std) ** 2
+    if im_size is None:
+        im_size = np.array(mean) + covar.diagonal() * 3
+
+    x, y = np.mgrid[0:im_size[0], 0:im_size[1]]
+    pos = np.rollaxis(np.array([x, y]), 0, 3)
+    gauss = stats.multivariate_normal(mean, covar)
+    pdf = gauss.pdf(pos)
+
+    if norm is not None:
+        pdf *= norm / np.max(pdf)
+    return pdf
+
+
+# def dataset_convert_nifti(path_in, path_out, img_suffix=IMAGE_POSIX):
+#     """ having a datset of png images conver them into nifti _images
 #
 #     :param path_in: str
 #     :param path_out: str
-#     :param img_posix: str, like '.png'
+#     :param img_suffix: str, like '.png'
 #     :return:
 #     """
 #     import src.own_utils.data_io as tl_data
 #     logging.info('convert a dataset to Nifti')
-#     p_imgs = glob.glob(os.path.join(path_in, '*' + img_posix))
+#     p_imgs = glob.glob(os.path.join(path_in, '*' + img_suffix))
 #     create_clean_folder(path_out)
 #     p_imgs = sorted(p_imgs)
 #     for path_im in p_imgs:
@@ -1095,7 +1250,7 @@ def wrapper_export_image(mp_set):
 def create_simple_atlas():
     """ create a simple atlas with split 3 patterns
 
-    :return np.array:
+    :return ndarray:
 
     >>> create_simple_atlas()
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -1130,7 +1285,7 @@ def create_sample_images(atlas):
     """ create 3 simple images according simple atlas with 3 patterns
 
     :param np.array atlas:
-    :return [np.array]:
+    :return [ndarray]:
 
     >>> atlas = create_simple_atlas()
     >>> im1, im2, im3 = create_sample_images(atlas)
@@ -1166,3 +1321,47 @@ def create_sample_images(atlas):
     im3[atlas > 2] = 0
     im3[im3 > 0] = 1
     return im1, im2, im3
+
+
+def wrap_execute_parallel(wrap_func, iterate_vals, nb_jobs=NB_THREADS,
+                          desc='', ordered=False):
+    """ wrapper for execution parallel of single thread as for...
+
+    :param wrap_func: function which will be excited in the iterations
+    :param [] iterate_vals: list or iterator which will ide in iterations
+    :param int nb_jobs: number og jobs running in parallel
+    :param str desc: description for the bar,
+        if it is set None, bar is suppressed
+    :param bool ordered: whether enforce ordering in the parallelism
+
+    >>> [o for o in wrap_execute_parallel(lambda x: x ** 2, range(5),
+    ...                                   nb_jobs=1, ordered=True)]
+    [0, 1, 4, 9, 16]
+    >>> [o for o in wrap_execute_parallel(sum, [[0, 1]] * 5,
+    ...                                   nb_jobs=2, desc=None)]
+    [1, 1, 1, 1, 1]
+    """
+    iterate_vals = list(iterate_vals)
+
+    if desc is not None:
+        tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
+    else:
+        tqdm_bar = None
+
+    if nb_jobs > 1:
+        logging.debug('perform sequential in %i threads', nb_jobs)
+        pool = mproc.Pool(nb_jobs)
+
+        pooling = pool.imap if ordered else pool.imap_unordered
+
+        for out in pooling(wrap_func, iterate_vals):
+            yield out
+            if tqdm_bar is not None:
+                tqdm_bar.update()
+        pool.close()
+        pool.join()
+    else:
+        for out in map(wrap_func, iterate_vals):
+            yield out
+            if tqdm_bar is not None:
+                tqdm_bar.update()
