@@ -1,45 +1,53 @@
-machine:
-  python:
-    version: 2.7.9
-  post:
-    - pyenv global 2.7.9
+version: 2.0
 
-dependencies:
-  cache_directories:
-    - "~/.local"
-  pre:
-    - sudo apt-get update
-    - sudo apt-get install tk-dev
-    - sudo apt-get install pkg-config
-    - sudo apt-get install python-dev
-    - sudo apt-get install python-tk
-    - mkdir libs
+jobs:
+  Py2:
+      docker:
+        - image: circleci/python:2.7
+      steps: &steps
+        - checkout
+        - run: sudo apt-get update
+        - run: sudo apt-get install tk-dev pkg-config python-dev python-tk
+        - run: sudo pip install nose coverage pytest pytest-cov
+        - run: pip install -r requirements.txt --user
+        - run: python --version ; pip --version ; pwd ; ls -l
 
-  override:
-    # - cd libs && git clone https://github.com/Borda/pyGCO.git
-    # - cd libs/pyGCO && pip install -r requirements.txt && python setup.py install
-    # - rm -r -f libs/pyGCO
-    # - pip install --upgrade setuptools
-    - pip install -r requirements.txt
-    - pip install nose coverage pytest pytest-cov
+        - run: mkdir results && mkdir test-reports
+        - run: python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
+        - run: python experiments/run_dataset_add_noise.py -p ./data_images
+        - run: coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
 
-test:
-  pre:
-    - mkdir data && mkdir results
-#    - python setup.py build_ext --inplace
-    - mkdir -p $CIRCLE_TEST_REPORTS
-    - unset DISPLAY && python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
+        # EXPERIMENTS - pre-processing
+        - run: rm -r results && mkdir results
+        - run: python experiments/run_cut_minimal_images.py -in "./data_images/imaginal_discs/gene/*.png" -out ./data_images/imaginal_discs/gene_cut
+        - run: python experiments/run_extract_fuzzy_activation.py -in "./data_images/ovary_stage-2/image/*.png" -out ./data_images/ovary_stage-2/gene
+        - run: python experiments/run_extract_fuzzy_activation.py -in "./data_images/ovary_stage-3/image/*.png" -out ./data_images/ovary_stage-3/gene
+        # EXPERIMENTS
+        - run: python experiments/run_experiments.py --type synth -in ./data_images/syntheticDataset_vX -out ./results -cfg ./data_images/sample_config.json
+        - run: python experiments/run_experiments.py --type real -in ./data_images/imaginal_discs -out ./results --dataset gene_small --nb_jobs 2
+        - run: python experiments/run_reconstruction.py -p ./results/ExperimentBPDL_real_imaginal_discs_gene_small --visual
+        # EXPERIMENTS - post-processing
+        - run: python experiments/run_parse_experiments_result.py -p ./results -res results.csv
+        - run: python experiments/run_recompute_experiments_result.py -p ./results
+        - run: python experiments/run_parse_experiments_result.py -p ./results -res results_NEW.csv
 
-  override:
-    - unset DISPLAY && coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=$CIRCLE_TEST_REPORTS/pytest_junit.xml
+        # POST-TEST
+        - run: python setup.py install --user
+        - run: coverage report && coverage xml -o test-reports/coverage.xml
 
-    - unset DISPLAY && python experiments/run_experiments_bpdl.py --type synth -in images/syntheticDataset_vX -out results
-    - unset DISPLAY && python experiments/run_experiments_bpdl.py --type real -in images -out results --dataset segm_gene_small
+        - store_test_results:
+            path: test-reports
+        - store_artifacts:
+            path: test-reports
 
-    - unset DISPLAY && python experiments/run_experiments_all.py --type synth -in images/syntheticDataset_vX -out results
-    - unset DISPLAY && python experiments/run_experiments_all.py --type real -in images -out results --dataset segm_gene_small
+  Py3:
+      docker:
+        - image: circleci/python:3.6
+      steps: *steps
 
-    - unset DISPLAY && python experiments/run_parse_experiments_results.py -p results
-
-  post:
-    - coverage report && coverage xml -o $CIRCLE_TEST_REPORTS/coverage.xml
+workflows:
+  version: 2
+  build:
+    jobs:
+      - Py2
+      - Py3

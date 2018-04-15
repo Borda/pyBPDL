@@ -1,15 +1,9 @@
 #!/bin/bash
 # launcher for all experiments
 
-# OUR method - BPDL
-
-python experiments/run_experiments_bpdl.py \
-    -in ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v0 \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth
-
 # STATE-OF-THE-ART methods - SPCA, ICA, DL, NMF, BPDL
 
-python experiments/run_experiments_all.py \
+python experiments/run_experiments.py \
      -in ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v0 \
      -out ~/Medical-drosophila/TEMPORARY/experiments_APD_synth
 
@@ -17,20 +11,21 @@ python experiments/run_experiments_all.py \
 for i in {1..50}
 do
 
-    python experiments/run_dataset_add_noise.py -p ~/Medical-drosophila/synthetic_data \
-        -d  atomicPatternDictionary_v0 \
-            atomicPatternDictionary_v1 \
-            atomicPatternDictionary_v2
+    python experiments/run_dataset_add_noise.py \
+        -p ~/Medical-drosophila/synthetic_data \
+        -d  synthDataset_v0 \
+            synthDataset_v1 \
+            synthDataset_v2
 
-    python experiments/run_experiments_all.py \
+    python experiments/run_experiments.py \
          -in ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v0 \
          -out ~/Medical-drosophila/TEMPORARY/experiments_APD_synth
 
-    python experiments/run_experiments_all.py \
+    python experiments/run_experiments.py \
          -in ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v1 \
          -out ~/Medical-drosophila/TEMPORARY/experiments_APD_synth
 
-    python experiments/run_experiments_all.py \
+    python experiments/run_experiments.py \
          -in ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v2 \
          -out ~/Medical-drosophila/TEMPORARY/experiments_APD_synth
 
@@ -38,23 +33,23 @@ done
 
 # EVALUATE experiments
 
-python experiments/run_parse_experiments_results.py \
+python experiments/run_parse_experiments_result.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APD_synth \
-    --fname_results results.csv --fname_config config.json --func_stat none
+    --name_results results.csv --name_config config.json --func_stat none
 
-python experiments/run_recompute_experiments_results.py \
+python experiments/run_recompute_experiments_result.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APD_synth
 
-python experiments/run_parse_experiments_results.py \
+python experiments/run_parse_experiments_result.py \
     -p ~/Medical-drosophila/TEMPORARY/experiments_APD_synth \
-    --fname_results results_NEW.csv --fname_config config.json --func_stat none
+    --name_results results_NEW.csv --name_config config.json --func_stat none
 
 
 # REAL IMAGES by folds
 
 for i in {1..4}
 do
-      cmd="python experiments/run_experiments_all.py --type real \
+      cmd="python experiments/run_experiments.py --type real \
             -in ~/Medical-drosophila/TEMPORARY/type_${i}_segm_reg_binary \
             -out ~/Medical-drosophila/TEMPORARY/experiments_APD_real_folds \
             --dataset gene_ssmall"
@@ -66,7 +61,7 @@ for i in {1..4}
 do
    for j in {1..5}
    do
-      cmd="python experiments/run_experiments_all.py --type real \
+      cmd="python experiments/run_experiments.py --type real \
             -in ~/Medical-drosophila/TEMPORARY/type_${i}_segm_reg_binary \
             -out ~/Medical-drosophila/TEMPORARY/experiments_APD_real_folds \
             --dataset gene_ssmall \

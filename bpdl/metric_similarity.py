@@ -3,7 +3,8 @@ Introducing some used similarity measures fro atlases and etc.
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-from __future__ import absolute_import
+
+# from __future__ import absolute_import
 import logging
 import traceback
 
@@ -19,6 +20,7 @@ def compare_atlas_rnd_pairs(a1, a2, rand_seed=None):
 
     :param a1: np.array<height, width>
     :param a2: np.array<height, width>
+    :param rand_seed: random initialization
     :return float: with 0 means no difference
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
@@ -34,9 +36,8 @@ def compare_atlas_rnd_pairs(a1, a2, rand_seed=None):
     """
     logging.debug('comparing two atlases of shapes %s <-> %s',
                   repr(a1.shape), repr(a2.shape))
-    assert a1.shape == a2.shape, \
-        'shapes: %s and %s' % (repr(a1.shape), repr(a2.shape))
-    # assert A1.shape[0]==A2.shape[0] and A1.shape[1]==A2.shape[1]
+    assert a1.shape == a2.shape, 'shapes: %s and %s' \
+                                 % (repr(a1.shape), repr(a2.shape))
     np.random.seed(rand_seed)
     logging.debug('unique labels are %s and %s', repr(np.unique(a1).tolist()),
                   repr(np.unique(a2).tolist()))
@@ -73,8 +74,8 @@ def compare_atlas_adjusted_rand(a1, a2):
     >>> compare_atlas_adjusted_rand(atlas1, atlas2) #doctest: +ELLIPSIS
     0.656...
     """
-    assert a1.shape == a2.shape, \
-        'shapes: %s and %s' % (repr(a1.shape), repr(a2.shape))
+    assert a1.shape == a2.shape, 'shapes: %s and %s' \
+                                 % (repr(a1.shape), repr(a2.shape))
     ars = metrics.adjusted_rand_score(a1.ravel(), a2.ravel())
     res = 1. - abs(ars)
     return res
@@ -85,7 +86,7 @@ def compute_labels_overlap_matrix(seg1, seg2):
 
     :param seg1: np.array<height, width>
     :param seg2: np.array<height, width>
-    :return: np.array<height, width>
+    :return ndarray: np.array<height, width>
 
     >>> seg1 = np.zeros((7, 15), dtype=int)
     >>> seg1[1:4, 5:10] = 3
@@ -106,8 +107,8 @@ def compute_labels_overlap_matrix(seg1, seg2):
     """
     logging.debug('computing overlap of two seg_pipe of shapes %s <-> %s',
                   repr(seg1.shape), repr(seg2.shape))
-    assert seg1.shape == seg2.shape, \
-        'shapes: %s and %s' % (repr(seg1.shape), repr(seg2.shape))
+    assert seg1.shape == seg2.shape, 'shapes: %s and %s' \
+                                     % (repr(seg1.shape), repr(seg2.shape))
     maxims = [np.max(seg1) + 1, np.max(seg2) + 1]
     overlap = np.zeros(maxims, dtype=int)
     for i in range(seg1.shape[0]):
@@ -136,8 +137,8 @@ def compare_matrices(m1, m2):
     >>> compare_matrices(seg1, seg2) # doctest: +ELLIPSIS
     0.819...
     """
-    assert m1.shape == m2.shape, \
-        'shapes: %s and %s' % (repr(m1.shape), repr(m2.shape))
+    assert m1.shape == m2.shape, 'shapes: %s and %s' \
+                                 % (repr(m1.shape), repr(m2.shape))
     diff = np.sum(abs(m1 - m2))
     return diff / float(np.product(m1.shape))
 
@@ -163,6 +164,7 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
 
     :param ndarray seg_ref: segmentation
     :param ndarray seg_relabel: segmentation
+    :param bool keep_bg:
     :return ndarray:
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
@@ -198,8 +200,8 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
            [0, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 0],
            [0, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
-    assert seg_ref.shape == seg_relabel.shape, \
-        'shapes: %s and %s' % (repr(seg_ref.shape), repr(seg_relabel.shape))
+    assert seg_ref.shape == seg_relabel.shape, 'shapes: %s and %s' \
+                            % (repr(seg_ref.shape), repr(seg_relabel.shape))
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
 
     lut = [-1] * (np.max(seg_relabel) + 1)
@@ -207,8 +209,9 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
         lut[0] = 0
         overlap[0, :] = 0
         overlap[:, 0] = 0
-    for i in range(max(overlap.shape) + 1):
-        if np.sum(overlap) == 0: break
+    for _ in range(max(overlap.shape) + 1):
+        if np.sum(overlap) == 0:
+            break
         lb_ref, lb_est = np.argwhere(overlap.max() == overlap)[0]
         lut[lb_est] = lb_ref
         overlap[lb_ref, :] = 0
@@ -218,7 +221,8 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
         if lb == -1 and i not in lut:
             lut[i] = i
     for i, lb in enumerate(lut):
-        if lb > -1: continue
+        if lb > -1:
+            continue
         for j in range(len(lut)):
             if j not in lut:
                 lut[i] = j
@@ -235,6 +239,7 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
 
     :param ndarray seg_ref: segmentation
     :param ndarray seg_relabel: segmentation
+    :param bool keep_bg:
     :return ndarray:
 
     >>> atlas1 = np.zeros((7, 15), dtype=int)
@@ -270,11 +275,12 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
            [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
-    assert seg_ref.shape == seg_relabel.shape, \
-        'shapes: %s and %s' % (repr(seg_ref.shape), repr(seg_relabel.shape))
+    assert seg_ref.shape == seg_relabel.shape, 'shapes: %s and %s' \
+                            % (repr(seg_ref.shape), repr(seg_relabel.shape))
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
     # ref_ptn_size = np.bincount(seg_ref.ravel())
-    # overlap = overlap.astype(float) / np.tile(ref_ptn_size, (overlap.shape[1], 1)).T
+    # overlap = overlap.astype(float) \
+    #                   / np.tile(ref_ptn_size, (overlap.shape[1], 1)).T
     # overlap = np.nan_to_num(overlap)
     max_axis = 1 if overlap.shape[0] > overlap.shape[1] else 0
     if keep_bg:
@@ -293,9 +299,10 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
 def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     """ compute standard metrics for multi-class classification
 
+    :param [str] metric_averages:
     :param [int] y_true:
     :param [int] y_pred:
-    :return: {str: float}
+    :return {str: float}:
 
     >>> y_true = np.array([0] * 3 + [1] * 5)
     >>> y_pred = np.array([0] * 5 + [1] * 3)
@@ -323,8 +330,8 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
      ('support_macro', None), ('support_weighted', None)]
     """
     y_pred = np.array(y_pred)
-    assert y_true.shape == y_pred.shape, \
-        'shapes: %s and %s' % (repr(y_true.shape), repr(y_pred.shape))
+    assert y_true.shape == y_pred.shape, 'shapes: %s and %s' \
+                                 % (repr(y_true.shape), repr(y_pred.shape))
     uq_y_true = np.unique(y_true)
     logging.debug('unique lbs true: %s, predict %s',
                   repr(uq_y_true), repr(np.unique(y_pred)))
@@ -357,7 +364,7 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
             mtr = metrics.precision_recall_fscore_support(y_true, y_pred,
                                                           average=avg)
             res = dict(zip(['{}_{}'.format(n, avg) for n in names], mtr))
-        except:
+        except Exception:
             logging.error(traceback.format_exc())
             res = dict(zip(['{}_{}'.format(n, avg) for n in names], [0] * 4))
         dict_metrics.update(res)

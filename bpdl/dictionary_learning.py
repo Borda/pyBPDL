@@ -4,7 +4,8 @@ and computing the encoding / weights
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
-from __future__ import absolute_import
+
+# from __future__ import absolute_import
 import os
 import time
 import logging
@@ -12,180 +13,37 @@ import traceback
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-if os.environ.get('DISPLAY','') == '':
-    logging.warning('No display found. Using non-interactive Agg backend')
+if os.environ.get('DISPLAY', '') == '' \
+        and matplotlib.rcParams['backend'] != 'agg':
+    # logging.warning('No display found. Using non-interactive Agg backend.')
+    # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import skimage.segmentation as sk_image
 # using https://github.com/Borda/pyGCO
 from gco import cut_general_graph, cut_grid_graph_simple
 
-import bpdl.pattern_atlas as ptn_dict
+import bpdl.pattern_atlas as ptn_atlas
 import bpdl.pattern_weights as ptn_weight
 import bpdl.metric_similarity as sim_metric
-import bpdl.dataset_utils as tl_data
+import bpdl.data_utils as tl_data
+import bpdl.registration as regist
 
-UNARY_BACKGROUND = 1
 NB_GRAPH_CUT_ITER = 5
-TEMPLATE_NAME_ATLAS = 'APDL_{}_{}_iter_{:04d}'
+TEMPLATE_NAME_ATLAS = 'BPDL_{}_{}_iter_{:04d}'
+LIST_BPDL_STEPS = [
+    'weights update',
+    'reinit. atlas',
+    'atlas update',
+    'deform images'
+]
 
 # TRY: init: spatial clustering
 # TRY: init: use ICA
 # TRY: init: greedy
-
-
-def compute_relative_penalty_images_weights(imgs, weights):
-    """ compute the relative penalty for all pixel and cjsing each label
-    on that particular position
-
-    >>> atlas = np.zeros((8, 12), dtype=int)
-    >>> atlas[:3, 1:5] = 1
-    >>> atlas[3:7, 6:12] = 2
-    >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
-    >>> imgs = [lut[atlas] for lut in luts]
-    >>> pott = compute_relative_penalty_images_weights(imgs, luts[:, 1:])
-    >>> pott   # doctest: +ELLIPSIS
-    array([[[ 0.        ,  0.666...,  0.666...],
-            [ 0.666...,  0.        ,  0.666...],
-            [ 0.666...,  0.        ,  0.666...],
-            [ 0.666...,  0.        ,  0.666...],
-            [ 0.666...,  0.        ,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...]],
-    <BLANKLINE>
-    ...
-    <BLANKLINE>
-           [[ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...],
-            [ 0.        ,  0.666...,  0.666...]]])
-    """
-    logging.debug('compute unary cost from images and related weights')
-    # weightsIdx = ptn_weight.convert_weights_binary2indexes(weights)
-    nb_lbs = weights.shape[1] + 1
-    assert len(imgs) == weights.shape[0]
-    pott_sum = np.zeros(imgs[0].shape + (nb_lbs,))
-    # extenf the weights by background value 0
-    weights_ext = np.append(np.zeros((weights.shape[0], 1)), weights, axis=1)
-    # logging.debug(weights_ext)
-    imgs = np.array(imgs)
-    logging.debug('DIMS potts: %s, imgs %s, w_bin: %s',
-                  repr(pott_sum.shape), repr(imgs.shape), repr(weights_ext.shape))
-    logging.debug('... walk over all pixels in each image')
-    for i in range(pott_sum.shape[0]):
-        for j in range(pott_sum.shape[1]):
-            # make it as matrix ops
-            img_vals = np.repeat(imgs[:, i, j, np.newaxis],
-                                 weights_ext.shape[1], axis=1)
-            pott_sum[i, j] = np.sum(np.abs(weights_ext - img_vals), axis=0)
-    pott_sum_norm = pott_sum / float(len(imgs))
-    return pott_sum_norm
-
-
-def compute_positive_cost_images_weights(imgs, ptn_weights):
-    """
-    :param [ndarray] imgs: list of np.array<height, width> input images
-    :param ndarray ptn_weights: matrix np.array<nb_imgs, nb_lbs> composed from wight vectors
-    :return: np.array<height, width, nb_lbs>
-
-    >>> atlas = np.zeros((8, 12), dtype=int)
-    >>> atlas[:3, 1:5] = 1
-    >>> atlas[3:7, 6:12] = 2
-    >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
-    >>> imgs = [lut[atlas] for lut in luts]
-    >>> pott = compute_positive_cost_images_weights(imgs, luts[:, 1:])
-    >>> pott   # doctest: +ELLIPSIS
-    array([[[ 1.,  0.,  0.],
-            [ 1.,  3.,  0.],
-            [ 1.,  3.,  0.],
-            [ 1.,  3.,  0.],
-            [ 1.,  3.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.]],
-    <BLANKLINE>
-    ...
-    <BLANKLINE>
-           [[ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.],
-            [ 1.,  0.,  0.]]])
-    """
-    # not using any more...
-    logging.debug('compute unary cost from images and related ptn_weights')
-    w_idx = ptn_weight.convert_weights_binary2indexes(ptn_weights)
-    nb_lbs = ptn_weights.shape[1] + 1
-    assert len(imgs) == len(w_idx)
-    pott_sum = np.zeros(imgs[0].shape + (nb_lbs,))
-    # walk over all pixels in image
-    logging.debug('... walk over all pixels in each image')
-    for i in range(pott_sum.shape[0]):
-        for j in range(pott_sum.shape[1]):
-            # per all images in list
-            for k in range(len(imgs)):
-                # if pixel is active
-                if imgs[k][i, j] == 1:
-                    # increment all possible spots
-                    for x in w_idx[k]:
-                        pott_sum[i, j, x] += 1
-                # else:
-                #     graphSum[i,j,0] += 1e-9
-            # set also the background values
-            pott_sum[i, j, 0] = UNARY_BACKGROUND
-    # graph = 1. / (graphSum +1)
-    return pott_sum
-
-
-def edges_in_image_plane(im_size):
-    """ create list of edges for uniform image plane
-
-    :param (int, int) im_size: size of image
-    :return [[int, int], ]:
-
-    >>> edges_in_image_plane([2, 3])
-    array([[0, 1],
-           [1, 2],
-           [3, 4],
-           [4, 5],
-           [0, 3],
-           [1, 4],
-           [2, 5]])
-    """
-    idxs = np.arange(np.product(im_size))
-    idxs = idxs.reshape(im_size)
-    # logging.debug(idxs)
-    eA = idxs[:, :-1].ravel().tolist() + idxs[:-1, :].ravel().tolist()
-    eB = idxs[:, 1:].ravel().tolist() + idxs[1:, :].ravel().tolist()
-    edges = np.array([eA, eB]).transpose()
-    logging.debug('edges for image plane are shape {}'.format(edges.shape))
-    return edges
 
 
 def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
@@ -195,7 +53,7 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
     :param [np.array<height, width>] imgs: list of input binary images
     :param np.array<nb_imgs, nb_lbs> ptn_weights: binary ptn selection
     :param float coef: coefficient for graphcut
-    :return:
+    :return [int]:
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -220,19 +78,19 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
         labels = np.zeros(imgs[0].shape)
         return labels
 
-    labeling_sum = compute_positive_cost_images_weights(imgs, ptn_weights)
-    unary_cost = np.array(-1 * labeling_sum , dtype=np.int32)
+    labeling_sum = ptn_atlas.compute_positive_cost_images_weights(imgs, ptn_weights)
+    unary_cost = np.array(-1 * labeling_sum, dtype=np.int32)
     logging.debug('graph unaries potentials %s: \n %s', repr(unary_cost.shape),
-                                        repr(np.histogram(unary_cost, bins=10)))
+                  repr(zip(np.histogram(unary_cost, bins=10))))
     # original and the right way..
     pairwise = (1 - np.eye(labeling_sum.shape[-1])) * coef
-    pairwise_cost = np.array(pairwise , dtype=np.int32)
+    pairwise_cost = np.array(pairwise, dtype=np.int32)
     logging.debug('graph pairwise coefs %s', repr(pairwise_cost.shape))
     # run GraphCut
     try:
         labels = cut_grid_graph_simple(unary_cost, pairwise_cost,
                                        algorithm='expansion')
-    except:
+    except Exception:
         logging.warning(traceback.format_exc())
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
@@ -241,7 +99,8 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
     return labels
 
 
-def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None):
+def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
+                                    connect_diag=False):
     """ run the graphcut on the unary costs with specific pairwise cost
     source: https://github.com/yujiali/pyGCO
 
@@ -250,7 +109,8 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
     :param float coef: coefficient for graphcut
     :param ndarray init_atlas: init labeling  np.array<nb_seg, 1>
         while None it take the arg ming of the unary costs
-    :return np.array<nb_seg, 1>:
+    :param bool connect_diag: used connecting diagonals, like use 8- instead 4-neighbour
+    :return ndarray: np.array<nb_seg, 1>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -275,21 +135,18 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
         labels = np.zeros(imgs[0].shape)
         return labels
 
-    u_cost = compute_relative_penalty_images_weights(imgs, ptn_weights)
+    u_cost = ptn_atlas.compute_relative_penalty_images_weights(imgs, ptn_weights)
     # u_cost = 1. / (labelingSum +1)
-    unary_cost = np.array(u_cost , dtype=np.float64)
+    unary_cost = np.array(u_cost, dtype=np.float64)
     unary_cost = unary_cost.reshape(-1, u_cost.shape[-1])
     logging.debug('graph unaries potentials %s: \n %s', repr(unary_cost.shape),
-                  repr(np.histogram(unary_cost, bins=10)))
+                  repr(zip(np.histogram(unary_cost, bins=10))))
 
-    edges = edges_in_image_plane(u_cost.shape[:2])
-    logging.debug('edges for image plane are shape %s', format(edges.shape))
-    edge_weights = np.ones(edges.shape[0])
-    logging.debug('edges weights are shape %s', repr(edge_weights.shape))
+    edges, edge_weights = ptn_atlas.edges_in_image2d_plane(u_cost.shape[:-1], connect_diag)
 
     # original and the right way...
     pairwise = (1 - np.eye(u_cost.shape[-1])) * coef
-    pairwise_cost = np.array(pairwise , dtype=np.float64)
+    pairwise_cost = np.array(pairwise, dtype=np.float64)
     logging.debug('graph pairwise coefs %s', repr(pairwise_cost.shape))
 
     if init_atlas is None:
@@ -303,7 +160,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None)
         labels = cut_general_graph(edges, edge_weights, unary_cost, pairwise_cost,
                                    algorithm='expansion', init_labels=init_labels,
                                    n_iter=NB_GRAPH_CUT_ITER)
-    except:
+    except Exception:
         logging.warning(traceback.format_exc())
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
@@ -367,7 +224,7 @@ def export_visual_atlas(i, out_dir, atlas=None, prefix='debug'):
     if atlas is not None:
         # export_visualization_image(atlas, i, out_dir, prefix, 'atlas',
         #                            labels=['X', 'Y'])
-        n_img = 'APDL_{}_atlas_iter_{:04d}'.format(prefix, i)
+        n_img = TEMPLATE_NAME_ATLAS.format(prefix, 'atlas', i)
         tl_data.export_image(out_dir, atlas, n_img)
     # if weights is not None:
     #     export_visualization_image(weights, i, out_dir, prefix, 'weights',
@@ -383,8 +240,8 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     :param ndarray init_weights: np.array<nb_imgs, nb_lbs>
     :param str out_prefix:
     :param str out_dir: path to the results directory
-    :param rnd_seed: random initialization
-    :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :param rand_seed: random initialization
+    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -419,24 +276,24 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     array([[3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1],
            [3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1],
            [3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1],
-           [3, 3, 3, 3, 1, 1, 1, 1, 2, 2, 2, 2],
-           [3, 3, 3, 3, 1, 1, 1, 1, 2, 2, 2, 2],
-           [3, 3, 3, 3, 1, 1, 1, 1, 2, 2, 2, 2],
            [1, 1, 1, 1, 3, 3, 3, 3, 2, 2, 2, 2],
-           [1, 1, 1, 1, 3, 3, 3, 3, 2, 2, 2, 2]])
+           [1, 1, 1, 1, 3, 3, 3, 3, 2, 2, 2, 2],
+           [1, 1, 1, 1, 3, 3, 3, 3, 2, 2, 2, 2],
+           [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3],
+           [1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3]])
     >>> init_w_bins
     """
     if init_weights is not None and init_atlas is None:
         logging.debug('... initialise Atlas from w_bins')
         init_atlas = estimate_atlas_graphcut_general(imgs, init_weights, 0.)
-        export_visual_atlas(0, out_dir, init_atlas, out_prefix)
+        # export_visual_atlas(0, out_dir, init_atlas, out_prefix)
     if init_atlas is None:
         nb_patterns = int(np.sqrt(len(imgs)))
         logging.debug('... initialise Atlas with ')
         # IDEA: find better way of initialisation
-        init_atlas = ptn_dict.initialise_atlas_mosaic(
+        init_atlas = ptn_atlas.init_atlas_mosaic(
             imgs[0].shape, nb_patterns, rand_seed=rand_seed)
-        export_visual_atlas(0, out_dir, init_atlas, out_prefix)
+        # export_visual_atlas(0, out_dir, init_atlas, out_prefix)
 
     atlas = init_atlas
     w_bins = init_weights
@@ -452,7 +309,8 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
 
     :param [ndarray] imgs: list of images np.array<height, width>
     :param ndarray atlas: used atlas of np.array<height, width>
-    :return: np.array<nb_imgs, nb_lbs>
+    :param bool overlap_major: whether it has majority overlap the pattern
+    :return ndarray: np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -493,17 +351,19 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
     return np.array(w_bins)
 
 
-def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_split):
+def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
+                      ptn_split, connect_diag=False):
     """ single iteration of the block coordinate descent algo
 
     :param [ndarray] imgs: list of images np.array<height, width>
     :param ndarray atlas: used atlas of np.array<height, width>
     :param ndarray w_bins: weights np.array<nb_imgs, nb_lbs>
-    :param int label_max:
+    :param int label_max: max number of used labels
     :param float gc_coef: graph cut regularisation
     :param bool gc_reinit: weather use atlas from previous step as init for act.
-    :param bool ptn_split:
-    :return: np.array<height, width>
+    :param bool ptn_split: split individial patterns
+    :param bool connect_diag: used connecting diagonals, like use 8- instead 4-neighbour
+    :return ndarray: np.array<height, width>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -527,55 +387,75 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_sp
 
     logging.debug('... perform Atlas estimation')
     if gc_reinit:
-        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef, atlas)
+        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef, atlas,
+                                                    connect_diag=connect_diag)
     else:
-        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef)
+        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef,
+                                                    connect_diag=connect_diag)
 
     if ptn_split:
-        atlas_new = ptn_dict.atlas_split_indep_ptn(atlas_new, label_max)
+        atlas_new = ptn_atlas.atlas_split_indep_ptn(atlas_new, label_max)
 
     atlas_new = np.remainder(atlas_new, label_max + 1)
     return atlas_new
 
 
-def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=None,
-                                         gc_coef=0.0, tol=1e-3, max_iter=25,
-                                         gc_reinit=True, ptn_split=True,
-                                         overlap_major=False, ptn_compact=True,
-                                         out_prefix='debug', out_dir=''):
+def bpdl_deform_images(images, atlas, weights, deform_coef, inverse=False):
+    if deform_coef is None or deform_coef < 0:
+        return images, None
+    # coef = deform_coef * np.sqrt(np.product(images.shape))
+    smooth_coef = deform_coef * min(images[0].shape)
+    logging.debug('... perform register images onto atlas with smooth_coef: %f',
+                  smooth_coef)
+    images_warped, deforms = regist.register_images_to_atlas_demons(
+                            images, atlas, weights, smooth_coef, inverse=inverse)
+    return images_warped, deforms
+
+
+def bpdl_pipeline(images, init_atlas=None, init_weights=None,
+                  gc_regul=0.0, tol=1e-3, max_iter=25,
+                  gc_reinit=True, ptn_split=True,
+                  overlap_major=False, ptn_compact=True,
+                  connect_diag=False, deform_coef=None,
+                  out_prefix='debug', out_dir=''):
     """ the experiments_synthetic pipeline for block coordinate descent
     algo with graphcut...
 
-    :param [ndarray] imgs: list of images np.array<height, width>
+    :param float deform_coef: regularise the deformation
+    :param [ndarray] images: list of images np.array<height, width>
     :param ndarray init_atlas: used atlas of np.array<height, width>
     :param ndarray init_weights: weights np.array<nb_imgs, nb_lbs>
-    :param float gc_coef: graph cut regularisation
+    :param float gc_regul: graph cut regularisation
     :param float tol: stop if the diff between two conseq steps
         is less then this given threshold. eg for -1 never until max nb iters
     :param int max_iter: max namber of iteration
     :param bool gc_reinit: wether use atlas from previous step as init for act.
+    :param bool ptn_compact: enforce compactness of patterns
+    :param bool ptn_split: split the connected components
+    :param bool overlap_major: whether it has majority overlap the pattern
+    :param bool connect_diag: used connecting diagonals, like use 8- instead 4-neighbour
     :param str out_prefix:
     :param str out_dir: path to the results directory
-    :return: np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
-    >>> imgs = [lut[atlas] for lut in luts]
+    >>> images = [lut[atlas] for lut in luts]
     >>> w_bins = luts[:, 1:]
-    >>> init_atlas = ptn_dict.initialise_atlas_mosaic(atlas.shape,
-    ...                                               nb_patterns=2, rand_seed=0)
+    >>> init_atlas = ptn_atlas.init_atlas_mosaic(atlas.shape, nb_patterns=2,
+    ...                                         coef=1.5, rand_seed=0)
     >>> init_atlas
-    array([[2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
-           [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
-           [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
-           [2, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1],
-           [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
-           [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
-           [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2],
-           [1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2]])
-    >>> bpdl_atlas, bpdl_w_bins = bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas)
+    array([[1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1],
+           [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1],
+           [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1],
+           [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
+           [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
+           [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
+           [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1],
+           [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1]])
+    >>> bpdl_atlas, bpdl_w_bins, deforms = bpdl_pipeline(images, init_atlas)
     >>> bpdl_atlas
     array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -595,49 +475,86 @@ def bpdl_pipe_atlas_learning_ptn_weights(imgs, init_atlas=None, init_weights=Non
            [1, 1],
            [1, 1],
            [1, 1]])
+    >>> bpdl_atlas, bpdl_w_bins, deforms = bpdl_pipeline(images, init_atlas,
+    ...                                                  deform_coef=1)
+    >>> bpdl_atlas
+    array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    logging.debug('compute an Atlas and weights for %i images...', len(imgs))
-    assert len(imgs) >= 0
+    logging.debug('compute an Atlas and weights for %i images...', len(images))
+    assert len(images) >= 0, 'missing input images'
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         if not os.path.exists(out_dir):
             os.mkdir(out_dir)
-    # assert initAtlas is not None or type(max_nb_lbs)==int
     # initialise
     label_max = np.max(init_atlas)
+    assert label_max > 0, 'at least some patterns should be searched'
     logging.debug('max nb labels set: %i', label_max)
-    atlas, w_bins = bpdl_initialisation(imgs, init_atlas, init_weights,
+    atlas, w_bins = bpdl_initialisation(images, init_atlas, init_weights,
                                         out_dir, out_prefix)
-    list_crit = []
+    list_diff = []
+    list_times = []
+    imgs_warped = images
+    deforms = None
+    max_iter = max(1, max_iter)  # set at least single iteration
 
-    for iter in range(max_iter):
+    for it in range(max_iter):
         if len(np.unique(atlas)) == 1:
-            logging.warning('.. iter: %i, no labels in the atlas %s', iter,
+            logging.warning('.. iter: %i, no labels in the atlas %s', it,
                             repr(np.unique(atlas).tolist()))
-        w_bins = bpdl_update_weights(imgs, atlas, overlap_major)
-        atlas_reinit, w_bins = ptn_dict.reinit_atlas_likely_patterns(
-                                    imgs, w_bins, atlas, label_max, ptn_compact)
-        atlas_new = bpdl_update_atlas(imgs, atlas_reinit, w_bins, label_max,
-                                      gc_coef, gc_reinit, ptn_split)
+        times = [time.time()]
+        # 1: update WEIGHTS
+        w_bins = bpdl_update_weights(imgs_warped, atlas, overlap_major)
+        times.append(time.time())
+        # 2: reinitialise empty patterns
+        atlas_reinit, w_bins = ptn_atlas.reinit_atlas_likely_patterns(
+            imgs_warped, w_bins, atlas, label_max, ptn_compact)
+        times.append(time.time())
+        # 3: update the ATLAS
+        atlas_new = bpdl_update_atlas(imgs_warped, atlas_reinit, w_bins,
+                                      label_max, gc_regul, gc_reinit, ptn_split,
+                                      connect_diag)
+        times.append(time.time())
+        # 4: optional deformations
+        if it > 0:
+            imgs_warped, deforms = bpdl_deform_images(images, atlas_new,
+                                                      w_bins, deform_coef)
+            times.append(time.time())
 
+        times = [times[i] - times[i-1] for i in range(1, len(times))]
+        d_times = dict(zip(LIST_BPDL_STEPS[:len(times)], times))
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
         # step_diff = np.sum(abs(atlas - atlas_new)) / float(np.product(atlas.shape))
-        list_crit.append(step_diff)
+        list_diff.append(step_diff)
+        list_times.append(d_times)
         atlas = sk_image.relabel_sequential(atlas_new)[0]
 
-        logging.debug('-> iter. #%i with Atlas diff %f', (iter + 1), step_diff)
-        export_visual_atlas(iter + 1, out_dir, atlas, out_prefix)
+        logging.debug('-> iter. #%i with Atlas diff %f', (it + 1), step_diff)
+        export_visual_atlas(it + 1, out_dir, atlas, out_prefix)
 
-        # stopping criterion
+        # STOPPING criterion
         if step_diff <= tol and len(np.unique(atlas)) > 1:
             logging.debug('>> exit while the atlas diff %f is smaller then %f',
                           step_diff, tol)
             break
-    logging.info('APDL: terminated with iter %i / %i and step diff %f <? %f',
-                 iter, max_iter, step_diff, tol)
-    logging.debug('criterion evolved:\n %s', repr(list_crit))
+
+    imgs_warped, deforms = bpdl_deform_images(images, atlas, w_bins, deform_coef)
+    logging.info('BPDL: terminated with iter %i / %i and step diff %f <? %f',
+                 len(list_diff), max_iter, list_diff[-1], tol)
+    logging.debug('criterion evolved:\n %s', repr(list_diff))
+    df_time = pd.DataFrame(list_times)
+    logging.debug('measured time: \n%s', repr(df_time))
+    logging.info('times: \n%s', df_time.describe())
     # atlas = sk_image.relabel_sequential(atlas)[0]
-    w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas) for img in imgs]
-    return atlas, np.array(w_bins)
+    w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+              for img in imgs_warped]
+    return atlas, np.array(w_bins), deforms
 
 
 def test_simple_show_case(atlas, imgs, ws):
@@ -685,7 +602,7 @@ def test_simple_show_case(atlas, imgs, ws):
         axarr[0, i + 1].imshow(img, cmap='gray', interpolation='nearest')
 
     t = time.time()
-    uc = compute_relative_penalty_images_weights(imgs, np.array(ws))
+    uc = ptn_atlas.compute_relative_penalty_images_weights(imgs, np.array(ws))
     logging.info('elapsed TIME: %s', repr(time.time() - t))
     res = estimate_atlas_graphcut_general(imgs, np.array(ws), 0.)
 
