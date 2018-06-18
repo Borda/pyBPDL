@@ -40,19 +40,25 @@ import experiments.experiment_methods as e_methods
 
 # standard multiprocessing version
 METHODS = {
-    'PCA': e_methods.ExperimentFastICA,
-    'ICA': e_methods.ExperimentSparsePCA,
+    'sPCA': e_methods.ExperimentSparsePCA,
+    'fICA': e_methods.ExperimentFastICA,
     'DL': e_methods.ExperimentDictLearn,
     'NMF': e_methods.ExperimentNMF,
+    'SC': e_methods.ExperimentSpectClust,
+    'cICA': e_methods.ExperimentCanICA,
+    'MSDL': e_methods.ExperimentMSDL,
     'BPDL': e_methods.ExperimentBPDL,
 }
 
 # working just in single thread for passing to image data to partial jobs
 METHODS_BASE = {
-    'PCA': e_methods.ExperimentFastICA_base,
-    'ICA': e_methods.ExperimentSparsePCA_base,
+    'sPCA': e_methods.ExperimentSparsePCA_base,
+    'fICA': e_methods.ExperimentFastICA_base,
     'DL': e_methods.ExperimentDictLearn_base,
     'NMF': e_methods.ExperimentNMF_base,
+    'SC': e_methods.ExperimentSpectClust_base,
+    'cICA': e_methods.ExperimentCanICA_base,
+    'MSDL': e_methods.ExperimentMSDL_base,
     'BPDL': e_methods.ExperimentBPDL_base,
 }
 LIST_METHODS = list(METHODS.keys())

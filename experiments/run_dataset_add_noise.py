@@ -19,6 +19,7 @@ import multiprocessing as mproc
 from functools import partial
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
@@ -94,7 +95,7 @@ def dataset_add_noise(path_in, path_out, noise_level,
 
     _wrapper_noise = partial(add_noise_image, path_in=path_in,
                              path_out=path_out, noise_level=noise_level)
-    list(tl_data.wrap_execute_parallel(_wrapper_noise, name_imgs, nb_jobs))
+    list(utils.wrap_execute_parallel(_wrapper_noise, name_imgs, nb_jobs))
 
     logging.info('DONE')
 

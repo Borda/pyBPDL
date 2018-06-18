@@ -20,8 +20,8 @@ from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
 from dipy.align.metrics import SSDMetric
 
+import bpdl.utilities as utils
 import bpdl.pattern_atlas as ptn_atlas
-import bpdl.data_utils as tl_data
 
 NB_THREADS = int(mproc.cpu_count() * .8)
 
@@ -204,7 +204,7 @@ def warp2d_transform_image(img, dict_deform, method='linear', inverse=False):
     if dict_deform['package'] == 'dipy':
         use_mapping = 'mapping-inv' if inverse else 'mapping'
         if dict_deform[use_mapping] is None:
-            logging.warning('missing (%s) transformation', use_mapping)
+            logging.debug('missing (%s) transformation', use_mapping)
             return img_warped
         if inverse:
             img_warped = dict_deform['mapping-inv'].transform_inverse(img, method)
@@ -298,8 +298,8 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear',
                            method=method, inverse=inverse)
     list_imgs_wrap = [None] * len(list_images)
     list_items = zip(range(len(list_images)), list_images, list_deforms)
-    for idx, img_w in tl_data.wrap_execute_parallel(_wrap_deform, list_items,
-                                                    nb_jobs, desc=None):
+    for idx, img_w in utils.wrap_execute_parallel(_wrap_deform, list_items,
+                                                  nb_jobs, desc=None):
         list_imgs_wrap[idx] = img_w
 
     return list_imgs_wrap
@@ -398,7 +398,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
                                 atlas=atlas, smooth_coef=smooth_coef,
                                 params=params, interp_method=interp_method,
                                 inverse=inverse)
-    for idx, deform in tl_data.wrap_execute_parallel(
+    for idx, deform in utils.wrap_execute_parallel(
                             _wrapper_register, iterations, nb_jobs, desc=None):
         list_deform[idx] = deform
 
@@ -410,8 +410,8 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     _wrapper_warp = partial(wrapper_warp2d_transform_image,
                             method='linear', inverse=False)
     iterations = zip(range(len(list_images)), list_images, list_deform)
-    for idx, img_w in tl_data.wrap_execute_parallel(_wrapper_warp, iterations,
-                                                    nb_jobs, desc=None):
+    for idx, img_w in utils.wrap_execute_parallel(_wrapper_warp, iterations,
+                                                     nb_jobs, desc=None):
         list_imgs_wrap[idx] = img_w
 
     return list_imgs_wrap, list_deform

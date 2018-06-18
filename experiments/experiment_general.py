@@ -33,6 +33,7 @@ import matplotlib.pylab as plt
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.data_utils as tl_data
+import bpdl.utilities as tl_utils
 import bpdl.pattern_atlas as ptn_dict
 import bpdl.pattern_weights as ptn_weight
 
@@ -74,7 +75,7 @@ DEFAULT_PARAMS = {
     'type': None,
     'computer': repr(os.uname()),
     'nb_samples': None,
-    'tol': 1e-3,
+    'tol': 1e-5,
     'init_tp': 'random-mosaic-2',  # random, greedy, , GT-deform
     'max_iter': 150,  # 250, 25
     'gc_regul': 1e-9,
@@ -105,6 +106,7 @@ SYNTH_PARAMS.update({
     'type': 'synth',
     'path_in': SYNTH_PATH_APD,
     'dataset': SYNTH_SUB_DATASETS_FUZZY,
+    'runs': range(3),
     'path_out': PATH_RESULTS,
 })
 # SYNTH_RESULTS_NAME = 'experiments_APD'
@@ -115,7 +117,7 @@ REAL_PARAMS.update({
     'path_in': PATH_DATA_REAL_DISC,
     'dataset': ['gene_small'],
     'max_iter': 50,
-    'runs': range(3),
+    'runs': 0,
     'path_out': PATH_RESULTS
 })
 # PATH_OUTPUT = os.path.join('..','..','results')
@@ -926,6 +928,6 @@ def parse_config_txt(path_config):
     with open(path_config, 'r') as fp:
         text = ''.join(fp.readlines())
     rec = re.compile('"(\S+)":\s+(.*)')
-    dict_config = {n: tl_data.convert_numerical(v)
+    dict_config = {n: tl_utils.convert_numerical(v)
                    for n, v in rec.findall(text) if len(v) > 0}
     return dict_config

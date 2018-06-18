@@ -30,6 +30,7 @@ from PIL import Image
 from skimage.segmentation import relabel_sequential
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import bpdl.metric_similarity as tl_metric
 import experiments.experiment_general as e_gen
@@ -184,7 +185,7 @@ def parse_experiments(params):
 
     _wrapper_parse_folder = partial(try_parse_folder,
                                     params=params)
-    list(tl_data.wrap_execute_parallel(_wrapper_parse_folder, path_dirs, nb_jobs))
+    list(utils.wrap_execute_parallel(_wrapper_parse_folder, path_dirs, nb_jobs))
 
 
 if __name__ == '__main__':

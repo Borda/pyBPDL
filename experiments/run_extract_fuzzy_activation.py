@@ -28,6 +28,7 @@ from skimage import filters
 from scipy import ndimage
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import experiments.run_cut_minimal_images as r_cut
 
@@ -87,7 +88,7 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     logging.info('found images: %i', len(list_img_paths))
 
     _wrapper_extract = partial(extract_activation, path_out=path_out)
-    list(tl_data.wrap_execute_parallel(_wrapper_extract, list_img_paths, nb_jobs))
+    list(utils.wrap_execute_parallel(_wrapper_extract, list_img_paths, nb_jobs))
 
 
 if __name__ == '__main__':
