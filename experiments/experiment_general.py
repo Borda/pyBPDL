@@ -7,14 +7,15 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 import os
 import sys
-import argparse
+import time
+import re
+import glob
 import logging
+import argparse
 import shutil
 import random
-import time
 import json
 import copy
-import re
 import traceback
 import types
 import multiprocessing as mproc
@@ -33,6 +34,7 @@ import matplotlib.pylab as plt
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.data_utils as tl_data
+import bpdl.utilities as tl_utils
 import bpdl.pattern_atlas as ptn_dict
 import bpdl.pattern_weights as ptn_weight
 
@@ -74,7 +76,7 @@ DEFAULT_PARAMS = {
     'type': None,
     'computer': repr(os.uname()),
     'nb_samples': None,
-    'tol': 1e-3,
+    'tol': 1e-5,
     'init_tp': 'random-mosaic-2',  # random, greedy, , GT-deform
     'max_iter': 150,  # 250, 25
     'gc_regul': 1e-9,
@@ -105,6 +107,7 @@ SYNTH_PARAMS.update({
     'type': 'synth',
     'path_in': SYNTH_PATH_APD,
     'dataset': SYNTH_SUB_DATASETS_FUZZY,
+    'runs': range(3),
     'path_out': PATH_RESULTS,
 })
 # SYNTH_RESULTS_NAME = 'experiments_APD'
@@ -115,7 +118,7 @@ REAL_PARAMS.update({
     'path_in': PATH_DATA_REAL_DISC,
     'dataset': ['gene_small'],
     'max_iter': 50,
-    'runs': range(3),
+    'runs': 0,
     'path_out': PATH_RESULTS
 })
 # PATH_OUTPUT = os.path.join('..','..','results')
@@ -143,7 +146,7 @@ def create_args_parser(dict_params, methods):
                         nargs='+', help='names of used datasets', default=None)
     parser.add_argument('-ptn', '--nb_patterns', type=int, required=False,
                         nargs='+', help='numbers of estimated patterns',
-                        default = None)
+                        default=None)
     parser.add_argument('--nb_jobs', type=int, required=False,
                         help='number of processes running in parallel',
                         default=NB_THREADS)
@@ -210,7 +213,7 @@ def parse_params(default_params, methods):
 
         # skip al keys with path or passed from arg params
         d_update = {k: d_json[k] for k in d_json
-                    if not k.startswith('path_') or not k in arg_params}
+                    if not k in arg_params or arg_params[k] is None}
         logging.debug(string_dict(d_update, desc='TO BE UPDATED:'))
         params.update(d_update)
 
@@ -360,12 +363,35 @@ class Experiment(object):
     """
     main_train class for APD experiments State-of-the-Art and BPDL
 
-    EXAMPLE:
+    SINGLE experiment:
     >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
     >>> expt = Experiment(params, time_stamp=False)
     >>> expt.run(gt=True)
+    >>> len(glob.glob(os.path.join(PATH_RESULTS, 'Experiment__*')))
+    1
+    >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
+
+    SEQUENTIAL example:
+    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
+    ...           'path_out': PATH_RESULTS}
+    >>> expt = Experiment(params, time_stamp=False)
+    >>> expt.run(gt=False, iter_params=[{'r': 0}, {'r': 1}])
+    >>> len(glob.glob(os.path.join(PATH_RESULTS, 'Experiment__*')))
+    1
+    >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
+
+    PARALLEL example:
+    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
+    ...           'path_out': PATH_RESULTS,
+    ...           'nb_jobs': 2}
+    >>> expt = Experiment(params, time_stamp=False)
+    >>> expt.run(gt=False, iter_params=[{'r': 0}, {'r': 1}])
+    >>> len(glob.glob(os.path.join(PATH_RESULTS, 'Experiment__*')))
+    1
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
     """
 
@@ -453,7 +479,7 @@ class Experiment(object):
     def _load_images(self):
         """ load image data """
         self._images, self._image_names = tl_data.dataset_load_images(
-            self._list_img_paths, nb_jobs=1)
+            self._list_img_paths, nb_jobs=self.params.get('nb_jobs', 1))
 
     def __load_data(self, gt=True):
         """ load all required data for APD and also ground-truth if required
@@ -513,13 +539,17 @@ class Experiment(object):
         """ perform experiment as sequence of iterated configurations """
         if is_list_like(self.iter_params):
             logging.info('iterate over %i configurations', len(self.iter_params))
-            self.__perform_sequence()
+            nb_jobs = self.params.get('nb_jobs', 1)
+            if nb_jobs > 1:
+                self.__perform_sequence_parellel(nb_jobs)
+            else:
+                self.__perform_sequence_serial()
         else:
             logging.debug('perform single configuration')
-            detail = self.__perform_once({})
+            detail = self._perform_once({})
             self.df_results = pd.DataFrame([detail])
 
-    def __perform_sequence(self):
+    def __perform_sequence_serial(self):
         """ Iteratively change a single experiment parameter with the same data
         """
         logging.info('perform_sequence in single thread')
@@ -529,12 +559,34 @@ class Experiment(object):
             tqdm_bar.set_description(d_params.get('param_idx', ''))
             logging.debug(' -> set iterable %s', repr(d_params))
 
-            detail = self.__perform_once(d_params)
+            detail = self._perform_once(d_params)
 
             self.df_results = self.df_results.append(detail, ignore_index=True)
             # just partial export
             logging.debug('partial results: %s', repr(detail))
             tqdm_bar.update()
+
+    def __perform_sequence_parellel(self, nb_jobs):
+        """ perform sequence in multiprocessing pool """
+        logging.debug('perform_sequence in %i threads for %i values',
+                      nb_jobs, len(self.iter_params))
+        # ISSUE with passing large date to processes so the images are saved
+        # and loaded in particular process again
+        # p_imgs = os.path.join(self.params.get('path_exp'), 'input_images.npz')
+        # np.savez(open(p_imgs, 'w'), imgs=self._images)
+
+        tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
+        pool = tl_utils.NDPool(nb_jobs)
+        for detail in pool.imap_unordered(self._perform_once, self.iter_params):
+            self.df_results = self.df_results.append(detail, ignore_index=True)
+            logging.debug('partial results: %s', repr(detail))
+            # just partial export
+            tqdm_bar.update()
+        pool.close()
+        pool.join()
+
+        # remove temporary image file
+        # os.remove(p_imgs)
 
     def _estimate_atlas_weights(self, images, params):
         """ This is the method to be be over written by individual methods
@@ -548,7 +600,7 @@ class Experiment(object):
         weights = np.zeros((len(self._images), 0))
         return atlas, weights, None
 
-    def __perform_once(self, d_params):
+    def _perform_once(self, d_params):
         """ perform single experiment
 
         :param {str: ...} d_params: used specific configuration
@@ -593,7 +645,6 @@ class Experiment(object):
 
         detail.update(self.__evaluate(atlas, weights_all))
         detail.update(self._evaluate_extras(atlas, weights, extras))
-
 
         return detail
 
@@ -719,60 +770,6 @@ class Experiment(object):
 # =============================================================================
 
 
-class ExperimentParallel(Experiment):
-    """
-    run the experiment in multiple threads
-
-    EXAMPLE:
-    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
-    ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
-    ...           'path_out': PATH_RESULTS}
-    >>> expt = ExperimentParallel(params, time_stamp=False)
-    >>> expt.run(gt=True)
-    >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
-    """
-
-    def __init__(self, dict_params, time_stamp=True):
-        """ initialise parameters and nb jobs in parallel
-
-        :param {str: ...} dict_params:
-        :param bool time_stamp:
-        """
-        super(ExperimentParallel, self).__init__(dict_params, time_stamp)
-        self.nb_jobs = dict_params.get('nb_jobs', NB_THREADS)
-
-    def _load_images(self):
-        """ load image data """
-        self._images, self._image_names = tl_data.dataset_load_images(
-            self._list_img_paths, nb_jobs=self.nb_jobs)
-
-    def __perform_sequence(self):
-        """ perform sequence in multiprocessing pool """
-        logging.debug('perform_sequence in %i threads for %i values',
-                      self.nb_jobs, len(self.iter_params))
-        # ISSUE with passing large date to processes so the images are saved
-        # and loaded in particular process again
-        # p_imgs = os.path.join(self.params.get('path_exp'), 'input_images.npz')
-        # np.savez(open(p_imgs, 'w'), imgs=self._images)
-
-        tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
-        mproc_pool = mproc.Pool(self.nb_jobs)
-        for detail in mproc_pool.map(self.__perform_once,
-                                     self.iter_params):
-            self.df_results = self.df_results.append(detail, ignore_index=True)
-            logging.debug('partial results: %s', repr(detail))
-            # just partial export
-            tqdm_bar.update()
-        mproc_pool.close()
-        mproc_pool.join()
-
-        # remove temporary image file
-        # os.remove(p_imgs)
-
-# =============================================================================
-# =============================================================================
-
-
 def is_list_like(var):
     """ check if the variable is iterable
 
@@ -870,7 +867,7 @@ def simplify_params(dict_params):
     return d_params
 
 
-def expand_params(dict_params, simple_config=None):
+def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     """ extend parameters to a list
 
     :param {} simple_config:
@@ -926,6 +923,6 @@ def parse_config_txt(path_config):
     with open(path_config, 'r') as fp:
         text = ''.join(fp.readlines())
     rec = re.compile('"(\S+)":\s+(.*)')
-    dict_config = {n: tl_data.convert_numerical(v)
+    dict_config = {n: tl_utils.convert_numerical(v)
                    for n, v in rec.findall(text) if len(v) > 0}
     return dict_config

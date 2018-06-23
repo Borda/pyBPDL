@@ -11,10 +11,14 @@ import traceback
 from functools import partial
 
 import numpy as np
+import nibabel as nib
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
+from sklearn.cluster import SpectralClustering
+from nilearn.decomposition import CanICA, DictLearning
 from skimage import segmentation
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.data_utils as tl_data
 import bpdl.pattern_atlas as ptn_dict
 import bpdl.dictionary_learning as dl
 import bpdl.pattern_weights as ptn_weight
@@ -72,6 +76,104 @@ def binarize_img_reconstruction(img_rct, thr=0.5):
     return img_rct_bin
 
 
+class ExperimentSpectClust(expt_gen.Experiment):
+    """
+    State-of-te-Art methods that are based on Spectral Clustering
+    """
+
+    def _estimate_atlas_weights(self, images, params):
+
+        imgs_vec = np.nan_to_num(np.array([np.ravel(im) for im in images]))
+
+        sc = SpectralClustering(n_clusters=params.get('nb_labels'),
+                                affinity='nearest_neighbors',
+                                eigen_tol=params.get('tol'),
+                                # assign_labels='discretize',
+                                degree=0,
+                                n_jobs=1)
+        sc.fit(imgs_vec.T)
+        atlas = sc.labels_.reshape(images[0].shape)
+
+        atlas = tl_data.relabel_boundary_background(atlas, bg_val=0)
+        atlas = segmentation.relabel_sequential(atlas)[0]
+
+        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+                   for img in self._images]
+        weights = np.array(weights)
+
+        return atlas, weights, None
+
+
+def convert_images_nifti(images):
+    mask = np.ones(images[0].shape, dtype=np.int8)
+    if images[0].ndim == 2:
+        images = [np.expand_dims(img, axis=0) for img in images]
+        mask = np.expand_dims(mask, axis=0)
+
+    nii_images = [nib.Nifti1Image(img, affine=np.eye(4)) for img in images]
+    nii_mask = nib.Nifti1Image(mask, affine=np.eye(4))
+    return nii_images, nii_mask
+
+
+class ExperimentCanICA(expt_gen.Experiment):
+    """
+    State-of-te-Art methods that are based on CanICA,
+    CanICA is an ICA method for group-level analysis
+    """
+
+    def _estimate_atlas_weights(self, images, params):
+
+        nii_images, nii_mask = convert_images_nifti(images)
+
+        canica = CanICA(mask=nii_mask,
+                        n_components=params.get('nb_labels') - 1,
+                        mask_strategy='background',
+                        threshold='auto',
+                        n_init=5,
+                        n_jobs=1,
+                        verbose=0)
+        canica.fit(nii_images)
+        components = np.argmax(canica.components_, axis=0) + 1
+        atlas = components.reshape(images[0].shape)
+
+        atlas = segmentation.relabel_sequential(atlas)[0]
+
+        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+                   for img in self._images]
+        weights = np.array(weights)
+
+        return atlas, weights, None
+
+
+class ExperimentMSDL(expt_gen.Experiment):
+    """
+    State-of-te-Art methods that are based on MSDL,
+    Multi Subject Dictionary Learning
+    """
+
+    def _estimate_atlas_weights(self, images, params):
+
+        nii_images, nii_mask = convert_images_nifti(images)
+        dict_learn = DictLearning(mask=nii_mask,
+                                  n_components=params.get('nb_labels') - 1,
+                                  mask_strategy='background',
+                                  # method='lars',
+                                  n_epochs=10,
+                                  n_jobs=1,
+                                  verbose=0)
+        dict_learn.fit(nii_images)
+        components = np.argmax(dict_learn.components_, axis=0) + 1
+        atlas = components.reshape(images[0].shape)
+
+        # atlas = segmentation.relabel_sequential(atlas)[0]
+
+        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+                   for img in self._images]
+        weights = np.array(weights)
+
+        return atlas, weights, None
+
+
 class ExperimentLinearCombineBase(expt_gen.Experiment):
     """
     State-of-te-Art methods that are based on Linear Combination
@@ -123,7 +225,7 @@ class ExperimentLinearCombineBase(expt_gen.Experiment):
         return atlas, weights, None
 
 
-class ExperimentFastICA_base(ExperimentLinearCombineBase):
+class ExperimentFastICA(ExperimentLinearCombineBase):
     """ Fast ICA
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html
     """
@@ -132,19 +234,14 @@ class ExperimentFastICA_base(ExperimentLinearCombineBase):
         estimator = FastICA(n_components=params.get('nb_labels'),
                             max_iter=params.get('max_iter'),
                             algorithm='deflation',
+                            tol=params.get('tol'),
                             whiten=True)
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.mixing_.T
         return estimator, components, fit_result
 
 
-class ExperimentFastICA(ExperimentFastICA_base,
-                        expt_gen.ExperimentParallel):
-    """ parallel version of Fast ICA  """
-    pass
-
-
-class ExperimentSparsePCA_base(ExperimentLinearCombineBase):
+class ExperimentSparsePCA(ExperimentLinearCombineBase):
     """ Sparse PCA
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html
     """
@@ -152,19 +249,14 @@ class ExperimentSparsePCA_base(ExperimentLinearCombineBase):
     def _estimate_linear_combination(self, imgs_vec, params):
         estimator = SparsePCA(n_components=params.get('nb_labels'),
                               max_iter=params.get('max_iter'),
+                              tol=params.get('tol'),
                               n_jobs=1)
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
         return estimator, components, fit_result
 
 
-class ExperimentSparsePCA(ExperimentSparsePCA_base,
-                          expt_gen.ExperimentParallel):
-    """ parallel version of Sparse PCA  """
-    pass
-
-
-class ExperimentDictLearn_base(ExperimentLinearCombineBase):
+class ExperimentDictLearn(ExperimentLinearCombineBase):
     """ Dictionary Learning
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html
     """
@@ -175,36 +267,26 @@ class ExperimentDictLearn_base(ExperimentLinearCombineBase):
                                        fit_algorithm='lars',
                                        transform_algorithm='omp',
                                        split_sign=False,
+                                       tol=params.get('tol'),
                                        n_jobs=1)
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
         return estimator, components, fit_result
 
 
-class ExperimentDictLearn(ExperimentDictLearn_base,
-                          expt_gen.ExperimentParallel):
-    """ parallel version of Dictionary Learning  """
-    pass
-
-
-class ExperimentNMF_base(ExperimentLinearCombineBase):
+class ExperimentNMF(ExperimentLinearCombineBase):
     """ NMF
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html
     """
 
     def _estimate_linear_combination(self, imgs_vec, params):
         estimator = NMF(n_components=params.get('nb_labels'),
-                             max_iter=params.get('max_iter'),
-                             init='random')
+                        max_iter=params.get('max_iter'),
+                        tol=params.get('tol'),
+                        init='random')
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
         return estimator, components, fit_result
-
-
-class ExperimentNMF(ExperimentNMF_base,
-                    expt_gen.ExperimentParallel):
-    """ parallel version of NMF  """
-    pass
 
 
 DICT_ATLAS_INIT = {
@@ -213,7 +295,7 @@ DICT_ATLAS_INIT = {
     'random-mosaic-1.5': partial(ptn_dict.init_atlas_mosaic, coef=1.5),
     'random-mosaic-2': partial(ptn_dict.init_atlas_mosaic, coef=2),
     'random': ptn_dict.init_atlas_random,
-    'greedy-GausWS': ptn_dict.init_atlas_gauss_watershed_2d,
+    'greedy-GaussWS': ptn_dict.init_atlas_gauss_watershed_2d,
     'greedy-OtsuWS': ptn_dict.init_atlas_otsu_watershed_2d,
     'greedy-OtsuWS-rand': partial(ptn_dict.init_atlas_otsu_watershed_2d,
                                   bg_type='rand'),
@@ -232,7 +314,7 @@ LIST_BPDL_PARAMS = ['tol', 'gc_reinit', 'gc_regul', 'max_iter',
                     'ptn_split', 'ptn_compact', 'overlap_major']
 
 
-class ExperimentBPDL_base(expt_gen.Experiment):
+class ExperimentBPDL(expt_gen.Experiment):
     """ the main_train real experiment or our Atlas Learning Pattern Encoding
     """
 
@@ -351,9 +433,3 @@ class ExperimentBPDL_base(expt_gen.Experiment):
             tag, diff = self._evaluate_reconstruct(images_rct, im_type='input')
             stat['reconst. diff %s deform' % tag] = diff
         return stat
-
-
-class ExperimentBPDL(ExperimentBPDL_base,
-                     expt_gen.ExperimentParallel):
-    """ parallel version of BPDL  """
-    pass

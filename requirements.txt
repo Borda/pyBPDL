@@ -9,5 +9,8 @@ scikit-image>=0.12.1
 tqdm>=4.7.4
 ipython==4.2.0
 gco-wrapper>=3.0.2c
+# numba>=0.22.1
+nibabel>=2.1.0
+nilearn>=0.3.1
 dipy>=0.11.0
 SimpleITK>=1.0.1

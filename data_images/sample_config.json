@@ -1,14 +1,39 @@
 {
   "nb_labels": 7,
+  "nb_labels---OPTIONS": "unsigned integer",
+
   "init_tp": "random",
+  "init_tp---OPTIONS": [
+    "GT", "GT-deform",
+    "random", "random-grid",
+    "random-mosaic", "random-mosaic-1.5", "random-mosaic-2",
+    "greedy-GaussWS", "greedy-OtsuWS", "greedy-OtsuWS-rand",
+    "soa-init-NFM", "soa-init-ICA", "soa-init-PCA", "soa-init-DL",
+    "soa-tune-NFM", "soa-tune-ICA", "soa-tune-PCA", "soa-tune-DL"
+  ],
+
   "connect_diag": [true, false],
+
   "overlap_major": true,
+
   "gc_reinit": true,
+
   "ptn_compact": false,
+
   "ptn_split": false,
+
   "gc_regul": 1e-09,
+  "gc_regul---OPTIONS": "positive float",
+
   "tol": 0.001,
+  "tol---OPTIONS": "positive float",
+
   "max_iter": 25,
+  "max_iter---OPTIONS": "unsigned integer",
+
+  "deform_coef": [null, 0.0, 1.0, 0.5, 0.25],
+  "deform_coef---OPTIONS": "positive float or null",
+
   "runs": 1,
-  "deform_coef": [null, 0.0, 1.0, 0.5, 0.25]
+  "runs---OPTIONS": "unsigned integer"
 }

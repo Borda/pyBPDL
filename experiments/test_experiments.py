@@ -20,6 +20,7 @@ import experiments.run_recompute_experiments_result as r_recomp
 PARAMS_TEST_SYNTH_UPDATE = {
     # 'dataset': tl_data.DEFAULT_NAME_DATASET,
     'max_iter': 5,
+    'nb_jobs': e_gen.NB_THREADS,
 }
 
 
@@ -50,8 +51,8 @@ def test_experiments_soa_real(params=r_expt.REAL_PARAMS):
         'max_iter': 15,
     })
 
-    for n in r_expt.METHODS_BASE:
-        cls_expt = r_expt.METHODS_BASE[n]
+    for n in r_expt.METHODS:
+        cls_expt = r_expt.METHODS[n]
         logging.info('testing %s by %s', n, str(cls_expt))
         expt = cls_expt(params)
         expt.run(gt=False, iter_params={'nb_labels': [4, 7]})
@@ -71,7 +72,7 @@ def test_experiments_bpdl_initials(dict_params=r_expt.SYNTH_PARAMS):
     for tp in e_mthd.DICT_ATLAS_INIT.keys():
         params.update({'init_tp': tp})
         logging.info('RUN: ExperimentBPDL-base, init: %s', tp)
-        expt = e_mthd.ExperimentBPDL_base(params)
+        expt = e_mthd.ExperimentBPDL(params)
         expt.run(gt=True)
         del expt
 
@@ -98,10 +99,11 @@ def test_experiments_bpdl(dict_params=r_expt.SYNTH_PARAMS):
         'gc_reinit': not params['gc_reinit'],
         'ptn_split': not params['ptn_split'],
         'ptn_compact': not params['ptn_compact'],
+        'nb_jobs': 1,
     })
 
     logging.info('RUN: ExperimentBPDL-parallel')
-    expt_p = e_mthd.ExperimentBPDL_base(params)
+    expt_p = e_mthd.ExperimentBPDL(params)
     expt_p.run(gt=True, iter_params={'run': [0, 1]})
     del expt_p
 

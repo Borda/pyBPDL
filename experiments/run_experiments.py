@@ -40,20 +40,14 @@ import experiments.experiment_methods as e_methods
 
 # standard multiprocessing version
 METHODS = {
-    'PCA': e_methods.ExperimentFastICA,
-    'ICA': e_methods.ExperimentSparsePCA,
+    'sPCA': e_methods.ExperimentSparsePCA,
+    'fICA': e_methods.ExperimentFastICA,
     'DL': e_methods.ExperimentDictLearn,
     'NMF': e_methods.ExperimentNMF,
+    'SC': e_methods.ExperimentSpectClust,
+    'cICA': e_methods.ExperimentCanICA,
+    'MSDL': e_methods.ExperimentMSDL,
     'BPDL': e_methods.ExperimentBPDL,
-}
-
-# working just in single thread for passing to image data to partial jobs
-METHODS_BASE = {
-    'PCA': e_methods.ExperimentFastICA_base,
-    'ICA': e_methods.ExperimentSparsePCA_base,
-    'DL': e_methods.ExperimentDictLearn_base,
-    'NMF': e_methods.ExperimentNMF_base,
-    'BPDL': e_methods.ExperimentBPDL_base,
 }
 LIST_METHODS = list(METHODS.keys())
 
@@ -75,7 +69,7 @@ INIT_TYPES_ALL = sorted(e_methods.DICT_ATLAS_INIT.keys())
 INIT_TYPES_NORM = [t for t in INIT_TYPES_ALL if 'tune' not in t]
 INIT_TYPES_NORM_REAL = [t for t in INIT_TYPES_NORM if not t.startswith('GT')]
 GRAPHCUT_REGUL = [0., 1e-9, 1e-3]
-SPECIAL_EXPERIEMENT = ['dataset', 'method']
+SPECIAL_EXPT_PARAMS = ['dataset', 'method', 'OPTIONS']
 
 
 def experiment_pipeline_alpe_showcase(path_out):
@@ -116,10 +110,7 @@ def experiment_iterate(params, iter_params, user_gt):
                          for d in params['dataset']]:
         params['dataset'] = data
         params['method'] = method
-        if params['nb_jobs'] <= 1:
-            cls_expt = METHODS_BASE.get(method, None)
-        else:
-            cls_expt = METHODS.get(method, None)
+        cls_expt = METHODS.get(method, None)
         assert cls_expt is not None, 'not existing experiment "%s"' % method
 
         expt = cls_expt(params, time_stamp=params.get('unique', True))
@@ -131,7 +122,7 @@ def experiment_iterate(params, iter_params, user_gt):
 def filter_iterable_params(params):
     d_iter = {k: params[k] for k in params
               if expt_gen.is_iterable(params[k])
-              and k not in SPECIAL_EXPERIEMENT}
+              and not any(x in k for x in SPECIAL_EXPT_PARAMS)}
     return d_iter
 
 

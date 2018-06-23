@@ -30,6 +30,7 @@ from PIL import Image
 from skimage.segmentation import relabel_sequential
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import bpdl.metric_similarity as tl_metric
 import experiments.experiment_general as e_gen
@@ -123,6 +124,12 @@ def parse_experiment_folder(path_expt, params):
     index_name = df_res.index.name
     df_res[index_name] = df_res.index
 
+    if dict_info.get('type') != 'synth':
+        logging.debug('non "synthetic" datasets does not have GT atlas')
+        return
+
+    # TODO: add recompute reconstruction error
+
     # load the GT atlas
     path_atlas = os.path.join(dict_info['path_in'],
                               tl_data.DIR_NAME_DICTIONARY)
@@ -132,7 +139,7 @@ def parse_experiment_folder(path_expt, params):
     tl_data.export_image(os.path.dirname(path_atlas_gt), atlas_gt, atlas_name)
     plt.imsave(os.path.splitext(path_atlas_gt)[0] + '_visual.png', atlas_gt)
 
-    df_res_new = pd.DataFrame()
+    results_new = []
     for _, row in df_res.iterrows():
         dict_row = dict(row)
         # if not isinstance(idx, str) and idx - int(idx) == 0:
@@ -146,16 +153,16 @@ def parse_experiment_folder(path_expt, params):
                                                          atlas.ravel())
         dict_measure = {'atlas %s' % k: dict_measure[k] for k in dict_measure}
         dict_row.update(dict_measure)
-        df_res_new = df_res_new.append(dict_row, ignore_index=True)
+        results_new.append(dict_row)
         # visualise atlas
         atlas_name_visu = os.path.splitext(atlas_name)[0] + '_visual.png'
         path_visu = os.path.join(path_expt, atlas_name_visu)
         export_atlas_overlap(atlas_gt, atlas, path_visu)
         export_atlas_both(atlas_gt, atlas, path_visu)
 
-    df_res_new.set_index([index_name], inplace=True)
+    df_results_new = pd.DataFrame(results_new).set_index([index_name])
     path_results = os.path.join(path_expt, NAME_OUTPUT_RESULT)
-    df_res_new.to_csv(path_results)
+    df_results_new.to_csv(path_results)
     # just to let it releases memory
     gc.collect(), time.sleep(1)
 
@@ -184,7 +191,7 @@ def parse_experiments(params):
 
     _wrapper_parse_folder = partial(try_parse_folder,
                                     params=params)
-    list(tl_data.wrap_execute_parallel(_wrapper_parse_folder, path_dirs, nb_jobs))
+    list(utils.wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_jobs))
 
 
 if __name__ == '__main__':

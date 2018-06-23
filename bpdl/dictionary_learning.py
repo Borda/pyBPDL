@@ -557,13 +557,13 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     return atlas, np.array(w_bins), deforms
 
 
-def test_simple_show_case(atlas, imgs, ws):
+def show_simple_case(atlas, imgs, ws):
     """ simple experiment
 
     >>> atlas = tl_data.create_simple_atlas()
     >>> imgs = tl_data.create_sample_images(atlas)
     >>> ws=([1, 0, 0], [0, 1, 1], [0, 0, 1])
-    >>> res, fig = test_simple_show_case(atlas, imgs, ws)
+    >>> res, fig = show_simple_case(atlas, imgs, ws)
     >>> res.astype(int)
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],

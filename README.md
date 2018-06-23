@@ -13,7 +13,7 @@ We present an final step of image processing pipeline which accepts a large numb
 
 For the image segmentation and individual object detection we used [Image segmentation toolbox](https://borda.github.io/pyImSegm/).
 
-## Comparable (SoA) Methods
+## Comparable (SoA) methods
 
 We have our method BPDL and also we compare it to State-of-the-Art, see [Faces dataset decompositions](http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#example-decomposition-plot-faces-decomposition-py):
  
@@ -21,6 +21,8 @@ We have our method BPDL and also we compare it to State-of-the-Art, see [Faces d
  * [**Sparse PCA**](notebooks/method_SparsePCA.ipynb), derived from [sklearn.decomposition.SparsePCA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html)
  * [**Non-negative Matrix Factorisation**](notebooks/method_NMF.ipynb), derived from [sklearn.decomposition.NMF](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html)
  * [**Dictionary Learning**](notebooks/method_DictiLearn.ipynb) with Matching pursuit, derived from [sklearn.decomposition.DictionaryLearning](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html)
+ * [**Spectral Clustering**](notebooks/method_SpectralClust.ipynb) used in [SPEX2](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2881357/), derived from [sklearn.cluster.SpectralClustering](http://scikit-learn.org/stable/modules/generated/sklearn.cluster.SpectralClustering.html)
+ * [**CanIca & MSDL**](notebooks/method_MSDL-CanICA.ipynb) used for observing spatial activation in fMRI, derived from [nilearn.decomposition.CanICA](http://nilearn.github.io/modules/generated/nilearn.decomposition.CanICA.html) and  [nilearn.decomposition.DictLearning](http://nilearn.github.io/modules/generated/nilearn.decomposition.DictLearning.html)
  * our [**Binary Pattern Dictionary Learning**](notebooks/method_BPDL.ipynb)
 
 ---

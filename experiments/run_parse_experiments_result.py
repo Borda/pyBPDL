@@ -28,6 +28,7 @@ import numpy as np
 import pandas as pd
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import experiments.experiment_general as e_gen
 
@@ -217,8 +218,8 @@ def parse_experiments(params):
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(try_parse_experiment_folder, params=params)
-    for df_folder in tl_data.wrap_execute_parallel(_wrapper_parse_folder,
-                                                   path_dirs, nb_jobs):
+    for df_folder in utils.wrap_execute_sequence(_wrapper_parse_folder,
+                                                 path_dirs, nb_jobs):
         df_all = append_df_folder(df_all, df_folder)
 
     if isinstance(params['name_results'], list):

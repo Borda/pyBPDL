@@ -7,10 +7,11 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import logging
 import traceback
 
+# import numba
+import numpy as np
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
-import numpy as np
 
 import bpdl.data_utils as tl_data
 import bpdl.pattern_weights as ptn_weight
@@ -520,6 +521,7 @@ def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
     return np.array(res, dtype=np.int)
 
 
+# @numba.jit
 def reconstruct_samples(atlas, w_bins):
     """ create reconstruction of binary images according given atlas and weights
 
@@ -564,7 +566,8 @@ def reconstruct_samples(atlas, w_bins):
 
 
 def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
-                          ptn_compact=REINIT_PATTERN_COMPACT, thr_fuzzy=0.5):
+                          ptn_compact=REINIT_PATTERN_COMPACT, thr_fuzzy=0.5,
+                          ptn_method='WaterShade'):
     """ estimate new pattern that occurs in input images and is not cover
     by any label in actual atlas, remove collision with actual atlas
 
@@ -594,26 +597,40 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> img_ptn = prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
+    ...                                 ptn_compact=True, ptn_method='Morpho')
+    >>> img_ptn.astype(int)
+    array([[1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     >>> atlas[atlas == 2] = 0
     >>> imgs_reconst = [lut[atlas] for lut in luts]
     >>> diffs = [np.sum(np.abs(im - imR)) for im, imR in zip(imgs, imgs_reconst)]
     >>> img_ptn = prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     ...                                 ptn_compact=False)
     >>> img_ptn.astype(int)
-    array([[1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-           [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
-           [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+    array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
-           [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]])
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     id_max = np.argmax(diffs)
     # take just positive differences
-    assert thr_fuzzy >= 0, 'threshold has to be a postive number'
-    im_diff = (imgs[id_max] - imgs_reconst[id_max]) > thr_fuzzy
-    if ptn_compact:  # WaterShade
+    assert thr_fuzzy >= 0, 'threshold has to be a positive number'
+    im_diff = np.logical_and((imgs[id_max] - imgs_reconst[id_max]) > thr_fuzzy,
+                             atlas == 0)
+    if not ptn_compact:
+        return im_diff
+    if ptn_method == 'WaterShade':  # WaterShade
         logging.debug('.. reinit. pattern using WaterShade')
         # im_diff = morphology.opening(im_diff, morphology.disk(3))
         # http://scikit-image.org/docs/dev/auto_examples/plot_watershed.html

@@ -34,6 +34,7 @@ import pandas as pd
 import skimage.segmentation as sk_segm
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import bpdl.registration as tl_reg
 from experiments import experiment_general as expt
@@ -236,8 +237,8 @@ def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
                        path_out=path_out, path_visu=path_visu)
     iterate = zip(df_weights.index, df_weights.values, segms, images, deforms)
     list_diffs = []
-    for n, diff in tl_data.wrap_execute_parallel(_reconst, iterate,
-                                                 nb_jobs=nb_jobs):
+    for n, diff in utils.wrap_execute_sequence(_reconst, iterate,
+                                               nb_jobs=nb_jobs):
         list_diffs.append({'image': n, 'reconstruction diff.': diff})
 
     df_diff = pd.DataFrame(list_diffs)

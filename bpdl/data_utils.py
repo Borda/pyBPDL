@@ -6,7 +6,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 # from __future__ import absolute_import
 import os
-import re
 import glob
 import logging
 import shutil
@@ -23,13 +22,16 @@ if os.environ.get('DISPLAY', '') == '' \
     # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
-import tqdm
+import nibabel
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy import ndimage, stats
+from scipy import ndimage
+from scipy.spatial import distance
 from skimage import io, draw, transform
 from PIL import Image
+
+import bpdl.utilities as utils
 
 NB_THREADS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
@@ -208,13 +210,11 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     # logging.debug(im.shape)
     im_size = im.shape[-2:]
     tform = create_elastic_deform_2d(im_size, coef, grid_size, rand_seed)
+    bg = frequent_boundary_label(im)
     if im.ndim == 2:
-        bg = np.median(np.hstack([im[0, :], im[:, 0], im[:, -1], im[-1, :]]))
         img = transform.warp(im.astype(float), tform, output_shape=im_size,
                              order=0, cval=bg)
     elif im.ndim == 3:
-        bg = np.median(np.hstack([im[0, :, 0], im[:, 0, 0],
-                                  im[:, -1, 0], im[-1, :, 0]]))
         im_stack = [transform.warp(im[i].astype(float), tform,
                                    output_shape=im_size, order=0, cval=bg)
                     for i in range(im.shape[0])]
@@ -226,8 +226,77 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     return img
 
 
-def generate_rand_center_radius(img, ratio, rand_seed=None):
+def frequent_boundary_label(image):
+    """ get most frequent label from image boundaries
+
+    :param ndarray image:
+    :return:
+
+    >>> img = np.zeros((10, 15), dtype=int)
+    >>> img[2:8, 3:7] = 1
+    >>> img[6:, 9:] = 2
+    >>> frequent_boundary_label(img)
+    0
+    >>> frequent_boundary_label(np.zeros((1)))
+    0.0
+    >>> frequent_boundary_label(np.zeros((5, 10, 15)))
+    0.0
     """
+    if image.ndim == 1:
+        labels = np.array([image[0], image[-1]])
+    elif image.ndim == 2:
+        labels = np.hstack([image[0, :], image[:, 0],
+                            image[:, -1], image[-1, :]])
+    elif image.ndim == 3:
+        slices = [image[0, :, 0], image[:, 0, 0], image[0, 0, :],
+                  image[-1, :, -1], image[:, -1, -1], image[-1, -1, :]]
+        labels = np.hstack([sl.ravel() for sl in slices])
+    else:
+        labels = np.array([0])
+        logging.warning('wrong image dimension - %s', repr(image.shape))
+    bg = np.argmax(np.bincount(labels)) \
+        if np.issubdtype(image.dtype, np.integer) else np.median(labels)
+    return bg
+
+
+def relabel_boundary_background(image, bg_val=0):
+    """ relabel image such that put a backround label for most frequent label
+    in image boundaries
+
+    :param ndarray image:
+    :return:
+
+    >>> img = np.ones((10, 15), dtype=int)
+    >>> img[2:8, 3:7] = 0
+    >>> img[6:, 9:] = 2
+    >>> relabel_boundary_background(img)
+    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2]])
+    >>> np.unique(relabel_boundary_background(np.ones((10, 15))))
+    array([ 1.])
+    >>> np.unique(relabel_boundary_background(np.ones((5, 10, 15), dtype=int)))
+    array([0])
+    """
+    bg = frequent_boundary_label(image)
+    if bg_val == bg or not np.issubdtype(image.dtype, np.integer):
+        return image
+    lut = np.arange(np.max(image) + 1)
+    lut[bg] = bg_val
+    lut[bg_val] = bg
+    image = lut[image]
+    return image
+
+
+def generate_rand_center_radius(img, ratio, rand_seed=None):
+    """ generate random center and radius
 
     :param ndarray img: np.array<height, width>
     :param float ratio:
@@ -374,7 +443,7 @@ def extract_image_largest_element(img_binary, labeled=None):
 
 
 def atlas_filter_larges_components(atlas):
-    """
+    """ atlas filter larges components
 
     :param ndarray atlas: np.array<height, width> image
     :return (ndarray, [ndarray]): np.array<height, width>, [np.array<height, width>]
@@ -619,7 +688,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     _wrapper_generate = partial(generate_rand_patterns_occlusion,
                                 im_ptns=im_ptns, out_dir=out_dir,
                                 ptn_ration=ptn_ration, rand_seed=rand_seed)
-    for idx, im, im_name, ptn_weights in wrap_execute_parallel(
+    for idx, im, im_name, ptn_weights in utils.wrap_execute_sequence(
             _wrapper_generate, range(nb_samples), nb_jobs):
         im_spls[idx] = im
         im_names[idx] = im_name
@@ -632,7 +701,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
 
 def format_table_weights(list_names, list_weights,
                          index_name='image', col_name=COLUMN_NAME):
-    """ formate the output table with patterns
+    """ format the output table with patterns
 
     :param list_names:
     :param list_weights:
@@ -685,7 +754,7 @@ def add_image_binary_noise(im, ration=0.1, rand_seed=None):
 
 
 def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
-                 stretch_range=True):
+                 stretch_range=True, nifti=False):
     """ export an image with given path and optional pattern for image name
 
     :param str path_out: path to the results directory
@@ -707,7 +776,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     >>> name, im = load_image(path_img)
     >>> im.shape
     (5, 10)
-    >>> np.round(im, 1)
+    >>> np.round(im.astype(float), 1)
     array([[ 0.6,  0.7,  0.6,  0.6,  0.4,  0.7,  0.4,  0.9,  1. ,  0.4],
            [ 0.8,  0.5,  0.6,  0.9,  0.1,  0.1,  0. ,  0.8,  0.8,  0.9],
            [ 1. ,  0.8,  0.5,  0.8,  0.1,  0.7,  0.1,  1. ,  0.5,  0.4],
@@ -735,6 +804,18 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     >>> im.shape
     (5, 20, 25)
     >>> os.remove(path_img)
+
+    Image - NIFTI
+    >>> img = np.random.random([5, 20, 25])
+    >>> path_img = export_image('.', img, 'testing-image', nifti=True)
+    >>> path_img
+    './testing-image.nii'
+    >>> os.path.exists(path_img)
+    True
+    >>> name, im = load_image(path_img)
+    >>> im.shape
+    (5, 20, 25)
+    >>> os.remove(path_img)
     """
     assert img.ndim >= 2, 'wrong image dim: %s' % repr(img.shape)
     if not os.path.exists(path_out):
@@ -744,14 +825,16 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     path_img = os.path.join(path_out, im_name)
     logging.debug(' .. saving image of size %s type %s to "%s"', repr(img.shape),
                   repr(img.dtype), path_img)
-    if img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 3):
-        if stretch_range and img.max() > 0:
-            img = img / float(img.max()) * 255
+    if stretch_range and img.max() > 0:
+        img = img / float(img.max()) * 255
+    if nifti:
+        path_img += '.nii'
+        nii = nibabel.Nifti1Image(img, affine=np.eye(4))
+        nii.to_filename(path_img)
+    elif img.ndim == 2 or (img.ndim == 3 and img.shape[2] == 3):
         path_img += '.png'
         io_imsave(path_img, img.astype(np.uint8))
     elif img.ndim == 3:
-        if stretch_range and img.max() > 0:
-            img = img / float(img.max()) * 255 ** 2
         path_img += '.tiff'
         io_imsave(path_img, img)
         # tif = libtiff.TIFF.open(path_img, mode='w')
@@ -761,7 +844,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     return path_img
 
 
-def wrapper_apply_function(i_img, func, coef, out_dir):
+def wrapper_image_function(i_img, func, coef, out_dir):
     """ apply an image by a specific function
 
     :param (int, np.array<height, width>) i_img:
@@ -812,8 +895,9 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
 
     imgs_new = [None] * len(imgs)
     logging.debug('running in %i threads...', nb_jobs)
-    _apply_fn = partial(wrapper_apply_function, func=func, coef=coef, out_dir=out_dir)
-    for i, im in wrap_execute_parallel(_apply_fn, enumerate(imgs), nb_jobs):
+    _apply_fn = partial(wrapper_image_function, func=func, coef=coef, out_dir=out_dir)
+    for i, im in utils.wrap_execute_sequence(_apply_fn, enumerate(imgs),
+                                             nb_jobs):
         imgs_new[i] = im
 
     return imgs_new
@@ -914,7 +998,7 @@ def wrapper_load_images(list_path_img):
     :param [str] list_path_img:
     :return ((str, ndarray)): np.array<height, width>
     """
-    logging.debug('parallel loading %i images', len(list_path_img))
+    logging.debug('sequential loading %i images', len(list_path_img))
     list_names_imgs = map(load_image, list_path_img)
     return list_names_imgs
 
@@ -965,19 +1049,22 @@ def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
         block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
 
-        mproc_pool = mproc.Pool(nb_jobs)
-        list_names_imgs = mproc_pool.map(wrapper_load_images, block_paths_img)
-        mproc_pool.close()
-        mproc_pool.join()
+        pool = mproc.Pool(nb_jobs)
+        list_names_imgs = pool.imap_unordered(wrapper_load_images, block_paths_img)
+        pool.close()
+        pool.join()
 
         logging.debug('transforming the parallel results')
         names_imgs = sorted(itertools.chain(*list_names_imgs))
-        im_names, imgs = zip(*names_imgs)
     else:
         logging.debug('running in single thread...')
         names_imgs = [load_image(p) for p in img_paths]
         logging.debug('split the resulting tuples')
+    if len(names_imgs) > 0:
         im_names, imgs = zip(*names_imgs)
+    else:
+        logging.warning('no images was loaded...')
+        im_names, imgs = [], []
     assert len(img_paths) == len(imgs), 'not all images was loaded'
     return imgs, im_names
 
@@ -1016,11 +1103,29 @@ def load_image(path_img, fuzzy_val=True):
     >>> np.array_equal(img, img_new)
     True
     >>> os.remove(path_img)
+
+    NIFTI image
+    >>> img_name = 'testing_image'
+    >>> img = np.random.randint(0, 255, size=(5, 20, 20))
+    >>> path_img = export_image('.', img, img_name, stretch_range=False, nifti=True)
+    >>> path_img
+    './testing_image.nii'
+    >>> os.path.exists(path_img)
+    True
+    >>> _, img_new = load_image(path_img, fuzzy_val=False)
+    >>> img_new.shape
+    (5, 20, 20)
+    >>> np.array_equal(img, img_new)
+    True
+    >>> os.remove(path_img)
     """
     assert os.path.exists(path_img), 'missing: %s' % path_img
     n_img, img_ext = os.path.splitext(os.path.basename(path_img))
 
-    if img_ext in ['.tif', '.tiff']:
+    if img_ext in ['.nii', '.nii.gz']:
+        nii = nibabel.load(path_img)
+        img = nii.get_data()
+    elif img_ext in ['.tif', '.tiff']:
         img = io_imread(path_img)
         # im = libtiff.TiffFile().get_tiff_array()
         # img = np.empty(im.shape)
@@ -1034,7 +1139,12 @@ def load_image(path_img, fuzzy_val=True):
     # return to original logging level
 
     if fuzzy_val and img.max() > 0:
-        img = (img / float(img.max()))
+        # set particular level of max value depending on leaded image
+        max_val = 255 if img.max() > 1 else 1
+        max_val = 255 ** 2 if img.max() > 255 else max_val
+        img = (img / float(max_val)).astype(np.float32)
+    elif img.dtype == int:
+        img = img.astype(np.int16)
     return n_img, img
 
 
@@ -1094,9 +1204,10 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
            [0, 1, 0, 1, 1, 1, 1, 1, 0, 1]], dtype=uint8)
     >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
+    assert os.path.isdir(path_dir), 'missing atlas directory: %s' % path_dir
     path_imgs = find_images(path_dir, im_pattern=img_temp_name)
     imgs, _ = dataset_load_images(path_imgs)
-    assert len(imgs) > 0, 'no images on input'
+    assert len(imgs) > 0, 'no patterns in input destination'
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
         atlas[im == 1] = i+1
@@ -1121,7 +1232,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
     >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=2)
     >>> len(imgs)
     36
-    >>> np.round(imgs[0], 1)
+    >>> np.round(imgs[0].astype(float), 1)
     array([[ 0.5,  0.7,  0.6,  0.5,  0.4,  0.6,  0.4,  0.9,  1. ,  0.4],
            [ 0.8,  0.5,  0.6,  0.9,  0.1,  0.1,  0. ,  0.8,  0.8,  0.9],
            [ 1. ,  0.8,  0.5,  0.8,  0.1,  0.6,  0.1,  0.9,  0.5,  0.4],
@@ -1147,83 +1258,11 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
         names = range(len(imgs))
 
     mp_set = [(path_out, im, names[i]) for i, im in enumerate(imgs)]
-    list(wrap_execute_parallel(wrapper_export_image, mp_set))
+    list(utils.wrap_execute_sequence(wrapper_export_image, mp_set))
 
 
 def wrapper_export_image(mp_set):
     export_image(*mp_set)
-
-
-def convert_numerical(s):
-    """ try to convert a string tu numerical
-
-    :param str s: input string
-    :return:
-
-    >>> convert_numerical('-1')
-    -1
-    >>> convert_numerical('-2.0')
-    -2.0
-    >>> convert_numerical('.1')
-    0.1
-    >>> convert_numerical('-0.')
-    -0.0
-    >>> convert_numerical('abc58')
-    'abc58'
-    """
-    re_int = re.compile(r"^[-]?\d+$")
-    re_float1 = re.compile(r"^[-]?\d+.\d*$")
-    re_float2 = re.compile(r"^[-]?\d*.\d+$")
-
-    if re_int.match(str(s)) is not None:
-        return int(s)
-    elif re_float1.match(str(s)) is not None:
-        return float(s)
-    elif re_float2.match(str(s)) is not None:
-        return float(s)
-    else:
-        return s
-
-
-def generate_gauss_2d(mean, std, im_size=None, norm=None):
-    """ Generating a Gaussian distribution in 2D image
-
-    :param float norm: normalise the maximal value
-    :param [int] mean: mean position
-    :param [[int]] std: STD
-    :param (int, int) im_size: optional image size
-    :return ndarray:
-
-    >>> im = generate_gauss_2d([4, 5], [[1, 0], [0, 2]], (8, 10), norm=1.)
-    >>> np.round(im, 1)  # doctest: +NORMALIZE_WHITESPACE
-    array([[ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
-           [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ],
-           [ 0. ,  0. ,  0. ,  0.1,  0.1,  0.1,  0.1,  0.1,  0. ,  0. ],
-           [ 0. ,  0.1,  0.2,  0.4,  0.5,  0.6,  0.5,  0.4,  0.2,  0.1],
-           [ 0. ,  0.1,  0.3,  0.6,  0.9,  1. ,  0.9,  0.6,  0.3,  0.1],
-           [ 0. ,  0.1,  0.2,  0.4,  0.5,  0.6,  0.5,  0.4,  0.2,  0.1],
-           [ 0. ,  0. ,  0. ,  0.1,  0.1,  0.1,  0.1,  0.1,  0. ,  0. ],
-           [ 0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ,  0. ]])
-    >>> im = generate_gauss_2d([2, 3], [[1., 0], [0, 1.2]])
-    >>> np.round(im, 2)  # doctest: +NORMALIZE_WHITESPACE
-    array([[ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ],
-           [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
-           [ 0.01,  0.03,  0.09,  0.13,  0.09,  0.03,  0.01,  0.  ],
-           [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
-           [ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ]])
-    """
-    covar = np.array(std) ** 2
-    if im_size is None:
-        im_size = np.array(mean) + covar.diagonal() * 3
-
-    x, y = np.mgrid[0:im_size[0], 0:im_size[1]]
-    pos = np.rollaxis(np.array([x, y]), 0, 3)
-    gauss = stats.multivariate_normal(mean, covar)
-    pdf = gauss.pdf(pos)
-
-    if norm is not None:
-        pdf *= norm / np.max(pdf)
-    return pdf
 
 
 # def dataset_convert_nifti(path_in, path_out, img_suffix=IMAGE_POSIX):
@@ -1247,37 +1286,28 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
 #     return None
 
 
-def create_simple_atlas():
+def create_simple_atlas(coef=2):
     """ create a simple atlas with split 3 patterns
 
     :return ndarray:
 
-    >>> create_simple_atlas()
-    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    >>> create_simple_atlas(1)
+    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 0, 0, 3, 3, 3, 0],
+           [0, 1, 1, 1, 0, 0, 3, 3, 3, 0],
+           [0, 1, 1, 1, 0, 0, 3, 3, 3, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    atlas = np.zeros((20, 20), dtype=int)
-    atlas[2:8, 2:8] = 1
-    atlas[12:18, 12:18] = 2
-    atlas[2:8, 12:18] = 3
+    coef = int(coef)
+    atlas = np.zeros((10 * coef, 10 * coef), dtype=int)
+    atlas[1 * coef:4 * coef, 1 * coef:4 * coef] = 1
+    atlas[6 * coef:9 * coef, 6 * coef:9 * coef] = 2
+    atlas[1 * coef:4 * coef, 6 * coef:9 * coef] = 3
     return atlas
 
 
@@ -1287,29 +1317,19 @@ def create_sample_images(atlas):
     :param np.array atlas:
     :return [ndarray]:
 
-    >>> atlas = create_simple_atlas()
+    >>> atlas = create_simple_atlas(1)
     >>> im1, im2, im3 = create_sample_images(atlas)
     >>> im2
-    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 1, 1, 1, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     im1 = atlas.copy()
     im1[im1 >= 2] = 0
@@ -1321,47 +1341,3 @@ def create_sample_images(atlas):
     im3[atlas > 2] = 0
     im3[im3 > 0] = 1
     return im1, im2, im3
-
-
-def wrap_execute_parallel(wrap_func, iterate_vals, nb_jobs=NB_THREADS,
-                          desc='', ordered=False):
-    """ wrapper for execution parallel of single thread as for...
-
-    :param wrap_func: function which will be excited in the iterations
-    :param [] iterate_vals: list or iterator which will ide in iterations
-    :param int nb_jobs: number og jobs running in parallel
-    :param str desc: description for the bar,
-        if it is set None, bar is suppressed
-    :param bool ordered: whether enforce ordering in the parallelism
-
-    >>> [o for o in wrap_execute_parallel(lambda x: x ** 2, range(5),
-    ...                                   nb_jobs=1, ordered=True)]
-    [0, 1, 4, 9, 16]
-    >>> [o for o in wrap_execute_parallel(sum, [[0, 1]] * 5,
-    ...                                   nb_jobs=2, desc=None)]
-    [1, 1, 1, 1, 1]
-    """
-    iterate_vals = list(iterate_vals)
-
-    if desc is not None:
-        tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
-    else:
-        tqdm_bar = None
-
-    if nb_jobs > 1:
-        logging.debug('perform sequential in %i threads', nb_jobs)
-        pool = mproc.Pool(nb_jobs)
-
-        pooling = pool.imap if ordered else pool.imap_unordered
-
-        for out in pooling(wrap_func, iterate_vals):
-            yield out
-            if tqdm_bar is not None:
-                tqdm_bar.update()
-        pool.close()
-        pool.join()
-    else:
-        for out in map(wrap_func, iterate_vals):
-            yield out
-            if tqdm_bar is not None:
-                tqdm_bar.update()
