@@ -148,17 +148,19 @@ def draw_reconstruction(atlas, segm_reconst, segm_orig=None, img_rgb=None,
     :param ndarray segm_reconst: np.array<height, width>
     :param ndarray img_rgb: np.array<height, width, 3>
     """
+    atlas = atlas.astype(int)
     fig, ax = plt.subplots(nrows=1, ncols=3, figsize=fig_size)
     ax[0].set_title('original (input)')
     if img_rgb is not None:
         ax[0].imshow(img_rgb, alpha=0.9)
     elif segm_orig is not None:
+        segm_orig = segm_orig.astype(np.float32)
         ax[0].imshow(segm_orig, cmap='Greys_r', alpha=0.7)
     ax[0].imshow(atlas, alpha=0.2)
-    ax[0].contour(atlas > 0, levels=np.unique(atlas > 0),
-                  linewidths=2, cmap=plt.cm.jet)
-    # ax[0].contour(atlas, levels=np.unique(atlas),
+    # ax[0].contour(atlas > 0, levels=np.unique(atlas > 0),
     #               linewidths=2, cmap=plt.cm.jet)
+    ax[0].contour(atlas, levels=np.unique(atlas),
+                  linewidths=2, cmap=plt.cm.jet)
 
     ax[1].set_title('reconstructed segmentation')
     atlas_levels = np.arange(atlas.max() + 1, dtype=float) / atlas.max()

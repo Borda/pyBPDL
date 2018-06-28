@@ -20,7 +20,7 @@
 
   "ptn_compact": false,
 
-  "ptn_split": false,
+  "force_bg": false,
 
   "gc_regul": 1e-09,
   "gc_regul---OPTIONS": "positive float",

@@ -49,19 +49,19 @@ METHODS = {
     'MSDL': e_methods.ExperimentMSDL,
     'BPDL': e_methods.ExperimentBPDL,
 }
-LIST_METHODS = list(METHODS.keys())
+LIST_METHODS = sorted(list(METHODS.keys()))
 
 SYNTH_PARAMS = expt_gen.SYNTH_PARAMS
 SYNTH_PARAMS.update({
     'dataset': ['datasetFuzzy_raw'],
     'method': LIST_METHODS,
-    'max_iter': 25,  # 250, 25
+    'max_iter': 25,  # 250, 150
 })
 
 REAL_PARAMS = expt_gen.REAL_PARAMS
 REAL_PARAMS.update({
     'method': LIST_METHODS,
-    'max_iter': 25,  # 250, 25
+    'max_iter': 25,  # 250, 150
 })
 
 # INIT_TYPES = ['OWS', 'OWSr', 'GWS']
@@ -137,7 +137,6 @@ def experiments_synthetic(params=SYNTH_PARAMS):
     iter_params = filter_iterable_params(params)
     # iter_params = {
     #     'init_tp': INIT_TYPES_NORM,
-    #     # 'ptn_split': [True, False],
     #     'ptn_compact': [True, False],
     #     'gc_regul': GRAPHCUT_REGUL,
     #     'nb_labels': params['nb_labels']
@@ -165,12 +164,15 @@ def experiments_real(params=REAL_PARAMS):
     experiment_iterate(params, iter_params, user_gt=False)
 
 
-def main(arg_params):
-    """ main entry point """
+def main(params):
+    """ main entry point
+
+    :param {} params:
+    """
     # swap according dataset type
-    if arg_params['type'] == 'synth':
+    if params['type'] == 'synth':
         experiments_synthetic()
-    elif arg_params['type'] == 'real':
+    elif params['type'] == 'real':
         experiments_real()
     # plt.show()
 

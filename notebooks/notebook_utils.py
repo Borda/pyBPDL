@@ -118,9 +118,9 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
     from IPython.html.widgets import DropdownWidget as w_s
 
     w_source = {n: w_s(options=dist_vars[n], description=n, )
-              for n in ['dataset', 'sub_dataset']}
+                for n in ['dataset', 'sub_dataset']}
     w_param = {n: w_tb(options=dist_vars[n], description=n)
-               for n in ['gc_reinit', 'init_tp', 'ptn_split', 'gc_regul']}
+               for n in ['gc_reinit', 'init_tp', 'gc_regul']}
     w_range = {n: w_is(min=0, max=0, description=n)
                for n in ['nb_lbs', 'samples']}
 
@@ -133,7 +133,7 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
 
     def show_results(**kwargs):
         params = colect_params()
-        print ('params:', params)
+        print('params:', params)
         # disable options with single value
         dict_source = {n: w_source[n].value for n in w_source}
         uq_param = filter_df_unique(df_data, dict_source, w_param)
@@ -207,7 +207,7 @@ def find_experiment(df_data, params):
 
 
 def extend_df(df_encode, df_main):
-    if not 'gene_id' in df_encode.columns:
+    if 'gene_id' not in df_encode.columns:
         df_encode = df_encode.merge(df_main, left_index=True, right_on='image',
                                     how='inner')
     return df_encode
@@ -236,7 +236,8 @@ def plot_bpdl_graph_results(df_res, n_group, n_curve, iter_var='nb_labels',
         fig.suptitle('{}'.format(v), fontsize=16)
         for i, col in enumerate(l_graphs):
             for j, (idx, row) in enumerate(df_group.iterrows()):
-                if len(row[iter_var]) == 0: continue
+                if len(row[iter_var]) == 0:
+                    continue
                 axarr[i].plot(row[iter_var], row[col], label=row[n_curve], color=clrs[j])
                 axarr[i].set_xlim([min(row[iter_var]), max(row[iter_var])])
             axarr[i].set_xlabel(iter_var), axarr[i].set_ylabel(col)

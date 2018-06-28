@@ -27,7 +27,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import ndimage
-from scipy.spatial import distance
+# from scipy.spatial import distance
 from skimage import io, draw, transform
 from PIL import Image
 
@@ -80,6 +80,26 @@ def update_path(path_file, lim_depth=5, absolute=True):
     return path_file
 
 
+def io_image_decorate(func):
+    """ costume decorator to suppers debug messages from the PIL function
+    to suppress PIl debug logging
+    - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+
+    :param func:
+    :return:
+    """
+    def wrap(*args, **kwargs):
+        log_level = logging.getLogger().getEffectiveLevel()
+        logging.getLogger().setLevel(logging.INFO)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            response = func(*args, **kwargs)
+        logging.getLogger().setLevel(log_level)
+        return response
+    return wrap
+
+
+@io_image_decorate
 def io_imread(path_img):
     """ just a wrapper to suppers debug messages from the PIL function
     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
@@ -87,15 +107,10 @@ def io_imread(path_img):
     :param str path_img:
     :return ndarray:
     """
-    log_level = logging.getLogger().getEffectiveLevel()
-    logging.getLogger().setLevel(logging.INFO)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        img = io.imread(path_img)
-    logging.getLogger().setLevel(log_level)
-    return img
+    return io.imread(path_img)
 
 
+@io_image_decorate
 def image_open(path_img):
     """ just a wrapper to suppers debug messages from the PIL function
     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
@@ -103,15 +118,10 @@ def image_open(path_img):
     :param str path_img:
     :return Image:
     """
-    log_level = logging.getLogger().getEffectiveLevel()
-    logging.getLogger().setLevel(logging.INFO)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        img = Image.open(path_img)
-    logging.getLogger().setLevel(log_level)
-    return img
+    return Image.open(path_img)
 
 
+@io_image_decorate
 def io_imsave(path_img, img):
     """ just a wrapper to suppers debug messages from the PIL function
     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
@@ -128,12 +138,7 @@ def io_imsave(path_img, img):
     (75, 50)
     >>> os.remove(p_img)
     """
-    log_level = logging.getLogger().getEffectiveLevel()
-    logging.getLogger().setLevel(logging.INFO)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        io.imsave(path_img, img)
-    logging.getLogger().setLevel(log_level)
+    io.imsave(path_img, img)
 
 
 def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=None):
@@ -501,6 +506,7 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     :param (int, int) im_size: image size
     :return ndarray: [np.array<height, width>] independent patters in the dictionary
 
+    >>> logging.getLogger().setLevel(logging.DEBUG)
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> path_dir = create_clean_folder(path_dir)
     >>> imgs_patterns = dictionary_generate_atlas(path_dir)
@@ -524,10 +530,9 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     # in case run in DEBUG show atlas and wait till close
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         logging.debug('labels: %s', repr(np.unique(atlas_def)))
-        if atlas_def.ndim == 2:
-            plt.imshow(atlas_def)
-        else:
-            plt.imshow(atlas_def[int(atlas_def.shape[0] / 2)])
+        atlas_show = atlas_def if atlas_def.ndim == 2 \
+            else atlas_def[int(atlas_def.shape[0] / 2)]
+        plt.imshow(atlas_show)
         plt.show()
     atlas_new, imgs_patterns = atlas_filter_larges_components(atlas_def)
     plt.imsave(os.path.join(path_out, 'atlas_rgb.png'), atlas_new,
@@ -1048,23 +1053,23 @@ def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
         logging.debug('estimated %i loading blocks', nb_load_blocks)
         block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
-
-        pool = mproc.Pool(nb_jobs)
-        list_names_imgs = pool.imap_unordered(wrapper_load_images, block_paths_img)
-        pool.close()
-        pool.join()
+        list_names_imgs = list(utils.wrap_execute_sequence(
+            wrapper_load_images, block_paths_img, nb_jobs=nb_jobs,
+            desc='loading images by blocks'))
 
         logging.debug('transforming the parallel results')
         names_imgs = sorted(itertools.chain(*list_names_imgs))
     else:
         logging.debug('running in single thread...')
         names_imgs = [load_image(p) for p in img_paths]
-        logging.debug('split the resulting tuples')
+
     if len(names_imgs) > 0:
+        logging.debug('split the resulting tuples')
         im_names, imgs = zip(*names_imgs)
     else:
         logging.warning('no images was loaded...')
         im_names, imgs = [], []
+
     assert len(img_paths) == len(imgs), 'not all images was loaded'
     return imgs, im_names
 
@@ -1141,8 +1146,8 @@ def load_image(path_img, fuzzy_val=True):
     if fuzzy_val and img.max() > 0:
         # set particular level of max value depending on leaded image
         max_val = 255 if img.max() > 1 else 1
-        max_val = 255 ** 2 if img.max() > 255 else max_val
-        img = (img / float(max_val)).astype(np.float32)
+        max_val = (256 ** 2) - 1 if img.max() > 255 else max_val
+        img = (img / float(max_val)).astype(np.float16)
     elif img.dtype == int:
         img = img.astype(np.int16)
     return n_img, img
@@ -1206,7 +1211,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
     """
     assert os.path.isdir(path_dir), 'missing atlas directory: %s' % path_dir
     path_imgs = find_images(path_dir, im_pattern=img_temp_name)
-    imgs, _ = dataset_load_images(path_imgs)
+    imgs, _ = dataset_load_images(path_imgs, nb_jobs=1)
     assert len(imgs) > 0, 'no patterns in input destination'
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
@@ -1286,7 +1291,7 @@ def wrapper_export_image(mp_set):
 #     return None
 
 
-def create_simple_atlas(coef=2):
+def create_simple_atlas(scale=2):
     """ create a simple atlas with split 3 patterns
 
     :return ndarray:
@@ -1303,11 +1308,11 @@ def create_simple_atlas(coef=2):
            [0, 0, 0, 0, 0, 0, 2, 2, 2, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    coef = int(coef)
-    atlas = np.zeros((10 * coef, 10 * coef), dtype=int)
-    atlas[1 * coef:4 * coef, 1 * coef:4 * coef] = 1
-    atlas[6 * coef:9 * coef, 6 * coef:9 * coef] = 2
-    atlas[1 * coef:4 * coef, 6 * coef:9 * coef] = 3
+    scale = int(scale)
+    atlas = np.zeros((10 * scale, 10 * scale), dtype=int)
+    atlas[1 * scale:4 * scale, 1 * scale:4 * scale] = 1
+    atlas[6 * scale:9 * scale, 6 * scale:9 * scale] = 2
+    atlas[1 * scale:4 * scale, 6 * scale:9 * scale] = 3
     return atlas
 
 

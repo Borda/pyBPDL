@@ -12,17 +12,17 @@ coverage:
     project:
       default:
         against: auto
-        target: 40% # specify the target coverage for each commit status
-        threshold: 30% # allow this little decrease on project
+        target: 60% # specify the target coverage for each commit status
+        threshold: 50% # allow this little decrease on project
         # https://github.com/codecov/support/wiki/Filtering-Branches
         # branches: master
         if_ci_failed: error
     # https://github.com/codecov/support/wiki/Patch-Status
     patch:
       default:
-        against: parent
-        target: 30% # specify the target "X%" coverage to hit
-        threshold: 50% # allow this much decrease on patch
+        against: auto
+        target: 20% # specify the target "X%" coverage to hit
+        threshold: 10% # allow this much decrease on patch
     changes: false
 
 parsers:

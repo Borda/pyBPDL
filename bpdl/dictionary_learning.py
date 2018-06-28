@@ -23,6 +23,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import skimage.segmentation as sk_image
+from skimage import filters
 # using https://github.com/Borda/pyGCO
 from gco import cut_general_graph, cut_grid_graph_simple
 
@@ -211,6 +212,7 @@ def export_visual_atlas(i, out_dir, atlas=None, prefix='debug'):
     :param str prefix:
 
     >>> import shutil
+    >>> logging.getLogger().setLevel(logging.DEBUG)
     >>> dir_name = 'sample_dir'
     >>> os.mkdir(dir_name)
     >>> export_visual_atlas(0, dir_name, np.random.randint(0, 5, (10, 5)))
@@ -352,7 +354,7 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
 
 
 def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
-                      ptn_split, connect_diag=False):
+                      ptn_compact, connect_diag=False):
     """ single iteration of the block coordinate descent algo
 
     :param [ndarray] imgs: list of images np.array<height, width>
@@ -361,7 +363,7 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
     :param int label_max: max number of used labels
     :param float gc_coef: graph cut regularisation
     :param bool gc_reinit: weather use atlas from previous step as init for act.
-    :param bool ptn_split: split individial patterns
+    :param bool ptn_compact: split individial patterns
     :param bool connect_diag: used connecting diagonals, like use 8- instead 4-neighbour
     :return ndarray: np.array<height, width>
 
@@ -371,7 +373,7 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
     >>> imgs = [lut[atlas] for lut in luts]
     >>> bpdl_update_atlas(imgs, atlas, luts[:, 1:], 2, gc_coef=0.,
-    ...                   gc_reinit=False, ptn_split=False)
+    ...                   gc_reinit=False, ptn_compact=False)
     array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -393,7 +395,7 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
         atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef,
                                                     connect_diag=connect_diag)
 
-    if ptn_split:
+    if ptn_compact:
         atlas_new = ptn_atlas.atlas_split_indep_ptn(atlas_new, label_max)
 
     atlas_new = np.remainder(atlas_new, label_max + 1)
@@ -413,11 +415,9 @@ def bpdl_deform_images(images, atlas, weights, deform_coef, inverse=False):
 
 
 def bpdl_pipeline(images, init_atlas=None, init_weights=None,
-                  gc_regul=0.0, tol=1e-3, max_iter=25,
-                  gc_reinit=True, ptn_split=True,
-                  overlap_major=False, ptn_compact=True,
-                  connect_diag=False, deform_coef=None,
-                  out_prefix='debug', out_dir=''):
+                  gc_regul=0.0, tol=1e-3, max_iter=25, gc_reinit=True,
+                  ptn_compact=True, overlap_major=False, connect_diag=False,
+                  deform_coef=None, out_prefix='debug', out_dir=''):
     """ the experiments_synthetic pipeline for block coordinate descent
     algo with graphcut...
 
@@ -429,15 +429,17 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     :param float tol: stop if the diff between two conseq steps
         is less then this given threshold. eg for -1 never until max nb iters
     :param int max_iter: max namber of iteration
-    :param bool gc_reinit: wether use atlas from previous step as init for act.
+    :param bool gc_reinit: whether use atlas from previous step as init for act.
     :param bool ptn_compact: enforce compactness of patterns
-    :param bool ptn_split: split the connected components
+        (split the connected components)
     :param bool overlap_major: whether it has majority overlap the pattern
     :param bool connect_diag: used connecting diagonals, like use 8- instead 4-neighbour
-    :param str out_prefix:
     :param str out_dir: path to the results directory
+    :param str out_prefix:
     :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
+    >>> import shutil
+    >>> logging.getLogger().setLevel(logging.DEBUG)
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
     >>> atlas[3:7, 6:12] = 2
@@ -455,7 +457,9 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
            [1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2],
            [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1],
            [1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1]])
-    >>> bpdl_atlas, bpdl_w_bins, deforms = bpdl_pipeline(images, init_atlas)
+    >>> bpdl_atlas, bpdl_w_bins, deforms = bpdl_pipeline(images, init_atlas,
+    ...                                                  out_dir='temp_export')
+    >>> shutil.rmtree('temp_export', ignore_errors=True)
     >>> bpdl_atlas
     array([[0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
            [0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -490,7 +494,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     logging.debug('compute an Atlas and weights for %i images...', len(images))
     assert len(images) >= 0, 'missing input images'
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-        if not os.path.exists(out_dir):
+        if len(out_dir) > 0 and not os.path.exists(out_dir):
             os.mkdir(out_dir)
     # initialise
     label_max = np.max(init_atlas)
@@ -518,7 +522,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
         times.append(time.time())
         # 3: update the ATLAS
         atlas_new = bpdl_update_atlas(imgs_warped, atlas_reinit, w_bins,
-                                      label_max, gc_regul, gc_reinit, ptn_split,
+                                      label_max, gc_regul, gc_reinit, ptn_compact,
                                       connect_diag)
         times.append(time.time())
         # 4: optional deformations
@@ -544,47 +548,72 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
                           step_diff, tol)
             break
 
+    # TODO: force set background for to small components
+
     imgs_warped, deforms = bpdl_deform_images(images, atlas, w_bins, deform_coef)
-    logging.info('BPDL: terminated with iter %i / %i and step diff %f <? %f',
-                 len(list_diff), max_iter, list_diff[-1], tol)
+    w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
+              for img in imgs_warped]
+
+    logging.debug('BPDL: terminated with iter %i / %i and step diff %f <? %f',
+                  len(list_diff), max_iter, list_diff[-1], tol)
     logging.debug('criterion evolved:\n %s', repr(list_diff))
     df_time = pd.DataFrame(list_times)
     logging.debug('measured time: \n%s', repr(df_time))
-    logging.info('times: \n%s', df_time.describe())
-    # atlas = sk_image.relabel_sequential(atlas)[0]
-    w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-              for img in imgs_warped]
+    logging.debug('times: \n%s', df_time.describe())
+
     return atlas, np.array(w_bins), deforms
+
+
+def reset_atlas_background(atlas, atlas_mean, max_bg_ration=0.9):
+    """ reset atlas components as background where appearance is smaller then ...
+
+    :param ndarray atlas:
+    :param ndarray atlas_mean:
+    :param float max_bg_ration:
+    :return:
+
+    >>> atlas = np.zeros((5, 10), dtype=int)
+    >>> atlas[:2, 4:8] = 1
+    >>> atlas[3:5, 6:9] = 2
+    >>> means = np.ones(atlas.shape) * 0.1
+    >>> means[atlas > 0] = 1
+    >>> reset_atlas_background(atlas, means)
+    array([[0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+           [0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 0],
+           [0, 0, 0, 0, 0, 0, 2, 2, 2, 0]])
+    """
+    bg_threshold = filters.threshold_otsu(atlas_mean)
+    logging.debug('atlas background threshold (Otsu): %f', bg_threshold)
+
+    # if there is too much background, reset threshold to zero level
+    max_bg = max_bg_ration * np.product(atlas.shape)
+    if np.sum([atlas_mean < bg_threshold]) > max_bg:
+        logging.debug('reset atlas background threshold to 0')
+        bg_threshold = 0
+    atlas[atlas_mean < bg_threshold] = 0
+    return atlas
 
 
 def show_simple_case(atlas, imgs, ws):
     """ simple experiment
 
-    >>> atlas = tl_data.create_simple_atlas()
+    >>> atlas = tl_data.create_simple_atlas(scale=1)
     >>> imgs = tl_data.create_sample_images(atlas)
     >>> ws=([1, 0, 0], [0, 1, 1], [0, 0, 1])
     >>> res, fig = show_simple_case(atlas, imgs, ws)
     >>> res.astype(int)
-    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+    array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 1, 1, 1, 0, 0, 2, 2, 2, 0],
+           [0, 1, 1, 1, 0, 0, 2, 2, 2, 0],
+           [0, 1, 1, 1, 0, 0, 2, 2, 2, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+           [0, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+           [0, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+           [0, 0, 0, 0, 0, 0, 3, 3, 3, 0],
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     >>> fig  # doctest: +ELLIPSIS
     <...>
     """
