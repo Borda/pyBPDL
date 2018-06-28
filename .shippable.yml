@@ -28,7 +28,7 @@ python:
 cache: pip
 
 before_install:
-  - apt-get update # --fix-missing
+  - apt-get update --fix-missing
   - apt-get install freetype*
   - apt-get install python-dev python-tk python3-tk
   - apt-get install pkg-config
@@ -36,12 +36,6 @@ before_install:
   - gcc --version ; python --version ; pip --version ; pwd ; ls -l
 
 install:
-  - root=$PWD
-#  - mkdir libs && cd $root/libs && git clone https://github.com/Borda/pyGCO.git
-#  - cd $root/libs/pyGCO && pip install -r requirements.txt && python setup.py install
-#  - rm -r -f $root/libs/pyGCO
-  - cd $root
-
   - pip install -r requirements.txt
   - pip install "nose>=1.3.7" coverage codecov "pytest>=3.0.5"
 
@@ -52,20 +46,24 @@ script:
   - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
   - python experiments/run_dataset_add_noise.py -p ./data_images
   - nosetests experiments -v --exe --with-doctest --with-xunit --xunit-file=shippable/testresults/nosetests.xml
+  - python setup.py check -m -s
 
+  - rm -rf results && mkdir results
+  # EXPERIMENTS: pre-processing
   - python experiments/run_cut_minimal_images.py -in "./data_images/imaginal_discs/gene/*.png" -out ./data_images/imaginal_discs/gene_cut
   - python experiments/run_extract_fuzzy_activation.py -in "./data_images/ovary_stage-2/image/*.png" -out ./data_images/ovary_stage-2/gene
   - python experiments/run_extract_fuzzy_activation.py -in "./data_images/ovary_stage-3/image/*.png" -out ./data_images/ovary_stage-3/gene
 
-  - rm -r results && mkdir results
+  # EXPERIMENTS: core
   - python experiments/run_experiments.py --type synth -in ./data_images/syntheticDataset_vX -out ./results -cfg ./data_images/sample_config.json
   - python experiments/run_experiments.py --type real -in ./data_images/imaginal_discs -out ./results --dataset gene_small --nb_jobs 2
   - python experiments/run_reconstruction.py -p ./results/ExperimentBPDL_real_imaginal_discs_gene_small --visual
 
+  # EXPERIMENTS: post-processing
   - python experiments/run_parse_experiments_result.py -p ./results -res results.csv
   - python experiments/run_recompute_experiments_result.py -p ./results
   - python experiments/run_parse_experiments_result.py -p ./results -res results_NEW.csv
-#  - codecov
+  # - codecov
 
 after_success:
   - python setup.py install

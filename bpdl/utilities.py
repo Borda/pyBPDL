@@ -91,7 +91,6 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
 
 
 class NoDaemonProcess(mproc.Process):
-
     # make 'daemon' attribute always return False
     def _get_daemon(self):
         return False
@@ -104,7 +103,10 @@ class NoDaemonProcess(mproc.Process):
 
 class NDPool(multiprocessing.pool.Pool):
     """ We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
-    because the latter is only a wrapper function, not a proper class. """
+    because the latter is only a wrapper function, not a proper class.
+
+    >>> pool = NDPool(1)
+    """
     Process = NoDaemonProcess
 
 

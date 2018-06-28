@@ -40,7 +40,7 @@ def args_parser():
                         help='path to set of experiments')
     parser.add_argument('-d', '--datasets', type=str, required=False, nargs='+',
                         help='result file name', default=LIST_DATASETS)
-    parser.add_argument('-s', '--sigmas', type=str, required=False, nargs='+',
+    parser.add_argument('-s', '--sigma', type=str, required=False, nargs='+',
                         help='Gaussian sigma of additive noise',
                         default=NOISE_RANGE)
 
@@ -117,4 +117,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
 
     args = args_parser()
-    main(args['path'], args['datasets'], args['sigmas'])
+    main(args['path'], args['datasets'], args['sigma'])

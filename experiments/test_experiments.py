@@ -97,7 +97,6 @@ def test_experiments_bpdl(dict_params=r_expt.SYNTH_PARAMS):
     params.update({
         'init_tp': 'random',
         'gc_reinit': not params['gc_reinit'],
-        'ptn_split': not params['ptn_split'],
         'ptn_compact': not params['ptn_compact'],
         'nb_jobs': 1,
     })

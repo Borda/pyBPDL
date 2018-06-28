@@ -15,7 +15,7 @@ import nibabel as nib
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from sklearn.cluster import SpectralClustering
 from nilearn.decomposition import CanICA, DictLearning
-from skimage import segmentation
+from skimage import segmentation, filters
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.data_utils as tl_data
@@ -28,21 +28,26 @@ import experiments.experiment_general as expt_gen
 NAME_DEFORMS = 'deformations{}.npz'
 
 
-def estim_atlas_as_argmax(atlas_components, fit_result, bg_threshold=0.1):
-    """ take max pattern with max value
+def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False,
+                          max_bg_ration=0.9):
+    """ take pattern index with max value and suppress some background
 
     :param [ndarray] atlas_components:
-    :param float bg_threshold: setting the backround
-    :return ndarray: np.array<height, width>
+    :param [ndarray] fit_results:
+    :param float max_bg_ration: reset BG threshold if the background is larger
+    :param bool force_bg: force too small components as background
+    :return ndarray : np.array<height, width>
     """
-    ptn_used = np.sum(np.abs(fit_result), axis=0) > 0
+    ptn_used = np.sum(np.abs(fit_results), axis=0) > 0
     # filter just used patterns
     atlas_components = atlas_components[ptn_used, :]
     # take the maximal component
     atlas_mean = np.mean(np.abs(atlas_components), axis=0)
     atlas = np.argmax(atlas_components, axis=0)  # + 1
+
     # filter small values
-    atlas[atlas_mean < bg_threshold] = 0
+    if force_bg:
+        atlas = dl.reset_atlas_background(atlas, atlas_mean, max_bg_ration)
 
     assert atlas.shape == atlas_components[0].shape, \
         'dimension mix - atlas: %s atlas_patterns: %s' \
@@ -84,8 +89,9 @@ class ExperimentSpectClust(expt_gen.Experiment):
     def _estimate_atlas_weights(self, images, params):
 
         imgs_vec = np.nan_to_num(np.array([np.ravel(im) for im in images]))
+        bg_offset = 1 if params.get('force_bg', False) else 1
 
-        sc = SpectralClustering(n_clusters=params.get('nb_labels'),
+        sc = SpectralClustering(n_clusters=params.get('nb_labels') - bg_offset,
                                 affinity='nearest_neighbors',
                                 eigen_tol=params.get('tol'),
                                 # assign_labels='discretize',
@@ -94,7 +100,7 @@ class ExperimentSpectClust(expt_gen.Experiment):
         sc.fit(imgs_vec.T)
         atlas = sc.labels_.reshape(images[0].shape)
 
-        atlas = tl_data.relabel_boundary_background(atlas, bg_val=0)
+        atlas = tl_data.relabel_boundary_background(atlas, bg_val=0) + bg_offset
         atlas = segmentation.relabel_sequential(atlas)[0]
 
         weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
@@ -110,7 +116,8 @@ def convert_images_nifti(images):
         images = [np.expand_dims(img, axis=0) for img in images]
         mask = np.expand_dims(mask, axis=0)
 
-    nii_images = [nib.Nifti1Image(img, affine=np.eye(4)) for img in images]
+    nii_images = [nib.Nifti1Image(img.astype(np.float32), affine=np.eye(4))
+                  for img in images]
     nii_mask = nib.Nifti1Image(mask, affine=np.eye(4))
     return nii_images, nii_mask
 
@@ -124,16 +131,17 @@ class ExperimentCanICA(expt_gen.Experiment):
     def _estimate_atlas_weights(self, images, params):
 
         nii_images, nii_mask = convert_images_nifti(images)
+        bg_offset = 1 if params.get('force_bg', False) else 1
 
         canica = CanICA(mask=nii_mask,
-                        n_components=params.get('nb_labels') - 1,
+                        n_components=params.get('nb_labels') - bg_offset,  # - 1
                         mask_strategy='background',
                         threshold='auto',
                         n_init=5,
                         n_jobs=1,
                         verbose=0)
         canica.fit(nii_images)
-        components = np.argmax(canica.components_, axis=0) + 1
+        components = np.argmax(canica.components_, axis=0) + bg_offset  # + 1
         atlas = components.reshape(images[0].shape)
 
         atlas = segmentation.relabel_sequential(atlas)[0]
@@ -154,15 +162,17 @@ class ExperimentMSDL(expt_gen.Experiment):
     def _estimate_atlas_weights(self, images, params):
 
         nii_images, nii_mask = convert_images_nifti(images)
+        bg_offset = 1 if params.get('force_bg', False) else 1
+
         dict_learn = DictLearning(mask=nii_mask,
-                                  n_components=params.get('nb_labels') - 1,
+                                  n_components=params.get('nb_labels') - bg_offset,
                                   mask_strategy='background',
                                   # method='lars',
                                   n_epochs=10,
                                   n_jobs=1,
                                   verbose=0)
         dict_learn.fit(nii_images)
-        components = np.argmax(dict_learn.components_, axis=0) + 1
+        components = np.argmax(dict_learn.components_, axis=0) + bg_offset
         atlas = components.reshape(images[0].shape)
 
         # atlas = segmentation.relabel_sequential(atlas)[0]
@@ -207,12 +217,14 @@ class ExperimentLinearCombineBase(expt_gen.Experiment):
             atlas_ptns = np.array([np.zeros(self._images[0].shape)])
             fit_result = np.zeros((len(imgs_vec), 1))
             # rct_vec = np.zeros(imgs_vec.shape)
-        atlas = estim_atlas_as_argmax(atlas_ptns, fit_result)
+
+        atlas = estim_atlas_as_argmax(atlas_ptns, fit_result,
+                                      force_bg=params.get('force_bg', False))
         return atlas
 
     def _estimate_atlas_weights(self, images, params):
 
-        imgs_vec = np.nan_to_num(np.array([np.ravel(im) for im in images]))
+        imgs_vec = np.nan_to_num(np.array([im.ravel() for im in images]))
 
         atlas = self.__perform_linear_combination(imgs_vec, params)
         # atlas = self._estim_atlas_as_unique_sum(atlas_ptns)
@@ -311,7 +323,7 @@ DICT_ATLAS_INIT = {
     'soa-tune-DL': partial(ptn_dict.init_atlas_dict_learn, nb_iter=150),
 }
 LIST_BPDL_PARAMS = ['tol', 'gc_reinit', 'gc_regul', 'max_iter',
-                    'ptn_split', 'ptn_compact', 'overlap_major']
+                    'ptn_compact', 'overlap_major']
 
 
 class ExperimentBPDL(expt_gen.Experiment):

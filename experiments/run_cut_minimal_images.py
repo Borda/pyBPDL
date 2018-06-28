@@ -3,8 +3,8 @@ cut the minimal image size over whole set
 
 EXAMPLES:
 >> python run_cut_minimal_images.py \
-    -in "data_images/imaginal_discs/gene/*.png" \
-    -out data_images/imaginal_discs/gene_cut
+    -in "./data_images/imaginal_discs/gene/*.png" \
+    -out ./data_images/imaginal_discs/gene_cut
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """

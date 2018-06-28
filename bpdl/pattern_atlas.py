@@ -134,7 +134,7 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
 
 
 def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
-                                       bg_type='none'):
+                                 bg_type='none'):
     """ do some simple operations to get better initialisation
     1] sum over all images, 2] Otsu thresholding, 3] watershed
 
@@ -576,6 +576,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     :param ndarray atlas: np.array<height, width>
     :param [int] diffs: list of differences among input and reconstruct images
     :param bool ptn_compact: enforce compactness of patterns
+    :param str ptn_method: pattern extraction method
     :param float thr_fuzzy:
     :return ndarray: np.array<height, width> binary single pattern
 
@@ -663,6 +664,7 @@ def insert_new_pattern(imgs, imgs_reconst, atlas, label,
     :param [ndarray] imgs: list of input images np.array<height, width>
     :param [ndarray] imgs_reconst: list of reconstructed images np.array<h, w>
     :param ndarray atlas: np.array<height, width>
+    :param int label:
     :param bool ptn_compact: enforce compactness of patterns
     :return ndarray: np.array<height, width> updated atlas
 
@@ -700,7 +702,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     """ walk and find all all free labels and try to reinit them by new patterns
 
     :param [ndarray] imgs: list of input images np.array<height, width>
-    :param ndarray w_bins: binary weigths np.array<nb_imgs, nb_lbs>
+    :param ndarray w_bins: binary weighs np.array<nb_imgs, nb_lbs>
     :param ndarray atlas: image np.array<height, width>
     :param int label_max: set max number of components
     :param bool ptn_compact: enforce compactness of patterns
@@ -744,7 +746,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
             logging.debug('adding disappeared weigh column %i', i)
             w_bins = np.append(w_bins, np.zeros((w_bins.shape[0], 1)), axis=1)
     # w_bin_ext = np.append(np.zeros((w_bins.shape[0], 1)), w_bins, axis=1)
-    #logging.debug('IN > sum over weights: %s', repr(np.sum(w_bin_ext, axis=0)))
+    # logging.debug('IN > sum over weights: %s', repr(np.sum(w_bin_ext, axis=0)))
     # add one while indexes does not cover 0 - bg
     logging.debug('total nb labels: %i', label_max)
     atlas_new = atlas.copy()

@@ -93,7 +93,7 @@ For adding Gaussian noise with given sigmas use following script:
 ```bash
 python experiments/run_dataset_add_noise.py \
     -p ~/Medical-drosophila/synthetic_data \
-    -d apdDataset_vX --sigmas 0.01 0.1 0.2
+    -d apdDataset_vX --sigma 0.01 0.1 0.2
 ```
 
 ![gauss noise](figures/synth_gauss-noise.png)

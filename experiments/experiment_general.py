@@ -18,6 +18,7 @@ import json
 import copy
 import traceback
 import types
+import collections
 import multiprocessing as mproc
 
 import matplotlib
@@ -83,7 +84,6 @@ DEFAULT_PARAMS = {
     'nb_labels': tl_data.NB_BIN_PATTERNS + 1,
     'runs': range(NB_THREADS),
     'gc_reinit': True,
-    'ptn_split': False,
     'ptn_compact': False,
     'connect_diag': True,
     'overlap_major': True,
@@ -116,7 +116,7 @@ REAL_PARAMS = DEFAULT_PARAMS.copy()
 REAL_PARAMS.update({
     'type': 'real',
     'path_in': PATH_DATA_REAL_DISC,
-    'dataset': ['gene_small'],
+    'dataset': [],
     'max_iter': 50,
     'runs': 0,
     'path_out': PATH_RESULTS
@@ -128,6 +128,7 @@ def create_args_parser(dict_params, methods):
     """ create simple arg parser with default values (input, output, dataset)
 
     :param {str: ...} dict_params:
+    :param [str] methods: list of possible methods
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
@@ -196,6 +197,7 @@ def parse_params(default_params, methods):
     """ parse arguments from command line
 
     :param {str: ...} default_params:
+    :param [str] methods: list of possible methods
     :return {str: ...}:
     """
     parser = create_args_parser(default_params, methods)
@@ -213,7 +215,7 @@ def parse_params(default_params, methods):
 
         # skip al keys with path or passed from arg params
         d_update = {k: d_json[k] for k in d_json
-                    if not k in arg_params or arg_params[k] is None}
+                    if k not in arg_params or arg_params[k] is None}
         logging.debug(string_dict(d_update, desc='TO BE UPDATED:'))
         params.update(d_update)
 
@@ -352,7 +354,7 @@ def generate_conf_suffix(d_params):
     """
     suffix = '_'
     suffix += '_'.join('{}={}'.format(k.replace('_', '-'), d_params[k])
-                      for k in sorted(d_params) if k != 'param_idx')
+                       for k in sorted(d_params) if k != 'param_idx')
     return suffix
 
 # =============================================================================
@@ -407,7 +409,7 @@ class Experiment(object):
             'missing some required parameters'
         dict_params = simplify_params(dict_params)
 
-        if not 'name' in dict_params:
+        if 'name' not in dict_params:
             dataset_name = dict_params['dataset']
             if isinstance(dataset_name, list):
                 dataset_name = dataset_name[0]
@@ -480,6 +482,9 @@ class Experiment(object):
         """ load image data """
         self._images, self._image_names = tl_data.dataset_load_images(
             self._list_img_paths, nb_jobs=self.params.get('nb_jobs', 1))
+        shapes = [im.shape for im in self._images]
+        assert len(set(shapes)) == 1, 'multiple image sizes found: %s' \
+                                      % repr(collections.Counter(shapes))
 
     def __load_data(self, gt=True):
         """ load all required data for APD and also ground-truth if required
@@ -633,7 +638,7 @@ class Experiment(object):
                       repr(atlas.shape), repr(np.unique(atlas).tolist()))
 
         weights_all = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                   for img in self._images]
+                       for img in self._images]
         weights_all = np.array(weights_all)
 
         logging.debug('estimated weights of size %s and summing %s',
@@ -707,7 +712,7 @@ class Experiment(object):
         """
         assert images_rct is not None, 'missing any images to compare with'
         # error estimation from original reconstruction
-        if im_type == 'GT' and  hasattr(self, '_gt_images'):
+        if im_type == 'GT' and hasattr(self, '_gt_images'):
             logging.debug('compute reconstruction - GT images')
             images_gt = self._gt_images[:len(images_rct)]
             diff = np.asarray(images_gt) - np.asarray(images_rct)
@@ -874,13 +879,14 @@ def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     :param {} dict_params:
     :return:
 
-    >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y')})
+    >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),
+    ...                         's--opts': ('a', 'b')})
     >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
-       n     param_idx  s    t
-    0  1  n-2#1_s-2#1  x  abc
-    1  1  n-2#1_s-2#2  y  abc
-    2  2  n-2#2_s-2#1  x  abc
-    3  2  n-2#2_s-2#2  y  abc
+       n    param_idx  s s--opts    t
+    0  1  n-2#1_s-2#1  x       a  abc
+    1  1  n-2#1_s-2#2  y       a  abc
+    2  2  n-2#2_s-2#1  x       a  abc
+    3  2  n-2#2_s-2#2  y       a  abc
     >>> params = expand_params({'s': ('x', 'y')}, {'old': 123.})
     >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
          old param_idx  s
@@ -894,8 +900,11 @@ def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
 
     list_configs = [simple_config]
     for k in sorted(dict_params):
-        if is_list_like(dict_params[k]) and len(dict_params[k]) > 1:
-            list_configs = extend_list_params(list_configs, k, dict_params[k])
+        if any(ptn in k for ptn in skip_patterns):
+            continue
+        if not is_list_like(dict_params[k]) or len(dict_params[k]) <= 1:
+            continue
+        list_configs = extend_list_params(list_configs, k, dict_params[k])
 
     return list_configs
 
