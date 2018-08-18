@@ -935,3 +935,24 @@ def parse_config_txt(path_config):
     dict_config = {n: tl_utils.convert_numerical(v)
                    for n, v in rec.findall(text) if len(v) > 0}
     return dict_config
+
+
+def activate_sigm(x, shift=0.12, slope=35.):
+    """ transformation function for gene activations
+
+    :param x: input values in range (0, 1)
+    :param shift: shift the slope
+    :param slope: steepness of the slope
+    :return float: values in range (0, 1)
+
+    >>> activate_sigm(0)
+    0.0
+    >>> activate_sigm(0.1)  # doctest: +ELLIPSIS
+    0.32...
+    >>> activate_sigm(1)
+    1.0
+    """
+    sigm = lambda x, a, b: 1. / (1 + np.exp(b * (- x + a)))
+    sigm_0, sigm_inf = sigm(0, shift, slope), sigm(1, shift, slope)
+    val = (sigm(x, shift, slope) - sigm_0) / (sigm_inf - sigm_0)
+    return val
