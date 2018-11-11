@@ -4,21 +4,21 @@ run experiments with Stat-of-the-art methods
 Example run:
 
 >> python run_experiments.py --type synth \
-    -in /mnt/F464B42264B3E590/TEMP/apdDataset_00 \
-    -out /mnt/F464B42264B3E590/TEMP/experiments_APD \
+    -i /mnt/F464B42264B3E590/TEMP/apdDataset_00 \
+    -o /mnt/F464B42264B3E590/TEMP/experiments_APD \
     --nb_jobs 1 
 
 >> python run_experiments.py --type synth \
-    -in ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APD
+    -i ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APD
 
 >> python run_experiments.py --type synth  --method BPDL \
-    -in ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth2 \
+    -i ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth2 \
 
 >> python run_experiments.py --type real \
-    -in ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
+    -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
     --dataset gene_ssmall
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>

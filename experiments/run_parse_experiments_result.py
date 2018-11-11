@@ -4,11 +4,11 @@ per ech folder and add final statistic
 
 EXAMPLES:
 >> python run_parse_experiments_result.py \
-    -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
+    -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --name_results results.csv --name_config config.json --func_stat mean
 
 >> python run_parse_experiments_result.py \
-    -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
+    -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --name_results results_NEW.csv --name_config config.json --func_stat none
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
@@ -57,17 +57,17 @@ def parse_arg_params(params):
     :return: argparse
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path', type=str, required=True,
+    parser.add_argument('-i', '--path', type=str, required=True,
                         help='path to set of experiments')
-    parser.add_argument('-conf', '--name_config', type=str, required=False,
+    parser.add_argument('-c', '--name_config', type=str, required=False,
                         help='config file name', default=params['name_config'])
-    parser.add_argument('-res', '--name_results', type=str, required=False,
+    parser.add_argument('-r', '--name_results', type=str, required=False,
                         nargs='*', default=params['name_results'],
                         help='result file name')
-    parser.add_argument('-cols', '--result_columns', type=str, required=False,
+    parser.add_argument('--result_columns', type=str, required=False,
                         default=None, nargs='*',
                         help='important columns from results')
-    parser.add_argument('-fn', '--func_stat', type=str, required=False,
+    parser.add_argument('-f', '--func_stat', type=str, required=False,
                         help='type od stat over results', default='none')
     parser.add_argument('--nb_jobs', type=int, required=False,
                         default=NB_THREADS,

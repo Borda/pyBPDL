@@ -132,10 +132,10 @@ def create_args_parser(dict_params, methods):
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-in', '--path_in', type=str, required=True,
+    parser.add_argument('-i', '--path_in', type=str, required=True,
                         help='path to the folder with input image dataset',
                         default=dict_params.get('path_in', ''))
-    parser.add_argument('-out', '--path_out', type=str, required=True,
+    parser.add_argument('-o', '--path_out', type=str, required=True,
                         help='path to the output with experiment results',
                         default=dict_params.get('path_out', ''))
     parser.add_argument('-t', '--type', type=str, required=False,
@@ -143,9 +143,9 @@ def create_args_parser(dict_params, methods):
                         default='real', choices=['real', 'synth'])
     parser.add_argument('-n', '--name', type=str, required=False,
                         help='specific name for this experiment', default=None)
-    parser.add_argument('-ds', '--dataset', type=str, required=False,
+    parser.add_argument('-d', '--dataset', type=str, required=False,
                         nargs='+', help='names of used datasets', default=None)
-    parser.add_argument('-ptn', '--nb_patterns', type=int, required=False,
+    parser.add_argument('-p', '--nb_patterns', type=int, required=False,
                         nargs='+', help='numbers of estimated patterns',
                         default=None)
     parser.add_argument('--nb_jobs', type=int, required=False,
@@ -154,10 +154,10 @@ def create_args_parser(dict_params, methods):
     parser.add_argument('--method', type=str, required=False, nargs='+',
                         default=None, help='possible APD methods',
                         choices=methods)
-    parser.add_argument('-imgs', '--list_images', type=str, required=False,
+    parser.add_argument('--list_images', type=str, required=False,
                         help='CSV file with list of images, supress `path_in`',
                         default=None)
-    parser.add_argument('-cfg', '--path_config', type=str, required=False,
+    parser.add_argument('-c', '--path_config', type=str, required=False,
                         help='path to JSON configuration file',
                         default=None)
     parser.add_argument('--debug', required=False, action='store_true',

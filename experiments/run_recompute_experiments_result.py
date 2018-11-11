@@ -3,7 +3,7 @@ walk over all experiment folders and ...
 
 EXAMPLES:
 >> python run_recompute_experiments_result.py \
-    -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth
+    -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """

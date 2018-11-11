@@ -5,7 +5,7 @@ the reconstruction error to evaluate the parameters and export visualisation
 
 EXAMPLE:
 >> python run_reconstruction.py \
-    -p ../results/ExperimentBPDL_synth_datasetAPDL_v0_datasetFuzzy_deform \
+    -e ../results/ExperimentBPDL_synth_datasetAPDL_v0_datasetFuzzy_deform \
     --nb_jobs 2 --visual
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
@@ -58,9 +58,9 @@ def parse_arg_params():
     :return {str: ...}:
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path_expt', type=str, required=True,
+    parser.add_argument('-e', '--path_expt', type=str, required=True,
                         help='path to the input experiment')
-    parser.add_argument('-imgs', '--path_images', type=str, required=False,
+    parser.add_argument('-i', '--path_images', type=str, required=False,
                         help='path to the input images', default=None)
     parser.add_argument('-n', '--name_expt', type=str, required=False,
                         default='*', help='name of experiment')

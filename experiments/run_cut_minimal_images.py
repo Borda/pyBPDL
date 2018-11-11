@@ -3,8 +3,8 @@ cut the minimal image size over whole set
 
 EXAMPLES:
 >> python run_cut_minimal_images.py \
-    -in "./data_images/imaginal_discs/gene/*.png" \
-    -out ./data_images/imaginal_discs/gene_cut
+    -i "./data_images/imaginal_discs/gene/*.png" \
+    -o ./data_images/imaginal_discs/gene_cut
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -44,15 +44,15 @@ def args_parse_params(params):
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-in', '--path_in', type=str, required=True,
+    parser.add_argument('-i', '--path_in', type=str, required=True,
                         default=params['path_in'],
                         help='path to the folder with input image dataset')
-    parser.add_argument('-out', '--path_out', type=str, required=True,
+    parser.add_argument('-o', '--path_out', type=str, required=True,
                         default=params['path_out'],
                         help='path to the output with experiment results')
-    parser.add_argument('-thr', '--threshold', type=float, required=False,
+    parser.add_argument('-t', '--threshold', type=float, required=False,
                         default=0.001, help='threshold for image information')
-    parser.add_argument('-tp', '--thr_method', type=str, required=False,
+    parser.add_argument('-m', '--thr_method', type=str, required=False,
                         default='', choices=METHODS, help='used methods')
     parser.add_argument('--nb_jobs', type=int, required=False,
                         default=NB_THREADS, help='number of parallel processes')
