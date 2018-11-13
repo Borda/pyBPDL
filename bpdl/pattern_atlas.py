@@ -5,7 +5,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 # from __future__ import absolute_import
 import logging
-import traceback
 
 # import numba
 import numpy as np
@@ -345,8 +344,7 @@ def init_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        # logging.warning('CRASH: %s' % init_atlas_nmf.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s' % init_atlas_nmf.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -392,8 +390,7 @@ def init_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        # logging.warning('CRASH: %s' % init_atlas_fast_ica.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s' % init_atlas_fast_ica.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -437,8 +434,7 @@ def init_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        # logging.warning('CRASH: %s' % init_atlas_sparse_pca.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s' % init_atlas_sparse_pca.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -485,8 +481,7 @@ def init_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        logging.warning('CRASH: %s' % init_atlas_dict_learn.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s', init_atlas_dict_learn.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -640,7 +635,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
             peaks = detect_peaks(dist)
             labels = morphology.watershed(-dist, peaks, mask=im_diff)
         except Exception:
-            logging.warning(traceback.format_exc())
+            logging.exception('morphology.watershed')
             labels = None
     else:
         logging.debug('.. reinit. pattern as major component')

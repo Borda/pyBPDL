@@ -19,7 +19,6 @@ import sys
 import glob
 import json
 import argparse
-import traceback
 import logging
 import multiprocessing as mproc
 from functools import partial
@@ -157,7 +156,7 @@ def parse_experiment_folder(path_expt, params):
         func_stat = DICT_STATISTIC_FUNC.get(params['func_stat'], None)
         df_results = load_multiple_results(path_expt, func_stat, params)
     except Exception:
-        logging.error(traceback.format_exc())
+        logging.exception('load_multiple_results: %s', path_expt)
         df_results = pd.DataFrame()
 
     if len(df_results) == 0:
@@ -184,9 +183,8 @@ def try_parse_experiment_folder(path_expt, params):
     try:
         df_folder = parse_experiment_folder(path_expt, params)
     except Exception:
-        logging.warning('no data extracted from folder %s',
-                        os.path.basename(path_expt))
-        logging.warning(traceback.format_exc())
+        logging.exception('no data extracted from folder %s',
+                          os.path.basename(path_expt))
         df_folder = None
     return df_folder
 
@@ -196,8 +194,7 @@ def append_df_folder(df_all, df_folder):
         # df = pd.concat([df, df_folder], ignore_index=True)
         df_all = df_all.append(df_folder, ignore_index=True)
     except Exception:
-        logging.warning('appending fail for DataFrame...')
-        logging.error(traceback.format_exc())
+        logging.exception('appending fail for DataFrame...')
     return df_all
 
 

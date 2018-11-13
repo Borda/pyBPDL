@@ -16,7 +16,6 @@ import shutil
 import random
 import json
 import copy
-import traceback
 import types
 import collections
 import multiprocessing as mproc
@@ -626,9 +625,8 @@ class Experiment(object):
             atlas, weights, extras = self._estimate_atlas_weights(images, detail)
             detail['time'] = time.time() - t
         except Exception:  # todo, optionaly remove this try/catch
-            logging.error('FAIL estimate atlas for %s with %s',
-                          str(self.__class__), repr(detail))
-            logging.error(traceback.format_exc())
+            logging.exception('FAIL estimate atlas for %s with %s',
+                              str(self.__class__), repr(detail))
             atlas = np.zeros_like(self._images[0])
             weights = np.zeros((len(self._images), 0))
             extras = None

@@ -9,7 +9,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import time
 import logging
-import traceback
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
@@ -92,7 +91,7 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
         labels = cut_grid_graph_simple(unary_cost, pairwise_cost,
                                        algorithm='expansion')
     except Exception:
-        logging.warning(traceback.format_exc())
+        logging.exception('cut_grid_graph_simple')
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
     labels = labels.reshape(labeling_sum.shape[:2])
@@ -162,7 +161,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
                                    algorithm='expansion', init_labels=init_labels,
                                    n_iter=NB_GRAPH_CUT_ITER)
     except Exception:
-        logging.warning(traceback.format_exc())
+        logging.exception('cut_general_graph')
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
     labels = labels.reshape(u_cost.shape[:2])

@@ -7,7 +7,6 @@ Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import sys
 import logging
-import traceback
 from functools import partial
 
 import numpy as np
@@ -211,9 +210,8 @@ class ExperimentLinearCombineBase(expt_gen.Experiment):
             atlas_ptns = components.reshape((-1, ) + self._images[0].shape)
             # rct_vec = np.dot(fit_result, components)
         except Exception:
-            logging.warning('CRASH in "__perform_linear_combination" in %s',
-                            self.__class__.__name__)
-            logging.warning(traceback.format_exc())
+            logging.exception('CRASH in "__perform_linear_combination" in %s',
+                              self.__class__.__name__)
             atlas_ptns = np.array([np.zeros(self._images[0].shape)])
             fit_result = np.zeros((len(imgs_vec), 1))
             # rct_vec = np.zeros(imgs_vec.shape)

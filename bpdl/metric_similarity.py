@@ -6,7 +6,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 # from __future__ import absolute_import
 import logging
-import traceback
 
 import numpy as np
 from sklearn import metrics
@@ -365,7 +364,7 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
                                                           average=avg)
             res = dict(zip(['{}_{}'.format(n, avg) for n in names], mtr))
         except Exception:
-            logging.error(traceback.format_exc())
+            logging.exception('metrics.precision_recall_fscore_support')
             res = dict(zip(['{}_{}'.format(n, avg) for n in names], [0] * 4))
         dict_metrics.update(res)
     return dict_metrics

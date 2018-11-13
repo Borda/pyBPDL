@@ -12,7 +12,6 @@ import os
 import sys
 import glob
 import json
-import traceback
 import logging
 import gc, time
 import multiprocessing as mproc
@@ -172,7 +171,7 @@ def try_parse_folder(path_expt, params):
     try:
         parse_experiment_folder(path_expt, params)
     except Exception:
-        logging.warning(traceback.format_exc())
+        logging.exception('parse_experiment_folder')
 
 
 def parse_experiments(params):
