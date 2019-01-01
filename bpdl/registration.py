@@ -21,12 +21,11 @@ from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicM
 from dipy.align.metrics import SSDMetric
 
 import bpdl.utilities as utils
-import bpdl.pattern_atlas as ptn_atlas
 
 NB_THREADS = int(mproc.cpu_count() * .8)
 
-LIST_SDR_PARAMS = ['metric', 'level_iters', 'step_length', 'ss_sigma_factor',
-                   'opt_tol', 'inv_iter', 'inv_tol', 'callback']
+LIST_SDR_PARAMS = ('metric', 'level_iters', 'step_length', 'ss_sigma_factor',
+                   'opt_tol', 'inv_iter', 'inv_tol', 'callback')
 DIPY_DEAMONS_PARAMS = dict(
     step_length=0.1,
     level_iters=[30, 50],
@@ -351,6 +350,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     :param int nb_jobs:
     :return: [ndarray], [ndarray]
 
+    >>> import bpdl.pattern_atlas as ptn_atlas
     >>> np.random.seed(42)
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -399,7 +399,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
                                 params=params, interp_method=interp_method,
                                 inverse=inverse)
     for idx, deform in utils.wrap_execute_sequence(
-                            _wrapper_register, iterations, nb_jobs, desc=None):
+            _wrapper_register, iterations, nb_jobs, desc=None):
         list_deform[idx] = deform
 
     # remove mean transform

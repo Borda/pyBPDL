@@ -12,9 +12,8 @@ import logging
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-if os.environ.get('DISPLAY', '') == '' \
-        and matplotlib.rcParams['backend'] != 'agg':
-    # logging.warning('No display found. Using non-interactive Agg backend.')
+if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
+    print('No display found. Using non-interactive Agg backend.')
     # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
@@ -409,7 +408,7 @@ def bpdl_deform_images(images, atlas, weights, deform_coef, inverse=False):
     logging.debug('... perform register images onto atlas with smooth_coef: %f',
                   smooth_coef)
     images_warped, deforms = regist.register_images_to_atlas_demons(
-                            images, atlas, weights, smooth_coef, inverse=inverse)
+        images, atlas, weights, smooth_coef, inverse=inverse)
     return images_warped, deforms
 
 
@@ -530,7 +529,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
                                                       w_bins, deform_coef)
             times.append(time.time())
 
-        times = [times[i] - times[i-1] for i in range(1, len(times))]
+        times = [times[i] - times[i - 1] for i in range(1, len(times))]
         d_times = dict(zip(LIST_BPDL_STEPS[:len(times)], times))
         step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
         # step_diff = np.sum(abs(atlas - atlas_new)) / float(np.product(atlas.shape))

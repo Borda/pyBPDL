@@ -1,3 +1,3 @@
-from bpdl import __init__
+import bpdl
 
-__init__
+bpdl

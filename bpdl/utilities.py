@@ -92,6 +92,7 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
 
 class NoDaemonProcess(mproc.Process):
     # make 'daemon' attribute always return False
+    @classmethod
     def _get_daemon(self):
         return False
 
@@ -131,6 +132,7 @@ def wrap_execute_sequence(wrap_func, iterate_vals, nb_jobs=NB_THREADS,
     iterate_vals = list(iterate_vals)
 
     if desc is not None:
+        desc = '%s @%i-threads' % (desc, nb_jobs)
         tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
     else:
         tqdm_bar = None
@@ -141,7 +143,6 @@ def wrap_execute_sequence(wrap_func, iterate_vals, nb_jobs=NB_THREADS,
         # inside its children, cascade or multiprocessing
         # https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic
         pool = NDPool(nb_jobs)
-
         pooling = pool.imap if ordered else pool.imap_unordered
 
         for out in pooling(wrap_func, iterate_vals):
@@ -219,7 +220,7 @@ def estimate_point_max_circle(idx, points, tangent_smooth=1, orient=1.,
     direction = np.array([[0, -1], [1, 0]]).dot(tangent)
     # set positive or negative direction
     direction = direction * orient
-    # normalisation 
+    # normalisation
     direction = direction / np.sqrt(np.sum(direction ** 2))
 
     diam = estimate_max_circle(points[idx], direction, points, max_diam, step_tol)

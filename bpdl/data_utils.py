@@ -16,9 +16,8 @@ from functools import partial
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-if os.environ.get('DISPLAY', '') == '' \
-        and matplotlib.rcParams['backend'] != 'agg':
-    # logging.warning('No display found. Using non-interactive Agg backend.')
+if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
+    print('No display found. Using non-interactive Agg backend.')
     # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
@@ -1215,7 +1214,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
     assert len(imgs) > 0, 'no patterns in input destination'
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
-        atlas[im == 1] = i+1
+        atlas[im == 1] = i + 1
     return np.array(atlas, dtype=np.uint8)
 
 

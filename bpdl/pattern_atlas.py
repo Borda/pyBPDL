@@ -758,7 +758,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
         # they should not be which lead to have high unary for atlas estimation
         lim_repopulate = 1. / label_max
         w_bins[:, w_index] = ptn_weight.weights_label_atlas_overlap_threshold(
-                                        imgs, atlas_new, label, lim_repopulate)
+            imgs, atlas_new, label, lim_repopulate)
         logging.debug('reinit. label: %i with w_bins after: %i',
                       label, np.sum(w_bins[:, w_index]))
     return atlas_new, w_bins

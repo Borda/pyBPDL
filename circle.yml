@@ -14,7 +14,8 @@ jobs:
       - run:
           name: Install PyPI dependences
           command: |
-            sudo pip install nose coverage pytest pytest-cov
+            sudo pip install nose coverage pytest pytest-cov flake8
+            sudo pip install -U backports.functools_lru_cache  # required for matplotlib @py2
             pip install -r requirements.txt --user
 
       - run:
@@ -28,6 +29,7 @@ jobs:
             python experiments/run_dataset_add_noise.py -p ./data_images
             coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
             coverage report && coverage xml -o test-reports/coverage.xml
+            flake8 bpdl --ignore=E402,W605,E731 --max-line-length=100
 
       - run:
           name: Experiments (pre-processing)

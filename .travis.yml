@@ -29,7 +29,7 @@ before_install:
 
 install:
   - pip install -r requirements.txt
-  - pip install nose coverage codecov pytest codacy-coverage check-manifest
+  - pip install nose coverage codecov pytest codacy-coverage check-manifest flake8
 
 before_script:
   - mkdir results
@@ -41,6 +41,7 @@ script:
   - nosetests bpdl -v --exe --with-doctest --with-xunit --with-coverage --cover-package=bpdl
   - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
   - nosetests experiments -v --exe --with-doctest --with-xunit
+  - flake8 bpdl --ignore=E402,W605,E731 --max-line-length=100
 
 after_success:
   - python setup.py install
