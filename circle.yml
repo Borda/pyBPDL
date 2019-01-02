@@ -11,6 +11,7 @@ jobs:
           command: |
             sudo apt-get update --fix-missing
             sudo apt-get install tk-dev pkg-config python-dev python-tk
+            unset DISPLAY
       - run:
           name: Install PyPI dependences
           command: |

@@ -38,6 +38,7 @@ before_script:
   - python setup.py check -m -s
 
 script:
+  - unset DISPLAY
   - nosetests bpdl -v --exe --with-doctest --with-xunit --with-coverage --cover-package=bpdl
   - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
   - nosetests experiments -v --exe --with-doctest --with-xunit
