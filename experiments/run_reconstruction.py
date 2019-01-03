@@ -212,7 +212,7 @@ def perform_reconstruction(set_variables, atlas, path_out, path_visu=None):
 def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
                                 path_imgs=None, nb_jobs=NB_THREADS, visual=False):
     atlas, df_weights, dict_deforms, segms, images = load_experiment(
-                        path_expt, name_expt, path_dataset, path_imgs, nb_jobs)
+        path_expt, name_expt, path_dataset, path_imgs, nb_jobs)
     df_weights.set_index('image', inplace=True)
 
     path_out = os.path.join(path_expt, BASE_NAME_RECONST + name_expt)

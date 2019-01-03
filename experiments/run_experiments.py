@@ -6,7 +6,7 @@ Example run:
 >> python run_experiments.py --type synth \
     -i /mnt/F464B42264B3E590/TEMP/apdDataset_00 \
     -o /mnt/F464B42264B3E590/TEMP/experiments_APD \
-    --nb_jobs 1 
+    --nb_jobs 1
 
 >> python run_experiments.py --type synth \
     -i ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
@@ -26,7 +26,8 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 import os
 import sys
-import gc, time
+import gc
+import time
 import logging
 
 import numpy as np
@@ -120,9 +121,9 @@ def experiment_iterate(params, iter_params, user_gt):
 
 
 def filter_iterable_params(params):
+    _any_special = lambda k: any(x in k for x in SPECIAL_EXPT_PARAMS)
     d_iter = {k: params[k] for k in params
-              if expt_gen.is_iterable(params[k])
-              and not any(x in k for x in SPECIAL_EXPT_PARAMS)}
+              if expt_gen.is_iterable(params[k]) and not _any_special(k)}
     return d_iter
 
 

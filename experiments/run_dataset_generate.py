@@ -62,18 +62,18 @@ def aparse_params():
 
 
 def view_func_params(frame=inspect.currentframe(), path_out=''):
-    """
+    """ view function parameters
 
     :param frame:
-    :param path_out:
-    :return:
+    :param str path_out:
+    :return dict:
 
     >>> view_func_params()  # doctest: +ELLIPSIS
     {...}
     """
     args, _, _, values = inspect.getargvalues(frame)
     logging.info('PARAMETERS: \n%s',
-                '\n'.join('"{}": \t {}'.format(k, values[k]) for k in values))
+                 '\n'.join('"{}": \t {}'.format(k, values[k]) for k in values))
     if os.path.exists(path_out):
         path_json = os.path.join(path_out, NAME_CONFIG)
         with open(path_json, 'w') as fp:
@@ -101,34 +101,34 @@ def generate_all(path_out=DEFAULT_PATH_APD,
     if not os.path.exists(path_out):
         os.mkdir(path_out)
     view_func_params(inspect.currentframe(), path_out)
-    path_dir = lambda d: os.path.join(path_out, d)
+    _path_dir = lambda d: os.path.join(path_out, d)
     # im_dict = dictionary_generate_rnd_pattern()
     im_dict = tl_data.dictionary_generate_atlas(path_out, im_size=atlas_size,
                                                 nb_patterns=nb_patterns)
     assert len(im_dict) > 0, 'dictionary has contain at least one pattern'
 
     im_comb, df_weights = tl_data.dataset_binary_combine_patterns(
-        im_dict, path_dir('datasetBinary_raw'), nb_samples)
+        im_dict, _path_dir('datasetBinary_raw'), nb_samples)
     df_weights.to_csv(os.path.join(path_out, NAME_WEIGHTS))
 
     _warp_ds_apply = partial(tl_data.dataset_apply_image_function,
                              nb_jobs=nb_jobs)
 
-    im_deform = _warp_ds_apply(im_comb, path_dir('datasetBinary_deform'),
-                         tl_data.image_deform_elastic)
-    _warp_ds_apply(im_comb, path_dir('datasetBinary_noise'),
-             tl_data.add_image_binary_noise, NOISE_BINARY)
-    _warp_ds_apply(im_deform, path_dir('datasetBinary_defNoise'),
-             tl_data.add_image_binary_noise, NOISE_BINARY)
+    im_deform = _warp_ds_apply(im_comb, _path_dir('datasetBinary_deform'),
+                               tl_data.image_deform_elastic)
+    _warp_ds_apply(im_comb, _path_dir('datasetBinary_noise'),
+                   tl_data.add_image_binary_noise, NOISE_BINARY)
+    _warp_ds_apply(im_deform, _path_dir('datasetBinary_defNoise'),
+                   tl_data.add_image_binary_noise, NOISE_BINARY)
 
-    im_comb_prob = _warp_ds_apply(im_comb, path_dir('datasetFuzzy_raw'),
-                            tl_data.image_transform_binary2fuzzy, 0.5)
-    im_def_prob = _warp_ds_apply(im_deform, path_dir('datasetFuzzy_deform'),
-                           tl_data.add_image_fuzzy_pepper_noise, 0.5)
-    _warp_ds_apply(im_comb_prob, path_dir('datasetFuzzy_noise'),
-             tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
-    _warp_ds_apply(im_def_prob, path_dir('datasetFuzzy_defNoise'),
-             tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
+    im_comb_prob = _warp_ds_apply(im_comb, _path_dir('datasetFuzzy_raw'),
+                                  tl_data.image_transform_binary2fuzzy, 0.5)
+    im_def_prob = _warp_ds_apply(im_deform, _path_dir('datasetFuzzy_deform'),
+                                 tl_data.add_image_fuzzy_pepper_noise, 0.5)
+    _warp_ds_apply(im_comb_prob, _path_dir('datasetFuzzy_noise'),
+                   tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
+    _warp_ds_apply(im_def_prob, _path_dir('datasetFuzzy_defNoise'),
+                   tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
 
 
 if __name__ == "__main__":

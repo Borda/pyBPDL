@@ -11,7 +11,6 @@ jobs:
           command: |
             sudo apt-get update --fix-missing
             sudo apt-get install tk-dev pkg-config python-dev python-tk
-            unset DISPLAY
       - run:
           name: Install PyPI dependences
           command: |
@@ -22,6 +21,7 @@ jobs:
       - run:
           name: Testing
           command: |
+            unset DISPLAY
             python --version ; pip --version ; pwd ; ls -l
             rm -rf data_images/syntheticDataset_vX
             mkdir results && mkdir test-reports
@@ -30,7 +30,7 @@ jobs:
             python experiments/run_dataset_add_noise.py -p ./data_images
             coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
             coverage report && coverage xml -o test-reports/coverage.xml
-            flake8 bpdl --ignore=E402,W605,E731 --max-line-length=100
+            flake8 . --ignore=E402,E731 --max-line-length=100
 
       - run:
           name: Experiments (pre-processing)

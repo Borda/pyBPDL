@@ -41,11 +41,11 @@ def load_dataset(path_dataset):
     list_imgs = []
     paths_imgs = glob.glob(os.path.join(path_dataset, '*' + DEFAULT_IMG_POSIX))
     reporting = [int((i + 1) * len(paths_imgs) / 5.) for i in range(5)]
-    for path_im in paths_imgs:
+    for j, path_im in enumerate(paths_imgs):
         im = io.imread(path_im)
         list_imgs.append(im / float(np.max(im)))
-        if i in reporting:
-            logging.debug(' -> loaded \t{:3.0%}'.format(i/float(len(paths_imgs))))
+        if j in reporting:
+            logging.debug(' -> loaded \t{:3.0%}'.format(j / float(len(paths_imgs))))
     return list_imgs
 
 
@@ -92,7 +92,7 @@ def bpdl_w_update_param(w_params, uq_params):
         else:
             try:
                 float(uq_params[n][0])
-                vals = ['v_'+str(v) for v in uq_params[n]]
+                vals = ['v_' + str(v) for v in uq_params[n]]
             except Exception:
                 vals = uq_params[n]
             w_params[n].options = dict(zip(vals, uq_params[n]))

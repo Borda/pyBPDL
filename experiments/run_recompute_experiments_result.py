@@ -13,7 +13,8 @@ import sys
 import glob
 import json
 import logging
-import gc, time
+import gc
+import time
 import multiprocessing as mproc
 from functools import partial
 

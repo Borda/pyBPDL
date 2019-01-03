@@ -14,7 +14,7 @@ import nibabel as nib
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from sklearn.cluster import SpectralClustering
 from nilearn.decomposition import CanICA, DictLearning
-from skimage import segmentation, filters
+from skimage import segmentation
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.data_utils as tl_data
@@ -358,7 +358,7 @@ class ExperimentBPDL(expt_gen.Experiment):
             init_atlas = init_atlas.astype(int)
         else:
             logging.error('not supported atlas init "%s"', init_type)
-            raise NotImplemented()
+            raise NotImplementedError()
 
         assert np.max(init_atlas) <= nb_patterns, \
             'init. atlas max=%i and nb labels=%i' % \

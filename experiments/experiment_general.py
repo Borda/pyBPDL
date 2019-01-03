@@ -9,7 +9,6 @@ import os
 import sys
 import time
 import re
-import glob
 import logging
 import argparse
 import shutil
@@ -364,6 +363,7 @@ class Experiment(object):
     main_train class for APD experiments State-of-the-Art and BPDL
 
     SINGLE experiment:
+    >>> import glob
     >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
@@ -374,6 +374,7 @@ class Experiment(object):
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
 
     SEQUENTIAL example:
+    >>> import glob
     >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
@@ -384,6 +385,7 @@ class Experiment(object):
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
 
     PARALLEL example:
+    >>> import glob
     >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS,
@@ -928,7 +930,7 @@ def parse_config_txt(path_config):
         return {}
     with open(path_config, 'r') as fp:
         text = ''.join(fp.readlines())
-    rec = re.compile('"(\S+)":\s+(.*)')
+    rec = re.compile(r'"(\S+)":\s+(.*)')
     dict_config = {n: tl_utils.convert_numerical(v)
                    for n, v in rec.findall(text) if len(v) > 0}
     return dict_config
