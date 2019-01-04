@@ -88,7 +88,7 @@ def parse_results_csv_summary(path_result, cols_sel, func_stat):
     """
     dict_result = {}
     df_res = load_results_csv(path_result, cols_sel)
-    if df_res is None or len(df_res) == 0:
+    if df_res is None or df_res.empty:
         return dict_result
     for col in df_res.columns:
         if df_res[col].dtype == int or df_res[col].dtype == float:

@@ -122,7 +122,7 @@ def test_experiments_postprocessing():
 
     dir_expts = glob.glob(os.path.join(params['path'], '*'))
     # in case the the postporcesing is called before experiment themselves
-    if len([p for p in dir_expts if os.path.isdir(p)]) == 0:
+    if not [p for p in dir_expts if os.path.isdir(p)]:
         test_experiments_soa_synth()
 
     r_parse.parse_experiments(params)
