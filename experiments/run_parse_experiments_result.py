@@ -148,7 +148,7 @@ def parse_experiment_folder(path_expt, params):
         dict_info = json.load(open(path_config, 'r'))
     else:
         dict_info = e_gen.parse_config_txt(path_config)
-    logging.debug(' -> loaded params: %s', repr(dict_info.keys()))
+    logging.debug(' -> loaded params: %r', dict_info.keys())
 
     dict_info.update(count_folders_subdirs(path_expt))
     df_info = pd.DataFrame().from_dict(dict_info, orient='index').T
@@ -162,8 +162,7 @@ def parse_experiment_folder(path_expt, params):
     if len(df_results) == 0:
         return df_results
 
-    logging.debug('  -> results params: %s',
-                  repr(df_results.columns.tolist()))
+    logging.debug('  -> results params: %r', df_results.columns.tolist())
     list_cols = [c for c in df_info.columns
                  if c not in df_results.columns]
     df_infos = pd.concat([df_info[list_cols]] * len(df_results),

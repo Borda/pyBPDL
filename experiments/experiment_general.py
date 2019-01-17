@@ -312,8 +312,7 @@ def string_dict(d, desc='DICTIONARY:', offset=30):
     """
     s = desc + '\n'
     tmp_name = '{:' + str(offset) + 's} {}'
-    rows = [tmp_name.format('"{}":'.format(n), repr(d[n]))
-            for n in sorted(d)]
+    rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
     s += '\n'.join(rows)
     return str(s)
 
@@ -483,8 +482,8 @@ class Experiment(object):
         self._images, self._image_names = tl_data.dataset_load_images(
             self._list_img_paths, nb_jobs=self.params.get('nb_jobs', 1))
         shapes = [im.shape for im in self._images]
-        assert len(set(shapes)) == 1, 'multiple image sizes found: %s' \
-                                      % repr(collections.Counter(shapes))
+        assert len(set(shapes)) == 1, 'multiple image sizes found: %r' \
+                                      % collections.Counter(shapes)
 
     def __load_data(self, gt=True):
         """ load all required data for APD and also ground-truth if required
@@ -562,13 +561,13 @@ class Experiment(object):
         for d_params in self.iter_params:
             # self.params.update(d_params)
             tqdm_bar.set_description(d_params.get('param_idx', ''))
-            logging.debug(' -> set iterable %s', repr(d_params))
+            logging.debug(' -> set iterable %r', d_params)
 
             detail = self._perform_once(d_params)
 
             self.df_results = self.df_results.append(detail, ignore_index=True)
             # just partial export
-            logging.debug('partial results: %s', repr(detail))
+            logging.debug('partial results: %r', detail)
             tqdm_bar.update()
 
     def __perform_sequence_parellel(self, nb_jobs):
@@ -584,7 +583,7 @@ class Experiment(object):
         pool = tl_utils.NDPool(nb_jobs)
         for detail in pool.imap_unordered(self._perform_once, self.iter_params):
             self.df_results = self.df_results.append(detail, ignore_index=True)
-            logging.debug('partial results: %s', repr(detail))
+            logging.debug('partial results: %r', detail)
             # just partial export
             tqdm_bar.update()
         pool.close()
@@ -625,23 +624,22 @@ class Experiment(object):
             t = time.time()
             atlas, weights, extras = self._estimate_atlas_weights(images, detail)
             detail['time'] = time.time() - t
-        except Exception:  # todo, optionaly remove this try/catch
-            logging.exception('FAIL estimate atlas for %s with %s',
-                              str(self.__class__), repr(detail))
+        except Exception:  # todo, optionally remove this try/catch
+            logging.exception('FAIL estimate atlas for %r with %r', self.__class__, detail)
             atlas = np.zeros_like(self._images[0])
             weights = np.zeros((len(self._images), 0))
             extras = None
             detail['time'] = -0.
 
-        logging.debug('estimated atlas of size %s and labels %s',
-                      repr(atlas.shape), repr(np.unique(atlas).tolist()))
+        logging.debug('estimated atlas of size %r and labels %r', atlas.shape,
+                      np.unique(atlas).tolist())
 
         weights_all = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
                        for img in self._images]
         weights_all = np.array(weights_all)
 
-        logging.debug('estimated weights of size %s and summing %s',
-                      repr(weights_all.shape), repr(np.sum(weights_all, axis=0)))
+        logging.debug('estimated weights of size %r and summing %r',
+                      weights_all.shape, np.sum(weights_all, axis=0))
 
         self._export_atlas(atlas, suffix=detail['name_suffix'])
         self._export_coding(weights_all, suffix=detail['name_suffix'])
@@ -768,7 +766,7 @@ class Experiment(object):
             with open(self._path_stat, 'a') as fp:
                 fp.write('\n' * 3 + 'RESULTS: \n' + '=' * 9)
                 fp.write('\n{}'.format(df_stat))
-            logging.debug('statistic: \n%s', repr(df_stat))
+            logging.debug('statistic: \n%r', df_stat)
 
 # =============================================================================
 # =============================================================================

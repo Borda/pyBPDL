@@ -33,13 +33,11 @@ def compare_atlas_rnd_pairs(a1, a2, rand_seed=None):
     >>> round(compare_atlas_rnd_pairs(atlas1, atlas2, rand_seed=0), 5)
     0.37143
     """
-    logging.debug('comparing two atlases of shapes %s <-> %s',
-                  repr(a1.shape), repr(a2.shape))
-    assert a1.shape == a2.shape, 'shapes: %s and %s' \
-                                 % (repr(a1.shape), repr(a2.shape))
+    logging.debug('comparing two atlases of shapes %r <-> %r', a1.shape, a2.shape)
+    assert a1.shape == a2.shape, 'shapes: %r and %r' % (a1.shape, a2.shape)
     np.random.seed(rand_seed)
-    logging.debug('unique labels are %s and %s', repr(np.unique(a1).tolist()),
-                  repr(np.unique(a2).tolist()))
+    logging.debug('unique labels are %r and %r',
+                  np.unique(a1).tolist(), np.unique(a2).tolist())
     matrix_x, matrix_y = np.meshgrid(range(a1.shape[0]), range(a1.shape[1]))
     vec_x, vec_y = matrix_x.flatten(), matrix_y.flatten()
     vec_x_perm = np.random.permutation(vec_x)
@@ -73,8 +71,7 @@ def compare_atlas_adjusted_rand(a1, a2):
     >>> compare_atlas_adjusted_rand(atlas1, atlas2) #doctest: +ELLIPSIS
     0.656...
     """
-    assert a1.shape == a2.shape, 'shapes: %s and %s' \
-                                 % (repr(a1.shape), repr(a2.shape))
+    assert a1.shape == a2.shape, 'shapes: %r and %r' % (a1.shape, a2.shape)
     ars = metrics.adjusted_rand_score(a1.ravel(), a2.ravel())
     res = 1. - abs(ars)
     return res
@@ -104,10 +101,9 @@ def compute_labels_overlap_matrix(seg1, seg2):
            [ 2,  0,  0, 12],
            [ 9,  6,  0,  0]])
     """
-    logging.debug('computing overlap of two seg_pipe of shapes %s <-> %s',
-                  repr(seg1.shape), repr(seg2.shape))
-    assert seg1.shape == seg2.shape, 'shapes: %s and %s' \
-                                     % (repr(seg1.shape), repr(seg2.shape))
+    logging.debug('computing overlap of two seg_pipe of shapes %r <-> %r',
+                  seg1.shape, seg2.shape)
+    assert seg1.shape == seg2.shape, 'shapes: %r and %r' % (seg1.shape, seg2.shape)
     maxims = [np.max(seg1) + 1, np.max(seg2) + 1]
     overlap = np.zeros(maxims, dtype=int)
     for i in range(seg1.shape[0]):
@@ -136,8 +132,7 @@ def compare_matrices(m1, m2):
     >>> compare_matrices(seg1, seg2) # doctest: +ELLIPSIS
     0.819...
     """
-    assert m1.shape == m2.shape, 'shapes: %s and %s' \
-                                 % (repr(m1.shape), repr(m2.shape))
+    assert m1.shape == m2.shape, 'shapes: %r and %r' % (m1.shape, m2.shape)
     diff = np.sum(abs(m1 - m2))
     return diff / float(np.product(m1.shape))
 
@@ -200,7 +195,7 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
            [0, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
     assert seg_ref.shape == seg_relabel.shape, \
-        'shapes: %s and %s' % (repr(seg_ref.shape), repr(seg_relabel.shape))
+        'shapes: %r and %r' % (seg_ref.shape, seg_relabel.shape)
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
 
     lut = [-1] * (np.max(seg_relabel) + 1)
@@ -275,7 +270,7 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
            [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
     assert seg_ref.shape == seg_relabel.shape, \
-        'shapes: %s and %s' % (repr(seg_ref.shape), repr(seg_relabel.shape))
+        'shapes: %r and %r' % (seg_ref.shape, seg_relabel.shape)
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
     # ref_ptn_size = np.bincount(seg_ref.ravel())
     # overlap = overlap.astype(float) \
@@ -330,17 +325,16 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     """
     y_pred = np.array(y_pred)
     assert y_true.shape == y_pred.shape, \
-        'shapes: %s and %s' % (repr(y_true.shape), repr(y_pred.shape))
+        'shapes: %r and %r' % (y_true.shape, y_pred.shape)
     uq_y_true = np.unique(y_true)
-    logging.debug('unique lbs true: %s, predict %s',
-                  repr(uq_y_true), repr(np.unique(y_pred)))
+    logging.debug('unique lbs true: %r, predict %r', uq_y_true, np.unique(y_pred))
 
     # in case the are just two classes relabel them as [0, 1] only
     # solving sklearn error:
     #  "ValueError: pos_label=1 is not a valid label: array([  0, 255])"
     if np.array_equal(sorted(uq_y_true), sorted(np.unique(y_pred))) \
             and len(uq_y_true) <= 2:
-        logging.debug('relabeling original %s to [0, 1]', repr(uq_y_true))
+        logging.debug('relabeling original %r to [0, 1]', uq_y_true)
         lut = np.zeros(uq_y_true.max() + 1)
         if len(uq_y_true) == 2:
             lut[uq_y_true[1]] = 1

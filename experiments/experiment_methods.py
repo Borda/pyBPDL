@@ -364,8 +364,7 @@ class ExperimentBPDL(expt_gen.Experiment):
             'init. atlas max=%i and nb labels=%i' % \
             (int(np.max(init_atlas)), nb_patterns)
         assert init_atlas.shape == im_size, \
-            'init atlas: %s & img size: %s' % \
-            (repr(init_atlas.shape), repr(im_size))
+            'init atlas: %r & img size: %r' % (init_atlas.shape, im_size)
         assert init_atlas.dtype == np.int, 'type: %s' % init_atlas.dtype
         if len(np.unique(init_atlas)) == 1:
             logging.warning('atlas init type "%s" failed '

@@ -269,9 +269,9 @@ def filter_df_results_4_plotting(df_select, iter_var='nb_labels',
             dict_samples[v][v1] = nb_samples
             df_res = df_res.append(d, ignore_index=True)
     # df_res = df_res.set_index('class')
-    logging.info('number of rows: %i columns: %s', len(df_res),
-                 repr(df_res.columns.tolist()))
-    logging.info('over samples: %s', repr(dict_samples))
+    logging.info('number of rows: %i columns: %r', len(df_res),
+                 df_res.columns.tolist())
+    logging.info('over samples: %r', dict_samples)
     return df_res, dict_samples
 
 

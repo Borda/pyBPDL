@@ -79,12 +79,12 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
 
     labeling_sum = ptn_atlas.compute_positive_cost_images_weights(imgs, ptn_weights)
     unary_cost = np.array(-1 * labeling_sum, dtype=np.int32)
-    logging.debug('graph unaries potentials %s: \n %s', repr(unary_cost.shape),
-                  repr(zip(np.histogram(unary_cost, bins=10))))
+    logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape,
+                  list(zip(np.histogram(unary_cost, bins=10))))
     # original and the right way..
     pairwise = (1 - np.eye(labeling_sum.shape[-1])) * coef
     pairwise_cost = np.array(pairwise, dtype=np.int32)
-    logging.debug('graph pairwise coefs %s', repr(pairwise_cost.shape))
+    logging.debug('graph pairwise coefs %r', pairwise_cost.shape)
     # run GraphCut
     try:
         labels = cut_grid_graph_simple(unary_cost, pairwise_cost,
@@ -94,7 +94,7 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
     labels = labels.reshape(labeling_sum.shape[:2])
-    logging.debug('resulting labelling %s: \n %s', repr(labels.shape), repr(labels))
+    logging.debug('resulting labelling %r: \n %r', labels.shape, labels)
     return labels
 
 
@@ -138,21 +138,21 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
     # u_cost = 1. / (labelingSum +1)
     unary_cost = np.array(u_cost, dtype=np.float64)
     unary_cost = unary_cost.reshape(-1, u_cost.shape[-1])
-    logging.debug('graph unaries potentials %s: \n %s', repr(unary_cost.shape),
-                  repr(zip(np.histogram(unary_cost, bins=10))))
+    logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape,
+                  list(zip(np.histogram(unary_cost, bins=10))))
 
     edges, edge_weights = ptn_atlas.edges_in_image2d_plane(u_cost.shape[:-1], connect_diag)
 
     # original and the right way...
     pairwise = (1 - np.eye(u_cost.shape[-1])) * coef
     pairwise_cost = np.array(pairwise, dtype=np.float64)
-    logging.debug('graph pairwise coefs %s', repr(pairwise_cost.shape))
+    logging.debug('graph pairwise coefs %r', pairwise_cost.shape)
 
     if init_atlas is None:
         init_labels = np.argmin(unary_cost, axis=1)
     else:
         init_labels = init_atlas.ravel()
-    logging.debug('graph initial labels of shape %s', repr(init_labels.shape))
+    logging.debug('graph initial labels of shape %r', init_labels.shape)
 
     # run GraphCut
     try:
@@ -164,7 +164,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
     labels = labels.reshape(u_cost.shape[:2])
-    logging.debug('resulting labelling %s of %s', repr(labels.shape),
+    logging.debug('resulting labelling %r of %r', labels.shape,
                   np.unique(labels).tolist())
     return labels
 
@@ -298,8 +298,8 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     atlas = init_atlas
     w_bins = init_weights
     if len(np.unique(atlas)) == 1:
-        logging.error('the init. atlas does not contain any label... %s',
-                      repr(np.unique(atlas)))
+        logging.error('the init. atlas does not contain any label... %r',
+                      np.unique(atlas))
     export_visual_atlas(0, out_dir, atlas, out_prefix)
     return atlas, w_bins
 
@@ -382,7 +382,7 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=int32)
     """
     if np.sum(w_bins) == 0:
-        logging.warning('the w_bins is empty... %s', repr(np.unique(atlas)))
+        logging.warning('the w_bins is empty... %r', np.unique(atlas))
     w_bins = np.array(w_bins)
 
     logging.debug('... perform Atlas estimation')
@@ -508,8 +508,8 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
 
     for it in range(max_iter):
         if len(np.unique(atlas)) == 1:
-            logging.warning('.. iter: %i, no labels in the atlas %s', it,
-                            repr(np.unique(atlas).tolist()))
+            logging.warning('.. iter: %i, no labels in the atlas %r', it,
+                            np.unique(atlas).tolist())
         times = [time.time()]
         # 1: update WEIGHTS
         w_bins = bpdl_update_weights(imgs_warped, atlas, overlap_major)
@@ -554,9 +554,9 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
 
     logging.debug('BPDL: terminated with iter %i / %i and step diff %f <? %f',
                   len(list_diff), max_iter, list_diff[-1], tol)
-    logging.debug('criterion evolved:\n %s', repr(list_diff))
+    logging.debug('criterion evolved:\n %r', list_diff)
     df_time = pd.DataFrame(list_times)
-    logging.debug('measured time: \n%s', repr(df_time))
+    logging.debug('measured time: \n%r', df_time)
     logging.debug('times: \n%s', df_time.describe())
 
     return atlas, np.array(w_bins), deforms
@@ -618,7 +618,7 @@ def show_simple_case(atlas, imgs, ws):
     # implement simple case just with 2 images and 2/3 classes in atlas
     fig, axarr = plt.subplots(2, len(imgs) + 2)
 
-    plt.title('w: {}'.format(repr(ws)))
+    plt.title('w: %s' % repr(ws))
     axarr[0, 0].set_title('atlas')
     cm = plt.cm.get_cmap('jet', len(np.unique(atlas)))
     im = axarr[0, 0].imshow(atlas, cmap=cm, interpolation='nearest')
@@ -630,7 +630,7 @@ def show_simple_case(atlas, imgs, ws):
 
     t = time.time()
     uc = ptn_atlas.compute_relative_penalty_images_weights(imgs, np.array(ws))
-    logging.info('elapsed TIME: %s', repr(time.time() - t))
+    logging.info('elapsed TIME: %f', time.time() - t)
     res = estimate_atlas_graphcut_general(imgs, np.array(ws), 0.)
 
     axarr[0, -1].set_title('result')

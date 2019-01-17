@@ -174,7 +174,7 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     img_mean = np.mean(np.asarray(mean_imgs), axis=0)
     tl_data.export_image(path_out, img_mean, 'mean_image')
 
-    logging.info('original image size: %s', repr(img_mean.shape))
+    logging.info('original image size: %r', img_mean.shape)
     # bbox = find_min_bbox_cumul_sum(img_mean, params['threshold'])
     if params['thr_method'] == 'line-grad':
         bbox = find_min_bbox_grad(img_mean)
@@ -185,7 +185,7 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     else:
         bbox = find_min_bbox_cumul_sum(img_mean, params['threshold'])
     d_bbox = export_bbox_json(path_out, bbox)
-    logging.info('found BBox: %s', repr(d_bbox))
+    logging.info('found BBox: %r', d_bbox)
 
     _cut_export = partial(export_cut_image, d_bbox=d_bbox, path_out=path_out)
     list(utils.wrap_execute_sequence(_cut_export, list_img_paths,

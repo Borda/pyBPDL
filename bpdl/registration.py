@@ -239,8 +239,7 @@ def warp2d_apply_deform_field(img, deform, method='linear'):
     assert img.ndim == 2, 'expected only 2D image'
     assert deform.ndim == 3, 'expected only 2D deformation'
     assert img.shape == deform.shape[:-1], \
-        'image %s and deform %s size should match' \
-        % (repr(img.shape), repr(deform.shape))
+        'image %r and deform %r size should match' % (img.shape, deform.shape)
     grid_x, grid_y = np.mgrid[0:img.shape[0], 0:img.shape[1]]
     deform_x = deform[..., 0]
     deform_y = deform[..., 1]
@@ -435,8 +434,7 @@ def subtract_mean_deform(list_deform, name):
 class SmoothSymmetricDiffeomorphicRegistration(SymmetricDiffeomorphicRegistration):
 
     def __init__(self, metric, smooth_sigma=0.5, **kwargs):
-        super(SmoothSymmetricDiffeomorphicRegistration, self).__init__(metric,
-                                                                       **kwargs)
+        super(SmoothSymmetricDiffeomorphicRegistration, self).__init__(metric, **kwargs)
         self.smooth_sigma = smooth_sigma
 
     def update(self, current_displacement, new_displacement,

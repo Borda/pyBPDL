@@ -115,7 +115,7 @@ def parse_experiment_folder(path_expt, params):
     assert path_config.endswith('.json'), '%s' % path_config
     assert os.path.exists(path_config), 'missing config: %s' % path_config
     dict_info = json.load(open(path_config, 'r'))
-    logging.debug(' -> loaded params: %s', repr(dict_info.keys()))
+    logging.debug(' -> loaded params: %r', dict_info.keys())
 
     path_results = os.path.join(path_expt, params['name_results'])
     assert path_results.endswith('.csv'), '%s' % path_results

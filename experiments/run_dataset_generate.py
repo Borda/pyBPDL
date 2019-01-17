@@ -56,7 +56,7 @@ def aparse_params():
                         help='number of processes in parallel')
     args = parser.parse_args()
     assert len(args.image_size) == 2 or len(args.image_size) == 3, \
-        'unsupported image dimension of %s' % repr(args.image_size)
+        'unsupported image dimension of %r' % args.image_size
     args.path_out = os.path.abspath(os.path.expanduser(args.path_out))
     return args
 

@@ -38,7 +38,7 @@ def init_atlas_random(im_size, nb_patterns, rand_seed=None):
            [3, 4, 1, 2, 2, 2, 4, 1, 4, 3, 1, 4],
            [4, 3, 4, 3, 4, 1, 3, 1, 1, 1, 2, 2]])
     """
-    logging.debug('initialise atlas %s as random labeling', repr(im_size))
+    logging.debug('initialise atlas %r as random labeling', im_size)
     nb_labels = nb_patterns + 1
     # reinit seed to have random samples even in the same time
     np.random.seed(rand_seed)
@@ -110,7 +110,7 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
            [4, 4, 3, 3, 1, 1, 1, 1, 3, 3, 4, 4],
            [4, 4, 3, 3, 1, 1, 2, 2, 4, 4, 2, 2]])
     """
-    logging.debug('initialise atlas %s as grid labeling', repr(im_size))
+    logging.debug('initialise atlas %r as grid labeling', im_size)
     max_label = int(np.ceil(nb_patterns * coef))
     assert max_label > 0, 'at least some labels should be reuested'
     # reinit seed to have random samples even in the same time
@@ -118,15 +118,15 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     block_size = np.ceil(np.array(im_size) / float(max_label))
     block = np.ones(block_size.astype(np.int))
     vec = list(range(max_label))
-    logging.debug('block size is %s', repr(block.shape))
+    logging.debug('block size is %r', block.shape)
     rows = []
     for label in range(0, max_label):
         vec = np.random.permutation(vec)
         row = np.hstack([block.copy() * vec[k] for k in range(max_label)])
         rows.append(row)
     mosaic = np.vstack(rows)
-    logging.debug('generated mosaic %s with labeling %s',
-                  repr(mosaic.shape), repr(np.unique(mosaic).tolist()))
+    logging.debug('generated mosaic %r with labeling %r', mosaic.shape,
+                  np.unique(mosaic).tolist())
     img_init = mosaic[:im_size[0], :im_size[1]]
     img_init = np.remainder(img_init, nb_patterns) + 1
     return np.array(img_init, dtype=np.int)
@@ -168,9 +168,8 @@ def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
            [4, 5, 5, 5, 1, 5, 0, 0, 0, 0, 0, 0],
            [1, 1, 2, 3, 5, 3, 1, 4, 3, 3, 1, 2]])
     """
-    logging.debug('initialise atlas for %i labels from %i images of shape %s '
-                  'with Otsu-Watershed', nb_patterns, len(imgs),
-                  repr(imgs[0].shape))
+    logging.debug('initialise atlas for %i labels from %i images of shape %r'
+                  ' with Otsu-Watershed', nb_patterns, len(imgs), imgs[0].shape)
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
     img_gauss = filters.gaussian(img_sum, 1)
     # http://scikit-image.org/docs/dev/auto_examples/plot_otsu.html
@@ -265,9 +264,8 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    logging.debug('initialise atlas for %i labels from %i images of shape %s '
-                  'with Gauss-Watershed', nb_patterns, len(imgs),
-                  repr(imgs[0].shape))
+    logging.debug('initialise atlas for %i labels from %i images of shape %r'
+                  ' with Gauss-Watershed', nb_patterns, len(imgs), imgs[0].shape)
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
     img_gauss = filters.gaussian(img_sum, 1)
     seeds = detect_peaks(img_gauss)
@@ -736,7 +734,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     if label_max is None:
         label_max = max(np.max(atlas), w_bins.shape[1])
     else:
-        logging.debug('compare w_bin %s to max %i', repr(w_bins.shape), label_max)
+        logging.debug('compare w_bin %r to max %i', w_bins.shape, label_max)
         for i in range(w_bins.shape[1], label_max):
             logging.debug('adding disappeared weigh column %i', i)
             w_bins = np.append(w_bins, np.zeros((w_bins.shape[0], 1)), axis=1)
@@ -747,7 +745,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     atlas_new = atlas.copy()
     labels_empty = [lb for lb in range(1, label_max + 1)
                     if np.sum(w_bins[:, lb - 1]) == 0]
-    logging.debug('reinit. following labels: %s', repr(labels_empty))
+    logging.debug('reinit. following labels: %r', labels_empty)
     for label in labels_empty:
         w_index = label - 1
         imgs_reconst = reconstruct_samples(atlas_new, w_bins)
@@ -792,7 +790,7 @@ def atlas_split_indep_ptn(atlas, label_max):
         # skip the largest one assuming to be background
         patterns += sorted(ptn, key=lambda x: np.sum(x), reverse=True)[1:]
     patterns = sorted(patterns, key=lambda x: np.sum(x), reverse=True)
-    logging.debug('list of all areas %s', repr([np.sum(p) for p in patterns]))
+    logging.debug('list of all areas %r', [np.sum(p) for p in patterns])
     atlas_new = np.zeros(atlas.shape, dtype=np.int)
     # take just label_max largest elements
     for i, ptn in enumerate(patterns[:label_max]):
@@ -804,7 +802,7 @@ def atlas_split_indep_ptn(atlas, label_max):
     # plt.subplot(121), plt.imshow(atlas), plt.colorbar()
     # plt.subplot(122), plt.imshow(atlas_new), plt.colorbar()
     # plt.show()
-    logging.debug('atlas unique %s', repr(np.unique(atlas_new)))
+    logging.debug('atlas unique %r', np.unique(atlas_new))
     return atlas_new
 
 
@@ -844,8 +842,8 @@ def edges_in_image2d_plane(im_size, connect_diag=False):
     assert len(edges) == len(weights), 'the lengths must match'
     edges = np.array(edges)
     weights = np.array(weights)
-    logging.debug('edges for image plane are shape %s', repr(edges.shape))
-    logging.debug('edges weights are shape %s', repr(weights.shape))
+    logging.debug('edges for image plane are shape %r', edges.shape)
+    logging.debug('edges weights are shape %r', weights.shape)
     return edges, weights
 
 
@@ -899,8 +897,8 @@ def compute_relative_penalty_images_weights(imgs, weights):
     weights_ext = np.append(np.zeros((weights.shape[0], 1)), weights, axis=1)
     # logging.debug(weights_ext)
     imgs = np.array(imgs)
-    logging.debug('DIMS potts: %s, imgs %s, w_bin: %s',
-                  repr(pott_sum.shape), repr(imgs.shape), repr(weights_ext.shape))
+    logging.debug('DIMS potts: %r, imgs %r, w_bin: %r',
+                  pott_sum.shape, imgs.shape, weights_ext.shape)
     logging.debug('... walk over all pixels in each image')
     for i in range(pott_sum.shape[0]):
         for j in range(pott_sum.shape[1]):

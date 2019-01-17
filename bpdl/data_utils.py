@@ -209,8 +209,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
     """
-    logging.debug('deform image plane by elastic transform with grid %s',
-                  repr(grid_size))
+    logging.debug('deform image plane by elastic transform with grid %r', grid_size)
     # logging.debug(im.shape)
     im_size = im.shape[-2:]
     tform = create_elastic_deform_2d(im_size, coef, grid_size, rand_seed)
@@ -224,7 +223,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
                     for i in range(im.shape[0])]
         img = np.array(im_stack)
     else:
-        logging.error('not supported image dimension - %s' % repr(im.shape))
+        logging.error('not supported image dimension - %r' % im.shape)
         img = im.copy()
     img = np.array(img, dtype=np.uint8)
     return img
@@ -257,7 +256,7 @@ def frequent_boundary_label(image):
         labels = np.hstack([sl.ravel() for sl in slices])
     else:
         labels = np.array([0])
-        logging.warning('wrong image dimension - %s', repr(image.shape))
+        logging.warning('wrong image dimension - %r', image.shape)
     bg = np.argmax(np.bincount(labels)) \
         if np.issubdtype(image.dtype, np.integer) else np.median(labels)
     return bg
@@ -474,8 +473,8 @@ def atlas_filter_larges_components(atlas):
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0]], dtype=uint8)
     """
     # export to dictionary
-    logging.info('... post-processing over generated patterns: %s',
-                 repr(np.unique(atlas).tolist()))
+    logging.info('... post-processing over generated patterns: %r',
+                 np.unique(atlas).tolist())
     atlas_new = np.zeros(atlas.shape, dtype=np.uint8)
     imgs_patterns = []
     for i, idx in enumerate(np.unique(atlas)[1:]):
@@ -511,8 +510,8 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     >>> imgs_patterns = dictionary_generate_atlas(path_dir)
     >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
-    logging.info('generate Atlas composed from %i patterns and image size %s',
-                 nb_patterns, repr(im_size))
+    logging.info('generate Atlas composed from %i patterns and image size %r',
+                 nb_patterns, im_size)
     out_dir = os.path.join(path_out, dir_name)
     create_clean_folder(out_dir)
     atlas = np.zeros(im_size, dtype=np.uint8)
@@ -528,7 +527,7 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     export_image(out_dir, atlas_def, 'atlas')
     # in case run in DEBUG show atlas and wait till close
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-        logging.debug('labels: %s', repr(np.unique(atlas_def)))
+        logging.debug('labels: %r', np.unique(atlas_def))
         atlas_show = atlas_def if atlas_def.ndim == 2 \
             else atlas_def[int(atlas_def.shape[0] / 2)]
         plt.imshow(atlas_show)
@@ -577,8 +576,8 @@ def dictionary_generate_rnd_pattern(path_out=None,
            [  0,   0,   0,   0,   0,   0,   0,   0]], dtype=uint8)
     >>> shutil.rmtree(p_dir, ignore_errors=True)
     """
-    logging.info('generate Dict. composed from %i patterns and img. size %s',
-                 nb_patterns, repr(im_size))
+    logging.info('generate Dict. composed from %i patterns and img. size %r',
+                 nb_patterns, im_size)
     if path_out is not None:
         path_out = os.path.join(path_out, dir_name)
         create_clean_folder(path_out)
@@ -630,7 +629,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     # if there is non above threshold select one random
     if not any(bool_combine):
         bool_combine[np.random.randint(0, len(bool_combine))] = True
-    logging.debug('combination vector is %s', repr(bool_combine.tolist()))
+    logging.debug('combination vector is %r', bool_combine.tolist())
     im = sum(np.asarray(im_ptns)[bool_combine])
     # convert sum to union such as all above 0 set as 1
     im[im > 0.] = 1
@@ -821,14 +820,14 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     (5, 20, 25)
     >>> os.remove(path_img)
     """
-    assert img.ndim >= 2, 'wrong image dim: %s' % repr(img.shape)
+    assert img.ndim >= 2, 'wrong image dim: %r' % img.shape
     if not os.path.exists(path_out):
         return ''
     if not isinstance(im_name, str):
         im_name = name_template.format(im_name)
     path_img = os.path.join(path_out, im_name)
-    logging.debug(' .. saving image of size %s type %s to "%s"', repr(img.shape),
-                  repr(img.dtype), path_img)
+    logging.debug(' .. saving image of size %r type %r to "%s"',
+                  img.shape, img.dtype, path_img)
     if stretch_range and img.max() > 0:
         img = img / float(img.max()) * 255
     if nifti:
@@ -844,7 +843,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
         # tif = libtiff.TIFF.open(path_img, mode='w')
         # tif.write_image(img_clip.astype(np.uint16))
     else:
-        logging.warning('not supported image format: %s', repr(img.shape))
+        logging.warning('not supported image format: %r', img.shape)
     return path_img
 
 
