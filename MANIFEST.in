@@ -20,9 +20,8 @@ include setup.*
 
 # Exclude build configs
 exclude *.yml
-
-# Exclude tests
-exclude test*.py
+# Exclude testing
+exclude pytest.*
 
 # Include the experiments
 recursive-include experiments *.py
