@@ -580,7 +580,7 @@ class Experiment(object):
         # np.savez(open(p_imgs, 'w'), imgs=self._images)
 
         tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
-        pool = tl_utils.NDPool(nb_jobs)
+        pool = tl_utils.NonDaemonPool(nb_jobs)
         for detail in pool.imap_unordered(self._perform_once, self.iter_params):
             self.df_results = self.df_results.append(detail, ignore_index=True)
             logging.debug('partial results: %r', detail)
