@@ -5,6 +5,8 @@
 
 # See doc/travis_notes.txt for some guidelines
 
+dist: xenial  # Ubuntu 16.04
+
 env:
   global:
     - CODACY_PROJECT_TOKEN=42d27066ead74eee9a090cae97328777
