@@ -12,7 +12,7 @@ import shutil
 import warnings
 import itertools
 import multiprocessing as mproc
-from functools import partial
+from functools import partial, wraps
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
@@ -87,6 +87,7 @@ def io_image_decorate(func):
     :param func:
     :return:
     """
+    @wraps(func)
     def wrap(*args, **kwargs):
         log_level = logging.getLogger().getEffectiveLevel()
         logging.getLogger().setLevel(logging.INFO)

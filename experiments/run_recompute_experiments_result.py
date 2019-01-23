@@ -103,6 +103,7 @@ def export_atlas_both(atlas_gt, atlas, path_out_img, fig_size=FIGURE_SIZE):
     plt.close(fig)
 
 
+@utils.try_decorator
 def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
@@ -167,14 +168,6 @@ def parse_experiment_folder(path_expt, params):
     gc.collect(), time.sleep(1)
 
 
-def try_parse_folder(path_expt, params):
-    """ just a wrapper to cover all paring as try  """
-    try:
-        parse_experiment_folder(path_expt, params)
-    except Exception:
-        logging.exception('parse_experiment_folder')
-
-
 def parse_experiments(params):
     """ with specific input parameters wal over result folder and parse it
 
@@ -189,8 +182,7 @@ def parse_experiments(params):
                  if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
 
-    _wrapper_parse_folder = partial(try_parse_folder,
-                                    params=params)
+    _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
     list(utils.wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_jobs))
 
 

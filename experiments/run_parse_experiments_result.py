@@ -134,6 +134,7 @@ def load_multiple_results(path_expt, func_stat, params):
     return df_results
 
 
+@utils.try_decorator
 def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
@@ -172,22 +173,6 @@ def parse_experiment_folder(path_expt, params):
     return df_results
 
 
-def try_parse_experiment_folder(path_expt, params):
-    """
-
-    :param str path_expt:
-    :param params: {str: ...}
-    :return:
-    """
-    try:
-        df_folder = parse_experiment_folder(path_expt, params)
-    except Exception:
-        logging.exception('no data extracted from folder %s',
-                          os.path.basename(path_expt))
-        df_folder = None
-    return df_folder
-
-
 def append_df_folder(df_all, df_folder):
     try:
         # df = pd.concat([df, df_folder], ignore_index=True)
@@ -213,7 +198,7 @@ def parse_experiments(params):
                  if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
 
-    _wrapper_parse_folder = partial(try_parse_experiment_folder, params=params)
+    _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
     for df_folder in utils.wrap_execute_sequence(_wrapper_parse_folder,
                                                  path_dirs, nb_jobs):
         df_all = append_df_folder(df_all, df_folder)

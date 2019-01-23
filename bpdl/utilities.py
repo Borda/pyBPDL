@@ -9,6 +9,7 @@ import re
 import logging
 import multiprocessing.pool
 import multiprocessing as mproc
+from functools import wraps
 
 import tqdm
 import numpy as np
@@ -268,3 +269,18 @@ def estimate_max_circle(point, direction, points, max_diam=1000, step_tol=1e-3):
             diam_min = diam
 
     return np.mean([diam_min, diam_max])
+
+
+def try_decorator(func):
+    """ costume decorator to wrap function in try/except
+
+    :param func:
+    :return:
+    """
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            logging.exception('%r with %r and %r', func.__name__, args, kwargs)
+    return wrap
