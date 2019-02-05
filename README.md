@@ -224,7 +224,7 @@ Since we have a results in form of estimated atlas and encoding (binary weights)
 ```bash
 python experiments/run_reconstruction.py \
     -e ./results/ExperimentBPDL_real_imaginal_disc_gene_small \
-    --nb_jobs 1 --visual
+    --nb_workers 1 --visual
 ```
 
 ![reconstruction](figures/reconst_imag-disc.png)

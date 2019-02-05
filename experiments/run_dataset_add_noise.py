@@ -67,14 +67,14 @@ def add_noise_image(img_name, path_in, path_out, noise_level):
 
 
 def dataset_add_noise(path_in, path_out, noise_level,
-                      img_pattern=IMAGE_PATTERN, nb_jobs=NB_THREADS):
+                      img_pattern=IMAGE_PATTERN, nb_workers=NB_THREADS):
     """
 
     :param str path_in:
     :param str path_out:
     :param float noise_level:
     :param str img_pattern:
-    :param int nb_jobs:
+    :param int nb_workers:
     """
     logging.info('starting adding noise %f', noise_level)
     assert os.path.exists(path_in), 'missing: %s' % path_in
@@ -95,7 +95,7 @@ def dataset_add_noise(path_in, path_out, noise_level,
 
     _wrapper_noise = partial(add_noise_image, path_in=path_in,
                              path_out=path_out, noise_level=noise_level)
-    list(utils.wrap_execute_sequence(_wrapper_noise, name_imgs, nb_jobs))
+    list(utils.wrap_execute_sequence(_wrapper_noise, name_imgs, nb_workers))
 
     logging.info('DONE')
 

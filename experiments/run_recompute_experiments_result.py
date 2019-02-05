@@ -176,14 +176,14 @@ def parse_experiments(params):
     logging.info('running recompute Experiments results')
     logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
-    nb_jobs = params.get('nb_jobs', NB_THREADS)
+    nb_workers = params.get('nb_workers', NB_THREADS)
 
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
                  if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
-    list(utils.wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_jobs))
+    list(utils.wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_workers))
 
 
 if __name__ == '__main__':

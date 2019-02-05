@@ -116,38 +116,38 @@ class NonDaemonPool(multiprocessing.pool.Pool):
         return proc
 
 
-def wrap_execute_sequence(wrap_func, iterate_vals, nb_jobs=NB_THREADS,
+def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
                           desc='', ordered=False):
     """ wrapper for execution parallel of single thread as for...
 
     :param wrap_func: function which will be excited in the iterations
     :param [] iterate_vals: list or iterator which will ide in iterations
-    :param int nb_jobs: number og jobs running in parallel
+    :param int nb_workers: number og jobs running in parallel
     :param str desc: description for the bar,
         if it is set None, bar is suppressed
     :param bool ordered: whether enforce ordering in the parallelism
 
     >>> [o for o in wrap_execute_sequence(lambda x: x ** 2, range(5),
-    ...                                   nb_jobs=1, ordered=True)]
+    ...                                   nb_workers=1, ordered=True)]
     [0, 1, 4, 9, 16]
     >>> [o for o in wrap_execute_sequence(sum, [[0, 1]] * 5,
-    ...                                   nb_jobs=2, desc=None)]
+    ...                                   nb_workers=2, desc=None)]
     [1, 1, 1, 1, 1]
     """
     iterate_vals = list(iterate_vals)
 
     if desc is not None:
-        desc = '%s @%i-threads' % (desc, nb_jobs)
+        desc = '%s @%i-threads' % (desc, nb_workers)
         tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
     else:
         tqdm_bar = None
 
-    if nb_jobs > 1:
-        logging.debug('perform sequential in %i threads', nb_jobs)
+    if nb_workers > 1:
+        logging.debug('perform sequential in %i threads', nb_workers)
         # Standard mproc.Pool created a demon processes which can be called
         # inside its children, cascade or multiprocessing
         # https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic
-        pool = NonDaemonPool(nb_jobs)
+        pool = NonDaemonPool(nb_workers)
         pooling = pool.imap if ordered else pool.imap_unordered
 
         for out in pooling(wrap_func, iterate_vals):

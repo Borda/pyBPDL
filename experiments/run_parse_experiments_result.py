@@ -68,7 +68,7 @@ def parse_arg_params(params):
                         help='important columns from results')
     parser.add_argument('-f', '--func_stat', type=str, required=False,
                         help='type od stat over results', default='none')
-    parser.add_argument('--nb_jobs', type=int, required=False,
+    parser.add_argument('--nb_workers', type=int, required=False,
                         default=NB_THREADS,
                         help='number of jobs running in parallel')
 
@@ -191,7 +191,7 @@ def parse_experiments(params):
     logging.info('running parse Experiments results')
     logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.isdir(params['path']), 'missing "%s"' % params['path']
-    nb_jobs = params.get('nb_jobs', NB_THREADS)
+    nb_workers = params.get('nb_workers', NB_THREADS)
 
     df_all = pd.DataFrame()
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
@@ -200,7 +200,7 @@ def parse_experiments(params):
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
     for df_folder in utils.wrap_execute_sequence(_wrapper_parse_folder,
-                                                 path_dirs, nb_jobs):
+                                                 path_dirs, nb_workers):
         df_all = append_df_folder(df_all, df_folder)
 
     if isinstance(params['name_results'], list):

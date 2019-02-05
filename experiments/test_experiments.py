@@ -20,7 +20,7 @@ import experiments.run_recompute_experiments_result as r_recomp
 PARAMS_TEST_SYNTH_UPDATE = {
     # 'dataset': tl_data.DEFAULT_NAME_DATASET,
     'max_iter': 5,
-    'nb_jobs': e_gen.NB_THREADS,
+    'nb_workers': e_gen.NB_THREADS,
 }
 
 
@@ -98,7 +98,7 @@ def test_experiments_bpdl(dict_params=r_expt.SYNTH_PARAMS):
         'init_tp': 'random',
         'gc_reinit': not params['gc_reinit'],
         'ptn_compact': not params['ptn_compact'],
-        'nb_jobs': 1,
+        'nb_workers': 1,
     })
 
     logging.info('RUN: ExperimentBPDL-parallel')
@@ -116,7 +116,7 @@ def test_experiments_postprocessing():
         'type': 'synth',
         'name_results': [e_gen.RESULTS_CSV],
         'name_config': e_gen.CONFIG_JSON,
-        'nb_jobs': 2,
+        'nb_workers': 2,
         'path': tl_data.update_path('results')
     }
 
@@ -131,7 +131,7 @@ def test_experiments_postprocessing():
     r_recomp.parse_experiments(params)
 
     name_res = os.path.splitext(e_gen.RESULTS_CSV)[0]
-    params.update({'name_results': [name_res + '_NEW.csv'], 'nb_jobs': 1})
+    params.update({'name_results': [name_res + '_NEW.csv'], 'nb_workers': 1})
     r_parse.parse_experiments(params)
 
 

@@ -74,7 +74,7 @@ def extract_activation(path_img, path_out):
     tl_data.export_image(path_out, im_gene, name)
 
 
-def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
+def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     assert os.path.isdir(os.path.dirname(path_pattern_in)), \
         'missing: %s' % path_pattern_in
     assert os.path.isdir(os.path.dirname(path_out)), \
@@ -88,7 +88,7 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     logging.info('found images: %i', len(list_img_paths))
 
     _wrapper_extract = partial(extract_activation, path_out=path_out)
-    list(utils.wrap_execute_sequence(_wrapper_extract, list_img_paths, nb_jobs))
+    list(utils.wrap_execute_sequence(_wrapper_extract, list_img_paths, nb_workers))
 
 
 if __name__ == '__main__':
@@ -97,6 +97,6 @@ if __name__ == '__main__':
 
     params = r_cut.args_parse_params(PARAMS)
     main(params['path_in'], params['path_out'],
-         nb_jobs=params['nb_jobs'])
+         nb_workers=params['nb_workers'])
 
     logging.info('DONE')

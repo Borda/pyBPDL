@@ -51,7 +51,7 @@ def aparse_params():
     parser.add_argument('--image_size', type=int, required=False, nargs='+',
                         default=IMAGE_SIZE[DATASET_TYPE],
                         help='dimensions of generated images in axis Z, X, Y')
-    parser.add_argument('--nb_jobs', type=int, required=False,
+    parser.add_argument('--nb_workers', type=int, required=False,
                         default=NB_THREADS,
                         help='number of processes in parallel')
     args = parser.parse_args()
@@ -85,7 +85,7 @@ def generate_all(path_out=DEFAULT_PATH_APD,
                  atlas_size=IMAGE_SIZE[DATASET_TYPE],
                  nb_patterns=NB_ATM_PATTERNS,
                  nb_samples=NB_SAMPLES,
-                 nb_jobs=NB_THREADS):
+                 nb_workers=NB_THREADS):
     """ generate complete dataset containing dictionary od patterns and also
     input binary / fuzzy images with geometrical deformation and random noise
 
@@ -112,7 +112,7 @@ def generate_all(path_out=DEFAULT_PATH_APD,
     df_weights.to_csv(os.path.join(path_out, NAME_WEIGHTS))
 
     _warp_ds_apply = partial(tl_data.dataset_apply_image_function,
-                             nb_jobs=nb_jobs)
+                             nb_workers=nb_workers)
 
     im_deform = _warp_ds_apply(im_comb, _path_dir('datasetBinary_deform'),
                                tl_data.image_deform_elastic)
@@ -140,7 +140,7 @@ if __name__ == "__main__":
                  atlas_size=params.image_size,
                  nb_patterns=params.nb_patterns,
                  nb_samples=params.nb_samples,
-                 nb_jobs=params.nb_jobs)
+                 nb_workers=params.nb_workers)
 
     # test_Ellipse()
 

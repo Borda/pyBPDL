@@ -145,7 +145,7 @@ def create_args_parser(dict_params, methods):
     parser.add_argument('-p', '--nb_patterns', type=int, required=False,
                         nargs='+', help='numbers of estimated patterns',
                         default=None)
-    parser.add_argument('--nb_jobs', type=int, required=False,
+    parser.add_argument('--nb_workers', type=int, required=False,
                         help='number of processes running in parallel',
                         default=NB_THREADS)
     parser.add_argument('--method', type=str, required=False, nargs='+',
@@ -388,7 +388,7 @@ class Experiment(object):
     >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS,
-    ...           'nb_jobs': 2}
+    ...           'nb_workers': 2}
     >>> expt = Experiment(params, time_stamp=False)
     >>> expt.run(gt=False, iter_params=[{'r': 0}, {'r': 1}])
     >>> len(glob.glob(os.path.join(PATH_RESULTS, 'Experiment__*')))
@@ -480,7 +480,7 @@ class Experiment(object):
     def _load_images(self):
         """ load image data """
         self._images, self._image_names = tl_data.dataset_load_images(
-            self._list_img_paths, nb_jobs=self.params.get('nb_jobs', 1))
+            self._list_img_paths, nb_workers=self.params.get('nb_workers', 1))
         shapes = [im.shape for im in self._images]
         assert len(set(shapes)) == 1, 'multiple image sizes found: %r' \
                                       % collections.Counter(shapes)
@@ -543,9 +543,9 @@ class Experiment(object):
         """ perform experiment as sequence of iterated configurations """
         if is_list_like(self.iter_params):
             logging.info('iterate over %i configurations', len(self.iter_params))
-            nb_jobs = self.params.get('nb_jobs', 1)
-            if nb_jobs > 1:
-                self.__perform_sequence_parellel(nb_jobs)
+            nb_workers = self.params.get('nb_workers', 1)
+            if nb_workers > 1:
+                self.__perform_sequence_parellel(nb_workers)
             else:
                 self.__perform_sequence_serial()
         else:
@@ -570,17 +570,17 @@ class Experiment(object):
             logging.debug('partial results: %r', detail)
             tqdm_bar.update()
 
-    def __perform_sequence_parellel(self, nb_jobs):
+    def __perform_sequence_parellel(self, nb_workers):
         """ perform sequence in multiprocessing pool """
         logging.debug('perform_sequence in %i threads for %i values',
-                      nb_jobs, len(self.iter_params))
+                      nb_workers, len(self.iter_params))
         # ISSUE with passing large date to processes so the images are saved
         # and loaded in particular process again
         # p_imgs = os.path.join(self.params.get('path_exp'), 'input_images.npz')
         # np.savez(open(p_imgs, 'w'), imgs=self._images)
 
         tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
-        pool = tl_utils.NonDaemonPool(nb_jobs)
+        pool = tl_utils.NonDaemonPool(nb_workers)
         for detail in pool.imap_unordered(self._perform_once, self.iter_params):
             self.df_results = self.df_results.append(detail, ignore_index=True)
             logging.debug('partial results: %r', detail)

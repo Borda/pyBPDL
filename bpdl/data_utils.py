@@ -644,7 +644,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
 
 def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES,
                                     ptn_ration=RND_PATTERN_OCCLUSION,
-                                    nb_jobs=NB_THREADS, rand_seed=None):
+                                    nb_workers=NB_THREADS, rand_seed=None):
     """ generate a Binary dataset composed from N samples and given ration
     of pattern occlusion
 
@@ -653,7 +653,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     :param int nb_samples: number of samples in dataset
     :param float ptn_ration: ration of how many patterns are used to create
         an input observation / image
-    :param int nb_jobs: number of running jobs
+    :param int nb_workers: number of running jobs
     :param rand_seed: random initialization
     :return (ndarray, DF): [np.array<height, width>], df<nb_imgs, nb_lbs>
 
@@ -688,12 +688,12 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     im_spls = [None] * nb_samples
     im_names = [None] * nb_samples
     im_weights = [None] * nb_samples
-    logging.debug('running in %i threads...', nb_jobs)
+    logging.debug('running in %i threads...', nb_workers)
     _wrapper_generate = partial(generate_rand_patterns_occlusion,
                                 im_ptns=im_ptns, out_dir=out_dir,
                                 ptn_ration=ptn_ration, rand_seed=rand_seed)
     for idx, im, im_name, ptn_weights in utils.wrap_execute_sequence(
-            _wrapper_generate, range(nb_samples), nb_jobs):
+            _wrapper_generate, range(nb_samples), nb_workers):
         im_spls[idx] = im
         im_names[idx] = im_name
         im_weights[idx] = ptn_weights
@@ -864,7 +864,7 @@ def wrapper_image_function(i_img, func, coef, out_dir):
 
 
 def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
-                                 nb_jobs=NB_THREADS):
+                                 nb_workers=NB_THREADS):
     """ having list if input images create an dataset with randomly deform set
     of these images and export them to the results folder
 
@@ -872,7 +872,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     :param [np.array<height, width>] imgs: raw input images
     :param str out_dir: path to the results directory
     :param float coef: a param describing the how much it is deformed (0 = None)
-    :param int nb_jobs: number of jobs running in parallel
+    :param int nb_workers: number of jobs running in parallel
     :return ndarray: [np.array<height, width>]
 
     >>> img = np.zeros((10, 5))
@@ -898,10 +898,10 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     create_clean_folder(out_dir)
 
     imgs_new = [None] * len(imgs)
-    logging.debug('running in %i threads...', nb_jobs)
+    logging.debug('running in %i threads...', nb_workers)
     _apply_fn = partial(wrapper_image_function, func=func, coef=coef, out_dir=out_dir)
     for i, im in utils.wrap_execute_sequence(_apply_fn, enumerate(imgs),
-                                             nb_jobs):
+                                             nb_workers):
         imgs_new[i] = im
 
     return imgs_new
@@ -1034,26 +1034,26 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     return paths_img_most
 
 
-def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
+def dataset_load_images(img_paths, nb_spls=None, nb_workers=1):
     """ load complete dataset or just a subset
 
     :param [str] img_paths: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
-    :param int nb_jobs: number of running jobs
+    :param int nb_workers: number of running jobs
     :return ([ndarray], [str]):
     """
     assert all(os.path.exists(p) for p in img_paths)
     img_paths = sorted(img_paths)[:nb_spls]
     logging.debug('number samples %i in dataset', len(img_paths))
-    if nb_jobs > 1:
-        logging.debug('running in %i threads...', nb_jobs)
+    if nb_workers > 1:
+        logging.debug('running in %i threads...', nb_workers)
         nb_load_blocks = len(img_paths) / float(BLOCK_NB_LOAD_IMAGES)
         nb_load_blocks = int(np.ceil(nb_load_blocks))
         logging.debug('estimated %i loading blocks', nb_load_blocks)
         block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
         list_names_imgs = list(utils.wrap_execute_sequence(
-            wrapper_load_images, block_paths_img, nb_jobs=nb_jobs,
+            wrapper_load_images, block_paths_img, nb_workers=nb_workers,
             desc='loading images by blocks'))
 
         logging.debug('transforming the parallel results')
@@ -1210,7 +1210,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
     """
     assert os.path.isdir(path_dir), 'missing atlas directory: %s' % path_dir
     path_imgs = find_images(path_dir, im_pattern=img_temp_name)
-    imgs, _ = dataset_load_images(path_imgs, nb_jobs=1)
+    imgs, _ = dataset_load_images(path_imgs, nb_workers=1)
     assert len(imgs) > 0, 'no patterns in input destination'
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
@@ -1218,22 +1218,22 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
     return np.array(atlas, dtype=np.uint8)
 
 
-def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
+def dataset_export_images(path_out, imgs, names=None, nb_workers=1):
     """ export complete dataset
 
     :param str path_out:
     :param [np.array<height, width>] imgs:
     :param names: [str] or None (use indexes)
-    :param int nb_jobs:
+    :param int nb_workers:
 
     >>> np.random.seed(0)
     >>> images = [np.random.random([15, 10]) for i in range(36)]
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> os.mkdir(path_dir)
-    >>> dataset_export_images(path_dir, images, nb_jobs=2)
+    >>> dataset_export_images(path_dir, images, nb_workers=2)
     >>> path_imgs = find_images(path_dir)
-    >>> _, _ = dataset_load_images(path_imgs, nb_jobs=1)
-    >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=2)
+    >>> _, _ = dataset_load_images(path_imgs, nb_workers=1)
+    >>> imgs, im_names = dataset_load_images(path_imgs, nb_workers=2)
     >>> len(imgs)
     36
     >>> np.round(imgs[0].astype(float), 1)

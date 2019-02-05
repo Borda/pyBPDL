@@ -6,7 +6,7 @@ Example run:
 >> python run_experiments.py --type synth \
     -i /mnt/F464B42264B3E590/TEMP/apdDataset_00 \
     -o /mnt/F464B42264B3E590/TEMP/experiments_APD \
-    --nb_jobs 1
+    --nb_workers 1
 
 >> python run_experiments.py --type synth \
     -i ~/Medical-drosophila/synthetic_data/apdDataset_v1 \

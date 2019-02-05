@@ -6,7 +6,7 @@ the reconstruction error to evaluate the parameters and export visualisation
 EXAMPLE:
 >> python run_reconstruction.py \
     -e ../results/ExperimentBPDL_synth_datasetAPDL_v0_datasetFuzzy_deform \
-    --nb_jobs 2 --visual
+    --nb_workers 2 --visual
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -64,7 +64,7 @@ def parse_arg_params():
                         help='path to the input images', default=None)
     parser.add_argument('-n', '--name_expt', type=str, required=False,
                         default='*', help='name of experiment')
-    parser.add_argument('--nb_jobs', type=int, required=False,
+    parser.add_argument('--nb_workers', type=int, required=False,
                         help='number of processes running in parallel',
                         default=NB_THREADS)
     parser.add_argument('--visual', required=False, action='store_true',
@@ -98,7 +98,7 @@ def get_path_dataset(path, path_imgs=None):
     return path_imgs
 
 
-def load_images(path_images, names, nb_jobs=NB_THREADS):
+def load_images(path_images, names, nb_workers=NB_THREADS):
     if path_images is None or not os.path.isdir(path_images):
         return None
     _name = lambda p: os.path.splitext(os.path.basename(p))[0]
@@ -107,14 +107,14 @@ def load_images(path_images, names, nb_jobs=NB_THREADS):
                       if _name(p) in names]
     logging.debug('found images: %i', len(list_img_paths))
     images, im_names = tl_data.dataset_load_images(list_img_paths,
-                                                   nb_jobs=nb_jobs)
+                                                   nb_workers=nb_workers)
     assert all(names == im_names), \
         'image names from weights and loaded images does not match'
     return images
 
 
 def load_experiment(path_expt, name, path_dataset=None, path_images=None,
-                    nb_jobs=NB_THREADS):
+                    nb_workers=NB_THREADS):
     path_atlas = os.path.join(path_expt, BASE_NAME_ATLAS + name + '.png')
     atlas = tl_data.io_imread(path_atlas)
     if (atlas.max() == 255 or atlas.max() == 1.) and len(np.unique(atlas)) < 128:
@@ -133,8 +133,8 @@ def load_experiment(path_expt, name, path_dataset=None, path_images=None,
     else:
         dict_deforms = None
 
-    segms = load_images(path_dataset, df_weights['image'].values, nb_jobs)
-    images = load_images(path_images, df_weights['image'].values, nb_jobs)
+    segms = load_images(path_dataset, df_weights['image'].values, nb_workers)
+    images = load_images(path_images, df_weights['image'].values, nb_workers)
 
     return atlas, df_weights, dict_deforms, segms, images
 
@@ -210,9 +210,9 @@ def perform_reconstruction(set_variables, atlas, path_out, path_visu=None):
 
 
 def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
-                                path_imgs=None, nb_jobs=NB_THREADS, visual=False):
+                                path_imgs=None, nb_workers=NB_THREADS, visual=False):
     atlas, df_weights, dict_deforms, segms, images = load_experiment(
-        path_expt, name_expt, path_dataset, path_imgs, nb_jobs)
+        path_expt, name_expt, path_dataset, path_imgs, nb_workers)
     df_weights.set_index('image', inplace=True)
 
     path_out = os.path.join(path_expt, BASE_NAME_RECONST + name_expt)
@@ -240,7 +240,7 @@ def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
     iterate = zip(df_weights.index, df_weights.values, segms, images, deforms)
     list_diffs = []
     for n, diff in utils.wrap_execute_sequence(_reconst, iterate,
-                                               nb_jobs=nb_jobs):
+                                               nb_workers=nb_workers):
         list_diffs.append({'image': n, 'reconstruction diff.': diff})
 
     df_diff = pd.DataFrame(list_diffs)
@@ -259,7 +259,7 @@ def main(params):
         process_expt_reconstruction(name_expt, path_expt=params['path_expt'],
                                     path_dataset=params['path_dataset'],
                                     path_imgs=params['path_images'],
-                                    nb_jobs=params['nb_jobs'],
+                                    nb_workers=params['nb_workers'],
                                     visual=params['visual'])
         gc.collect()
         time.sleep(1)
