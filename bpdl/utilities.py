@@ -5,6 +5,7 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 # from __future__ import absolute_import
+import os
 import re
 import logging
 import multiprocessing.pool
@@ -17,6 +18,35 @@ from scipy import stats
 from scipy.spatial import distance
 
 NB_THREADS = mproc.cpu_count()
+
+
+def update_path(path_file, lim_depth=5, absolute=True):
+    """ bubble in the folder tree up intil it found desired file
+    otherwise return original one
+
+    :param str path_file: path
+    :param int lim_depth: length of bubble attempted
+    :param bool absolute: absolute path
+    :return str:
+
+    >>> path = 'sample_file.test'
+    >>> f = open(path, 'w')
+    >>> update_path(path, absolute=False)
+    'sample_file.test'
+    >>> os.remove(path)
+    """
+    if path_file.startswith('/'):
+        return path_file
+    elif path_file.startswith('~'):
+        path_file = os.path.expanduser(path_file)
+    else:
+        for _ in range(lim_depth):
+            if os.path.exists(path_file):
+                break
+            path_file = os.path.join('..', path_file)
+    if absolute:
+        path_file = os.path.abspath(path_file)
+    return path_file
 
 
 def convert_numerical(s):
@@ -48,6 +78,27 @@ def convert_numerical(s):
         return float(s)
     else:
         return s
+
+
+def create_clean_folder(path_dir):
+    """ create empty folder and while the folder exist clean all files
+
+    :param str path_dir: path
+    :return str:
+
+    >>> path_dir = os.path.abspath('sample_dir')
+    >>> path_dir = create_clean_folder(path_dir)
+    >>> os.path.exists(path_dir)
+    True
+    >>> shutil.rmtree(path_dir, ignore_errors=True)
+    """
+    if os.path.isdir(os.path.dirname(path_dir)):
+        logging.warning('existing folder will be cleaned: %s', path_dir)
+    logging.info('create clean folder "%s"', path_dir)
+    if os.path.exists(path_dir):
+        shutil.rmtree(path_dir, ignore_errors=True)
+    os.mkdir(path_dir)
+    return path_dir
 
 
 def generate_gauss_2d(mean, std, im_size=None, norm=None):

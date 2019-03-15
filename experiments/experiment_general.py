@@ -24,17 +24,19 @@ if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'ag
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import tqdm
 import numpy as np
 import pandas as pd
 from sklearn import metrics
 import matplotlib.pylab as plt
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.data_utils as tl_data
-import bpdl.utilities as tl_utils
-import bpdl.pattern_atlas as ptn_dict
-import bpdl.pattern_weights as ptn_weight
+from bpdl.data_utils import (
+    NB_BIN_PATTERNS, DIR_MANE_SYNTH_DATASET, GAUSS_NOISE, DIR_NAME_DICTIONARY, export_image,
+    dataset_compose_atlas, dataset_load_weights, dataset_load_images, find_images,
+    format_table_weights)
+from bpdl.utilities import wrap_execute_sequence, convert_numerical, update_path
+from bpdl.pattern_atlas import reconstruct_samples
+from bpdl.pattern_weights import weights_image_atlas_overlap_major
 
 FORMAT_DT = '%Y%m%d-%H%M%S'
 CONFIG_JSON = 'config.json'
@@ -66,10 +68,10 @@ if sys.version_info.major == 2:
     copy_reg.pickle(types.MethodType, _reduce_method)
 
 NB_THREADS = int(mproc.cpu_count() * .8)
-PATH_DATA_SYNTH = tl_data.update_path('data_images')
-PATH_DATA_REAL_DISC = os.path.join(tl_data.update_path('data_images'), 'imaginal_discs')
-PATH_DATA_REAL_OVARY = os.path.join(tl_data.update_path('data_images'), 'ovary_stage-2')
-PATH_RESULTS = tl_data.update_path('results')
+PATH_DATA_SYNTH = update_path('data_images')
+PATH_DATA_REAL_DISC = os.path.join(update_path('data_images'), 'imaginal_discs')
+PATH_DATA_REAL_OVARY = os.path.join(update_path('data_images'), 'ovary_stage-2')
+PATH_RESULTS = update_path('results')
 DEFAULT_PARAMS = {
     'type': None,
     'computer': repr(os.uname()),
@@ -78,7 +80,7 @@ DEFAULT_PARAMS = {
     'init_tp': 'random-mosaic-2',  # random, greedy, , GT-deform
     'max_iter': 150,  # 250, 25
     'gc_regul': 1e-9,
-    'nb_labels': tl_data.NB_BIN_PATTERNS + 1,
+    'nb_labels': NB_BIN_PATTERNS + 1,
     'runs': range(NB_THREADS),
     'gc_reinit': True,
     'ptn_compact': False,
@@ -90,14 +92,13 @@ DEFAULT_PARAMS = {
     'dataset': [''],
 }
 
-SYNTH_DATASET_NAME = tl_data.DIR_MANE_SYNTH_DATASET
+SYNTH_DATASET_NAME = DIR_MANE_SYNTH_DATASET
 SYNTH_PATH_APD = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME)
 
 SYNTH_SUBSETS = ['raw', 'noise', 'deform', 'defNoise']
 SYNTH_SUB_DATASETS_BINARY = ['datasetBinary_' + n for n in SYNTH_SUBSETS]
 SYNTH_SUB_DATASETS_FUZZY = ['datasetFuzzy_' + n for n in SYNTH_SUBSETS]
-SYNTH_SUB_DATASETS_FUZZY_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d
-                                  for d in tl_data.GAUSS_NOISE]
+SYNTH_SUB_DATASETS_FUZZY_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d for d in GAUSS_NOISE]
 
 SYNTH_PARAMS = DEFAULT_PARAMS.copy()
 SYNTH_PARAMS.update({
@@ -174,7 +175,7 @@ def parse_arg_params(parser):
     # remove not filled parameters
     args = {k: args[k] for k in args if args[k] is not None}
     for n in (k for k in args if k.startswith('path_') and args[k] is not None):
-        args[n] = tl_data.update_path(args[n])
+        args[n] = update_path(args[n])
         assert os.path.exists(args[n]), '%s' % args[n]
     for flag in ['nb_patterns', 'method']:
         if flag in args and not isinstance(args[flag], list):
@@ -463,23 +464,20 @@ class Experiment(object):
 
         :param {str: ...} params: parameter settings
         """
-        path_atlas = os.path.join(self.params.get('path_in'),
-                                  tl_data.DIR_NAME_DICTIONARY)
-        self._gt_atlas = tl_data.dataset_compose_atlas(path_atlas)
+        path_atlas = os.path.join(self.params.get('path_in'), DIR_NAME_DICTIONARY)
+        self._gt_atlas = dataset_compose_atlas(path_atlas)
         if self.params.get('list_images') is not None:
             img_names = [os.path.splitext(os.path.basename(p))[0]
                          for p in self._list_img_paths]
-            self._gt_encoding = tl_data.dataset_load_weights(self.path_data,
-                                                             img_names=img_names)
+            self._gt_encoding = dataset_load_weights(self.path_data, img_names=img_names)
         else:
-            self._gt_encoding = tl_data.dataset_load_weights(self.params.get('path_in'))
-        self._gt_images = ptn_dict.reconstruct_samples(self._gt_atlas,
-                                                       self._gt_encoding)
+            self._gt_encoding = dataset_load_weights(self.params.get('path_in'))
+        self._gt_images = reconstruct_samples(self._gt_atlas, self._gt_encoding)
         # self._images = [im.astype(np.uint8, copy=False) for im in self._images]
 
     def _load_images(self):
         """ load image data """
-        self._images, self._image_names = tl_data.dataset_load_images(
+        self._images, self._image_names = dataset_load_images(
             self._list_img_paths, nb_workers=self.params.get('nb_workers', 1))
         shapes = [im.shape for im in self._images]
         assert len(set(shapes)) == 1, 'multiple image sizes found: %r' \
@@ -503,7 +501,7 @@ class Experiment(object):
                                                    os.path.basename(path_csv)))
             self._list_img_paths = load_list_img_names(path_csv)
         else:
-            self._list_img_paths = tl_data.find_images(self.path_data)
+            self._list_img_paths = find_images(self.path_data)
 
         assert len(self._list_img_paths) > 0, 'no images found'
         self._load_images()
@@ -545,8 +543,8 @@ class Experiment(object):
             logging.info('iterate over %i configurations', len(self.iter_params))
             nb_workers = self.params.get('nb_workers', 1)
 
-            for detail in tl_utils.wrap_execute_sequence(self._perform_once, self.iter_params,
-                                                         nb_workers, desc='experiments'):
+            for detail in wrap_execute_sequence(self._perform_once, self.iter_params,
+                                                nb_workers, desc='experiments'):
                 self.df_results = self.df_results.append(detail, ignore_index=True)
                 logging.debug('partial results: %r', detail)
         else:
@@ -596,8 +594,7 @@ class Experiment(object):
         logging.debug('estimated atlas of size %r and labels %r', atlas.shape,
                       np.unique(atlas).tolist())
 
-        weights_all = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                       for img in self._images]
+        weights_all = [weights_image_atlas_overlap_major(img, atlas) for img in self._images]
         weights_all = np.array(weights_all)
 
         logging.debug('estimated weights of size %r and summing %r',
@@ -619,7 +616,7 @@ class Experiment(object):
         :param str suffix:
         """
         n_img = NAME_ATLAS.format(suffix)
-        tl_data.export_image(self.params.get('path_exp'), atlas, n_img,
+        export_image(self.params.get('path_exp'), atlas, n_img,
                              stretch_range=False)
         path_atlas_rgb = os.path.join(self.params.get('path_exp'),
                                       n_img + '_rgb.png')
@@ -634,7 +631,7 @@ class Experiment(object):
         """
         if not hasattr(self, '_image_names'):
             self._image_names = [str(i) for i in range(weights.shape[0])]
-        df = tl_data.format_table_weights(self._image_names, weights)
+        df = format_table_weights(self._image_names, weights)
 
         path_csv = os.path.join(self.params.get('path_exp'),
                                 NAME_ENCODING.format(suffix))
@@ -694,7 +691,7 @@ class Experiment(object):
         :param [ndarray] weights: np.array<nb_samples, nb_patterns>
         :return {str: ...}:
         """
-        images_rct = ptn_dict.reconstruct_samples(atlas, weights)
+        images_rct = reconstruct_samples(atlas, weights)
         tag, diff = self._evaluate_reconstruct(images_rct)
         stat = {
             'atlas ARS': self.__evaluate_atlas(atlas),
@@ -891,7 +888,7 @@ def parse_config_txt(path_config):
     with open(path_config, 'r') as fp:
         text = ''.join(fp.readlines())
     rec = re.compile(r'"(\S+)":\s+(.*)')
-    dict_config = {n: tl_utils.convert_numerical(v)
+    dict_config = {n: convert_numerical(v)
                    for n, v in rec.findall(text) if len(v) > 0}
     return dict_config
 

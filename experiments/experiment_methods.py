@@ -17,12 +17,15 @@ from nilearn.decomposition import CanICA, DictLearning
 from skimage import segmentation
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.data_utils as tl_data
-import bpdl.pattern_atlas as ptn_dict
-import bpdl.dictionary_learning as dl
-import bpdl.pattern_weights as ptn_weight
-import bpdl.registration as regist
-import experiments.experiment_general as expt_gen
+from bpdl.data_utils import relabel_boundary_background
+from bpdl.pattern_atlas import (
+    init_atlas_grid, init_atlas_mosaic, init_atlas_random, init_atlas_gauss_watershed_2d,
+    init_atlas_otsu_watershed_2d, init_atlas_nmf, init_atlas_fast_ica, init_atlas_sparse_pca,
+    init_atlas_dict_learn, init_atlas_deform_original, reconstruct_samples)
+from bpdl.dictionary_learning import reset_atlas_background, bpdl_pipeline
+from bpdl.pattern_weights import weights_image_atlas_overlap_major
+from bpdl.registration import warp2d_images_deformations
+from experiments.experiment_general import Experiment, string_dict
 
 NAME_DEFORMS = 'deformations{}.npz'
 
@@ -46,7 +49,7 @@ def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False,
 
     # filter small values
     if force_bg:
-        atlas = dl.reset_atlas_background(atlas, atlas_mean, max_bg_ration)
+        atlas = reset_atlas_background(atlas, atlas_mean, max_bg_ration)
 
     assert atlas.shape == atlas_components[0].shape, \
         'dimension mix - atlas: %s atlas_patterns: %s' \
@@ -80,7 +83,7 @@ def binarize_img_reconstruction(img_rct, thr=0.5):
     return img_rct_bin
 
 
-class ExperimentSpectClust(expt_gen.Experiment):
+class ExperimentSpectClust(Experiment):
     """
     State-of-te-Art methods that are based on Spectral Clustering
     """
@@ -99,11 +102,10 @@ class ExperimentSpectClust(expt_gen.Experiment):
         sc.fit(imgs_vec.T)
         atlas = sc.labels_.reshape(images[0].shape)
 
-        atlas = tl_data.relabel_boundary_background(atlas, bg_val=0) + bg_offset
+        atlas = relabel_boundary_background(atlas, bg_val=0) + bg_offset
         atlas = segmentation.relabel_sequential(atlas)[0]
 
-        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                   for img in self._images]
+        weights = [weights_image_atlas_overlap_major(img, atlas) for img in self._images]
         weights = np.array(weights)
 
         return atlas, weights, None
@@ -121,7 +123,7 @@ def convert_images_nifti(images):
     return nii_images, nii_mask
 
 
-class ExperimentCanICA(expt_gen.Experiment):
+class ExperimentCanICA(Experiment):
     """
     State-of-te-Art methods that are based on CanICA,
     CanICA is an ICA method for group-level analysis
@@ -145,14 +147,13 @@ class ExperimentCanICA(expt_gen.Experiment):
 
         atlas = segmentation.relabel_sequential(atlas)[0]
 
-        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                   for img in self._images]
+        weights = [weights_image_atlas_overlap_major(img, atlas) for img in self._images]
         weights = np.array(weights)
 
         return atlas, weights, None
 
 
-class ExperimentMSDL(expt_gen.Experiment):
+class ExperimentMSDL(Experiment):
     """
     State-of-te-Art methods that are based on MSDL,
     Multi Subject Dictionary Learning
@@ -176,14 +177,13 @@ class ExperimentMSDL(expt_gen.Experiment):
 
         # atlas = segmentation.relabel_sequential(atlas)[0]
 
-        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                   for img in self._images]
+        weights = [weights_image_atlas_overlap_major(img, atlas) for img in self._images]
         weights = np.array(weights)
 
         return atlas, weights, None
 
 
-class ExperimentLinearCombineBase(expt_gen.Experiment):
+class ExperimentLinearCombineBase(Experiment):
     """
     State-of-te-Art methods that are based on Linear Combination
     """
@@ -228,8 +228,7 @@ class ExperimentLinearCombineBase(expt_gen.Experiment):
         # atlas = self._estim_atlas_as_unique_sum(atlas_ptns)
         atlas = segmentation.relabel_sequential(atlas)[0]
 
-        weights = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                   for img in self._images]
+        weights = [weights_image_atlas_overlap_major(img, atlas) for img in self._images]
         weights = np.array(weights)
 
         return atlas, weights, None
@@ -300,31 +299,30 @@ class ExperimentNMF(ExperimentLinearCombineBase):
 
 
 DICT_ATLAS_INIT = {
-    'random-grid': ptn_dict.init_atlas_grid,
-    'random-mosaic': ptn_dict.init_atlas_mosaic,
-    'random-mosaic-1.5': partial(ptn_dict.init_atlas_mosaic, coef=1.5),
-    'random-mosaic-2': partial(ptn_dict.init_atlas_mosaic, coef=2),
-    'random': ptn_dict.init_atlas_random,
-    'greedy-GaussWS': ptn_dict.init_atlas_gauss_watershed_2d,
-    'greedy-OtsuWS': ptn_dict.init_atlas_otsu_watershed_2d,
-    'greedy-OtsuWS-rand': partial(ptn_dict.init_atlas_otsu_watershed_2d,
-                                  bg_type='rand'),
+    'random-grid': init_atlas_grid,
+    'random-mosaic': init_atlas_mosaic,
+    'random-mosaic-1.5': partial(init_atlas_mosaic, coef=1.5),
+    'random-mosaic-2': partial(init_atlas_mosaic, coef=2),
+    'random': init_atlas_random,
+    'greedy-GaussWS': init_atlas_gauss_watershed_2d,
+    'greedy-OtsuWS': init_atlas_otsu_watershed_2d,
+    'greedy-OtsuWS-rand': partial(init_atlas_otsu_watershed_2d, bg_type='rand'),
     'GT': None,  # init by Ground Truth, require GT atlas
     'GT-deform': None,  # init by deformed Ground Truth, require GT atlas
-    'soa-init-NFM': partial(ptn_dict.init_atlas_nmf, nb_iter=5),
-    'soa-init-ICA': partial(ptn_dict.init_atlas_fast_ica, nb_iter=15),
-    'soa-init-PCA': partial(ptn_dict.init_atlas_sparse_pca, nb_iter=5),
-    'soa-init-DL': partial(ptn_dict.init_atlas_dict_learn, nb_iter=5),
-    'soa-tune-NFM': partial(ptn_dict.init_atlas_nmf, nb_iter=150),
-    'soa-tune-ICA': partial(ptn_dict.init_atlas_fast_ica, nb_iter=150),
-    'soa-tune-PCA': partial(ptn_dict.init_atlas_sparse_pca, nb_iter=150),
-    'soa-tune-DL': partial(ptn_dict.init_atlas_dict_learn, nb_iter=150),
+    'soa-init-NFM': partial(init_atlas_nmf, nb_iter=5),
+    'soa-init-ICA': partial(init_atlas_fast_ica, nb_iter=15),
+    'soa-init-PCA': partial(init_atlas_sparse_pca, nb_iter=5),
+    'soa-init-DL': partial(init_atlas_dict_learn, nb_iter=5),
+    'soa-tune-NFM': partial(init_atlas_nmf, nb_iter=150),
+    'soa-tune-ICA': partial(init_atlas_fast_ica, nb_iter=150),
+    'soa-tune-PCA': partial(init_atlas_sparse_pca, nb_iter=150),
+    'soa-tune-DL': partial(init_atlas_dict_learn, nb_iter=150),
 }
 LIST_BPDL_PARAMS = ['tol', 'gc_reinit', 'gc_regul', 'max_iter',
                     'ptn_compact', 'overlap_major']
 
 
-class ExperimentBPDL(expt_gen.Experiment):
+class ExperimentBPDL(Experiment):
     """ the main_train real experiment or our Atlas Learning Pattern Encoding
     """
 
@@ -354,7 +352,7 @@ class ExperimentBPDL(expt_gen.Experiment):
             assert hasattr(self, '_gt_atlas'), 'missing GT atlas'
             init_atlas = np.remainder(self._gt_atlas, nb_patterns)
             if init_type == 'GT-deform':
-                init_atlas = ptn_dict.init_atlas_deform_original(init_atlas)
+                init_atlas = init_atlas_deform_original(init_atlas)
             init_atlas = init_atlas.astype(int)
         else:
             logging.error('not supported atlas init "%s"', init_type)
@@ -381,7 +379,7 @@ class ExperimentBPDL(expt_gen.Experiment):
         :return (ndarray, ndarray, {}):
         """
         logging.debug(' -> estimate atlas...')
-        logging.debug(expt_gen.string_dict(params, desc='PARAMETERS'))
+        logging.debug(string_dict(params, desc='PARAMETERS'))
         init_atlas = self._init_atlas(params['nb_labels'] - 1,
                                       params['init_tp'], self._images)
         # prefix = 'expt_{}'.format(p['init_tp'])
@@ -390,10 +388,10 @@ class ExperimentBPDL(expt_gen.Experiment):
 
         bpdl_params = {k: params[k] for k in params if k in LIST_BPDL_PARAMS}
         bpdl_params['deform_coef'] = params.get('deform_coef', None)
-        atlas, weights, deforms = dl.bpdl_pipeline(images,
-                                                   init_atlas=init_atlas,
-                                                   out_dir=path_out,
-                                                   **bpdl_params)
+        atlas, weights, deforms = bpdl_pipeline(images,
+                                                init_atlas=init_atlas,
+                                                out_dir=path_out,
+                                                **bpdl_params)
 
         assert atlas.max() == weights.shape[1], \
             'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
@@ -430,13 +428,13 @@ class ExperimentBPDL(expt_gen.Experiment):
             return {}
         if extras.get('deforms', None) is not None:
             deforms = extras['deforms']
-            images_rct = ptn_dict.reconstruct_samples(atlas, weights)
+            images_rct = reconstruct_samples(atlas, weights)
             # images = self._images[:len(weights)]
             assert len(images_rct) == len(deforms), \
                 'nb reconst. images (%i) and deformations (%i) should match' \
                 % (len(images_rct), len(deforms))
             # apply the estimated deformation
-            images_rct = regist.warp2d_images_deformations(images_rct, deforms,
+            images_rct = warp2d_images_deformations(images_rct, deforms,
                                                            method='nearest',
                                                            inverse=True)
             tag, diff = self._evaluate_reconstruct(images_rct, im_type='input')

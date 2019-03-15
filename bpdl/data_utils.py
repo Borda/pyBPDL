@@ -50,35 +50,6 @@ COLUMN_NAME = 'ptn_{:02d}'
 GAUSS_NOISE = [0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001]
 
 
-def update_path(path_file, lim_depth=5, absolute=True):
-    """ bubble in the folder tree up intil it found desired file
-    otherwise return original one
-
-    :param str path_file: path
-    :param int lim_depth: length of bubble attempted
-    :param bool absolute: absolute path
-    :return str:
-
-    >>> path = 'sample_file.test'
-    >>> f = open(path, 'w')
-    >>> update_path(path, absolute=False)
-    'sample_file.test'
-    >>> os.remove(path)
-    """
-    if path_file.startswith('/'):
-        return path_file
-    elif path_file.startswith('~'):
-        path_file = os.path.expanduser(path_file)
-    else:
-        for _ in range(lim_depth):
-            if os.path.exists(path_file):
-                break
-            path_file = os.path.join('..', path_file)
-    if absolute:
-        path_file = os.path.abspath(path_file)
-    return path_file
-
-
 def io_image_decorate(func):
     """ costume decorator to suppers debug messages from the PIL function
     to suppress PIl debug logging
@@ -383,27 +354,6 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     dist = (mesh_z ** 2 / a ** 2) + (mesh_x ** 2 / b ** 2) + (mesh_y ** 2 / c ** 2)
     img[dist < 1.] = clr
     return img
-
-
-def create_clean_folder(path_dir):
-    """ create empty folder and while the folder exist clean all files
-
-    :param str path_dir: path
-    :return str:
-
-    >>> path_dir = os.path.abspath('sample_dir')
-    >>> path_dir = create_clean_folder(path_dir)
-    >>> os.path.exists(path_dir)
-    True
-    >>> shutil.rmtree(path_dir, ignore_errors=True)
-    """
-    if os.path.isdir(os.path.dirname(path_dir)):
-        logging.warning('existing folder will be cleaned: %s', path_dir)
-    logging.info('create clean folder "%s"', path_dir)
-    if os.path.exists(path_dir):
-        shutil.rmtree(path_dir, ignore_errors=True)
-    os.mkdir(path_dir)
-    return path_dir
 
 
 def extract_image_largest_element(img_binary, labeled=None):
