@@ -171,7 +171,7 @@ def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
     logging.debug('initialise atlas for %i labels from %i images of shape %r'
                   ' with Otsu-Watershed', nb_patterns, len(imgs), imgs[0].shape)
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian(img_sum, 1)
+    img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
     # http://scikit-image.org/docs/dev/auto_examples/plot_otsu.html
     thresh = filters.threshold_otsu(img_gauss)
     img_otsu = (img_gauss >= thresh)
@@ -267,7 +267,7 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
     logging.debug('initialise atlas for %i labels from %i images of shape %r'
                   ' with Gauss-Watershed', nb_patterns, len(imgs), imgs[0].shape)
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian(img_sum, 1)
+    img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
     seeds = detect_peaks(img_gauss)
     # http://scikit-image.org/docs/dev/auto_examples/plot_watershed.html
     labels = morphology.watershed(-img_gauss, seeds)
