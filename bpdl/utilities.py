@@ -139,6 +139,7 @@ def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
     tqdm_bar = None
     if desc is not None:
         desc = '%r @%i-threads' % (desc, nb_workers)
+        desc = desc.encode('utf-8').decode()
         tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
 
     if nb_workers > 1:
