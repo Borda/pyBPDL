@@ -25,11 +25,14 @@ from skimage import filters
 # using https://github.com/Borda/pyGCO
 from gco import cut_general_graph, cut_grid_graph_simple
 
-import bpdl.pattern_atlas as ptn_atlas
-import bpdl.pattern_weights as ptn_weight
-import bpdl.metric_similarity as sim_metric
-import bpdl.data_utils as tl_data
-import bpdl.registration as regist
+from bpdl.pattern_atlas import (
+    compute_positive_cost_images_weights, edges_in_image2d_plane, init_atlas_mosaic,
+    atlas_split_indep_ptn, reinit_atlas_likely_patterns, compute_relative_penalty_images_weights)
+from bpdl.pattern_weights import (weights_image_atlas_overlap_major,
+                                  weights_image_atlas_overlap_partial)
+from bpdl.metric_similarity import compare_atlas_adjusted_rand
+from bpdl.data_utils import export_image
+from bpdl.registration import register_images_to_atlas_demons
 
 NB_GRAPH_CUT_ITER = 5
 TEMPLATE_NAME_ATLAS = 'BPDL_{}_{}_iter_{:04d}'
@@ -77,7 +80,7 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
         labels = np.zeros(imgs[0].shape)
         return labels
 
-    labeling_sum = ptn_atlas.compute_positive_cost_images_weights(imgs, ptn_weights)
+    labeling_sum = compute_positive_cost_images_weights(imgs, ptn_weights)
     unary_cost = np.array(-1 * labeling_sum, dtype=np.int32)
     logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape,
                   list(zip(np.histogram(unary_cost, bins=10))))
@@ -134,14 +137,14 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
         labels = np.zeros(imgs[0].shape)
         return labels
 
-    u_cost = ptn_atlas.compute_relative_penalty_images_weights(imgs, ptn_weights)
+    u_cost = compute_relative_penalty_images_weights(imgs, ptn_weights)
     # u_cost = 1. / (labelingSum +1)
     unary_cost = np.array(u_cost, dtype=np.float64)
     unary_cost = unary_cost.reshape(-1, u_cost.shape[-1])
     logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape,
                   list(zip(np.histogram(unary_cost, bins=10))))
 
-    edges, edge_weights = ptn_atlas.edges_in_image2d_plane(u_cost.shape[:-1], connect_diag)
+    edges, edge_weights = edges_in_image2d_plane(u_cost.shape[:-1], connect_diag)
 
     # original and the right way...
     pairwise = (1 - np.eye(u_cost.shape[-1])) * coef
@@ -225,7 +228,7 @@ def export_visual_atlas(i, out_dir, atlas=None, prefix='debug'):
         # export_visualization_image(atlas, i, out_dir, prefix, 'atlas',
         #                            labels=['X', 'Y'])
         n_img = TEMPLATE_NAME_ATLAS.format(prefix, 'atlas', i)
-        tl_data.export_image(out_dir, atlas, n_img)
+        export_image(out_dir, atlas, n_img)
     # if weights is not None:
     #     export_visualization_image(weights, i, out_dir, prefix, 'weights',
     #                                'auto', ['patterns', 'images'])
@@ -291,8 +294,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
         nb_patterns = int(np.sqrt(len(imgs)))
         logging.debug('... initialise Atlas with ')
         # IDEA: find better way of initialisation
-        init_atlas = ptn_atlas.init_atlas_mosaic(
-            imgs[0].shape, nb_patterns, rand_seed=rand_seed)
+        init_atlas = init_atlas_mosaic(imgs[0].shape, nb_patterns, rand_seed=rand_seed)
         # export_visual_atlas(0, out_dir, init_atlas, out_prefix)
 
     atlas = init_atlas
@@ -340,12 +342,9 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
     """
     # update w_bins
     logging.debug('... perform pattern weights')
-    if overlap_major:
-        w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                  for img in imgs]
-    else:
-        w_bins = [ptn_weight.weights_image_atlas_overlap_partial(img, atlas)
-                  for img in imgs]
+    fn_weights_ = weights_image_atlas_overlap_major if overlap_major \
+        else weights_image_atlas_overlap_partial
+    w_bins = [fn_weights_(img, atlas) for img in imgs]
     # add once for patterns that are not used at all
     # w_bins = ptn_weight.fill_empty_patterns(np.array(w_bins))
     return np.array(w_bins)
@@ -394,7 +393,7 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
                                                     connect_diag=connect_diag)
 
     if ptn_compact:
-        atlas_new = ptn_atlas.atlas_split_indep_ptn(atlas_new, label_max)
+        atlas_new = atlas_split_indep_ptn(atlas_new, label_max)
 
     atlas_new = np.remainder(atlas_new, label_max + 1)
     return atlas_new
@@ -407,8 +406,8 @@ def bpdl_deform_images(images, atlas, weights, deform_coef, inverse=False):
     smooth_coef = deform_coef * min(images[0].shape)
     logging.debug('... perform register images onto atlas with smooth_coef: %f',
                   smooth_coef)
-    images_warped, deforms = regist.register_images_to_atlas_demons(
-        images, atlas, weights, smooth_coef, inverse=inverse)
+    images_warped, deforms = register_images_to_atlas_demons(images, atlas, weights,
+                                                             smooth_coef, inverse=inverse)
     return images_warped, deforms
 
 
@@ -515,8 +514,8 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
         w_bins = bpdl_update_weights(imgs_warped, atlas, overlap_major)
         times.append(time.time())
         # 2: reinitialise empty patterns
-        atlas_reinit, w_bins = ptn_atlas.reinit_atlas_likely_patterns(
-            imgs_warped, w_bins, atlas, label_max, ptn_compact)
+        atlas_reinit, w_bins = reinit_atlas_likely_patterns(imgs_warped, w_bins, atlas,
+                                                            label_max, ptn_compact)
         times.append(time.time())
         # 3: update the ATLAS
         atlas_new = bpdl_update_atlas(imgs_warped, atlas_reinit, w_bins,
@@ -531,7 +530,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
 
         times = [times[i] - times[i - 1] for i in range(1, len(times))]
         d_times = dict(zip(LIST_BPDL_STEPS[:len(times)], times))
-        step_diff = sim_metric.compare_atlas_adjusted_rand(atlas, atlas_new)
+        step_diff = compare_atlas_adjusted_rand(atlas, atlas_new)
         # step_diff = np.sum(abs(atlas - atlas_new)) / float(np.product(atlas.shape))
         list_diff.append(step_diff)
         list_times.append(d_times)
@@ -549,8 +548,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     # TODO: force set background for to small components
 
     imgs_warped, deforms = bpdl_deform_images(images, atlas, w_bins, deform_coef)
-    w_bins = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-              for img in imgs_warped]
+    w_bins = [weights_image_atlas_overlap_major(img, atlas) for img in imgs_warped]
 
     logging.debug('BPDL: terminated with iter %i / %i and step diff %f <? %f',
                   len(list_diff), max_iter, list_diff[-1], tol)
@@ -597,8 +595,9 @@ def reset_atlas_background(atlas, atlas_mean, max_bg_ration=0.9):
 def show_simple_case(atlas, imgs, ws):
     """ simple experiment
 
-    >>> atlas = tl_data.create_simple_atlas(scale=1)
-    >>> imgs = tl_data.create_sample_images(atlas)
+    >>> from bpdl.data_utils import create_simple_atlas, create_sample_images
+    >>> atlas = create_simple_atlas(scale=1)
+    >>> imgs = create_sample_images(atlas)
     >>> ws=([1, 0, 0], [0, 1, 1], [0, 0, 1])
     >>> res, fig = show_simple_case(atlas, imgs, ws)
     >>> res.astype(int)
@@ -629,7 +628,7 @@ def show_simple_case(atlas, imgs, ws):
         axarr[0, i + 1].imshow(img, cmap='gray', interpolation='nearest')
 
     t = time.time()
-    uc = ptn_atlas.compute_relative_penalty_images_weights(imgs, np.array(ws))
+    uc = compute_relative_penalty_images_weights(imgs, np.array(ws))
     logging.info('elapsed TIME: %f', time.time() - t)
     res = estimate_atlas_graphcut_general(imgs, np.array(ws), 0.)
 

@@ -12,8 +12,9 @@ from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
 
-import bpdl.data_utils as tl_data
-import bpdl.pattern_weights as ptn_weight
+from bpdl.data_utils import image_deform_elastic, extract_image_largest_element
+from bpdl.pattern_weights import (weights_label_atlas_overlap_threshold,
+                                  convert_weights_binary2indexes)
 
 REINIT_PATTERN_COMPACT = True
 UNARY_BACKGROUND = 1
@@ -509,8 +510,7 @@ def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     logging.debug('initialise atlas by deforming original one')
-    res = tl_data.image_deform_elastic(atlas, coef, grid_size,
-                                       rand_seed=rand_seed)
+    res = image_deform_elastic(atlas, coef, grid_size, rand_seed=rand_seed)
     return np.array(res, dtype=np.int)
 
 
@@ -640,7 +640,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
         im_diff = morphology.closing(im_diff, morphology.disk(1))
         labels = None
     # find largest connected component
-    img_ptn = tl_data.extract_image_largest_element(im_diff, labels)
+    img_ptn = extract_image_largest_element(im_diff, labels)
     # ptn_size = np.sum(ptn) / float(np.product(ptn.shape))
     # if ptn_size < 0.01:
     #     logging.debug('new patterns was too small %f', ptn_size)
@@ -755,8 +755,8 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
         # BE AWARE OF THIS CONSTANT, it can caused that there are weight even
         # they should not be which lead to have high unary for atlas estimation
         lim_repopulate = 1. / label_max
-        w_bins[:, w_index] = ptn_weight.weights_label_atlas_overlap_threshold(
-            imgs, atlas_new, label, lim_repopulate)
+        w_bins[:, w_index] = weights_label_atlas_overlap_threshold(imgs, atlas_new, label,
+                                                                   lim_repopulate)
         logging.debug('reinit. label: %i with w_bins after: %i',
                       label, np.sum(w_bins[:, w_index]))
     return atlas_new, w_bins
@@ -954,7 +954,7 @@ def compute_positive_cost_images_weights(imgs, ptn_weights):
     """
     # not using any more...
     logging.debug('compute unary cost from images and related ptn_weights')
-    w_idx = ptn_weight.convert_weights_binary2indexes(ptn_weights)
+    w_idx = convert_weights_binary2indexes(ptn_weights)
     nb_lbs = ptn_weights.shape[1] + 1
     assert len(imgs) == len(w_idx), 'nb of images (%i) and weights (%i) ' \
                                     'do not match' % (len(imgs), len(w_idx))

@@ -30,7 +30,7 @@ from scipy import ndimage
 from skimage import io, draw, transform
 from PIL import Image
 
-import bpdl.utilities as utils
+from bpdl.utilities import wrap_execute_sequence
 
 NB_THREADS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
@@ -692,7 +692,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     _wrapper_generate = partial(generate_rand_patterns_occlusion,
                                 im_ptns=im_ptns, out_dir=out_dir,
                                 ptn_ration=ptn_ration, rand_seed=rand_seed)
-    for idx, im, im_name, ptn_weights in utils.wrap_execute_sequence(
+    for idx, im, im_name, ptn_weights in wrap_execute_sequence(
             _wrapper_generate, range(nb_samples), nb_workers):
         im_spls[idx] = im
         im_names[idx] = im_name
@@ -900,8 +900,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     imgs_new = [None] * len(imgs)
     logging.debug('running in %i threads...', nb_workers)
     _apply_fn = partial(wrapper_image_function, func=func, coef=coef, out_dir=out_dir)
-    for i, im in utils.wrap_execute_sequence(_apply_fn, enumerate(imgs),
-                                             nb_workers):
+    for i, im in wrap_execute_sequence(_apply_fn, enumerate(imgs), nb_workers):
         imgs_new[i] = im
 
     return imgs_new
@@ -1052,7 +1051,7 @@ def dataset_load_images(img_paths, nb_spls=None, nb_workers=1):
         logging.debug('estimated %i loading blocks', nb_load_blocks)
         block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
-        list_names_imgs = list(utils.wrap_execute_sequence(
+        list_names_imgs = list(wrap_execute_sequence(
             wrapper_load_images, block_paths_img, nb_workers=nb_workers,
             desc='loading images by blocks'))
 
@@ -1262,7 +1261,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_workers=1):
         names = range(len(imgs))
 
     mp_set = [(path_out, im, names[i]) for i, im in enumerate(imgs)]
-    list(utils.wrap_execute_sequence(wrapper_export_image, mp_set))
+    list(wrap_execute_sequence(wrapper_export_image, mp_set))
 
 
 def wrapper_export_image(mp_set):
