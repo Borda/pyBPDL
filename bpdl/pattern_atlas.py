@@ -120,7 +120,7 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     vec = list(range(max_label))
     logging.debug('block size is %r', block.shape)
     rows = []
-    for label in range(0, max_label):
+    for _ in range(0, max_label):
         vec = np.random.permutation(vec)
         row = np.hstack([block.copy() * vec[k] for k in range(max_label)])
         rows.append(row)

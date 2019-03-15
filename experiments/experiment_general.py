@@ -569,6 +569,7 @@ class Experiment(object):
             # just partial export
             logging.debug('partial results: %r', detail)
             tqdm_bar.update()
+        tqdm_bar.close()
 
     def __perform_sequence_parellel(self, nb_workers):
         """ perform sequence in multiprocessing pool """
@@ -588,6 +589,7 @@ class Experiment(object):
             tqdm_bar.update()
         pool.close()
         pool.join()
+        tqdm_bar.close()
 
         # remove temporary image file
         # os.remove(p_imgs)

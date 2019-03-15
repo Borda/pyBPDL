@@ -136,11 +136,10 @@ def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
     """
     iterate_vals = list(iterate_vals)
 
+    tqdm_bar = None
     if desc is not None:
         desc = '%s @%i-threads' % (desc, nb_workers)
         tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
-    else:
-        tqdm_bar = None
 
     if nb_workers > 1:
         logging.debug('perform sequential in %i threads', nb_workers)
@@ -151,16 +150,16 @@ def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
         pooling = pool.imap if ordered else pool.imap_unordered
 
         for out in pooling(wrap_func, iterate_vals):
+            tqdm_bar.update() if tqdm_bar is not None else None
             yield out
-            if tqdm_bar is not None:
-                tqdm_bar.update()
         pool.close()
         pool.join()
     else:
         for out in map(wrap_func, iterate_vals):
+            tqdm_bar.update() if tqdm_bar is not None else None
             yield out
-            if tqdm_bar is not None:
-                tqdm_bar.update()
+
+    tqdm_bar.close() if tqdm_bar is not None else None
 
 
 def estimate_rolling_ball(points, tangent_smooth=1, max_diam=1e6, step_tol=1e-3):
