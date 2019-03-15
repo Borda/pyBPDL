@@ -544,55 +544,15 @@ class Experiment(object):
         if is_list_like(self.iter_params):
             logging.info('iterate over %i configurations', len(self.iter_params))
             nb_workers = self.params.get('nb_workers', 1)
-            if nb_workers > 1:
-                self.__perform_sequence_parellel(nb_workers)
-            else:
-                self.__perform_sequence_serial()
+
+            for detail in tl_utils.wrap_execute_sequence(self._perform_once, self.iter_params,
+                                                         nb_workers, desc='experiments'):
+                self.df_results = self.df_results.append(detail, ignore_index=True)
+                logging.debug('partial results: %r', detail)
         else:
             logging.debug('perform single configuration')
             detail = self._perform_once({})
             self.df_results = pd.DataFrame([detail])
-
-    def __perform_sequence_serial(self):
-        """ Iteratively change a single experiment parameter with the same data
-        """
-        logging.info('perform_sequence in single thread')
-        tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
-        for d_params in self.iter_params:
-            # self.params.update(d_params)
-            tqdm_bar.set_description(d_params.get('param_idx', ''))
-            logging.debug(' -> set iterable %r', d_params)
-
-            detail = self._perform_once(d_params)
-
-            self.df_results = self.df_results.append(detail, ignore_index=True)
-            # just partial export
-            logging.debug('partial results: %r', detail)
-            tqdm_bar.update()
-        tqdm_bar.close()
-
-    def __perform_sequence_parellel(self, nb_workers):
-        """ perform sequence in multiprocessing pool """
-        logging.debug('perform_sequence in %i threads for %i values',
-                      nb_workers, len(self.iter_params))
-        # ISSUE with passing large date to processes so the images are saved
-        # and loaded in particular process again
-        # p_imgs = os.path.join(self.params.get('path_exp'), 'input_images.npz')
-        # np.savez(open(p_imgs, 'w'), imgs=self._images)
-
-        tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
-        pool = tl_utils.NonDaemonPool(nb_workers)
-        for detail in pool.imap_unordered(self._perform_once, self.iter_params):
-            self.df_results = self.df_results.append(detail, ignore_index=True)
-            logging.debug('partial results: %r', detail)
-            # just partial export
-            tqdm_bar.update()
-        pool.close()
-        pool.join()
-        tqdm_bar.close()
-
-        # remove temporary image file
-        # os.remove(p_imgs)
 
     def _estimate_atlas_weights(self, images, params):
         """ This is the method to be be over written by individual methods
