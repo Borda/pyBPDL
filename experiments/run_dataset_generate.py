@@ -15,9 +15,10 @@ from functools import partial
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.data_utils as tl_data
+import bpdl.utilities as utils
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
-DEFAULT_PATH_DATA = tl_data.update_path('data_images')
+DEFAULT_PATH_DATA = utils.update_path('data_images')
 DEFAULT_PATH_APD = os.path.join(DEFAULT_PATH_DATA,
                                 tl_data.DIR_MANE_SYNTH_DATASET)
 NAME_WEIGHTS = tl_data.CSV_NAME_WEIGHTS

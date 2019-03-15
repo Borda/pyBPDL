@@ -45,7 +45,7 @@ def args_parser():
                         default=NOISE_RANGE)
 
     args = vars(parser.parse_args())
-    args['path'] = tl_data.update_path(args['path'])
+    args['path'] = utils.update_path(args['path'])
     assert os.path.isdir(args['path']), 'missing: %s' % args['path']
 
     return args

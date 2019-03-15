@@ -30,10 +30,8 @@ NAME_JSON_BBOX = 'cut_bounding_box.json'
 LOAD_SUBSET_COEF = 5
 METHODS = ['cum-info', 'line-sum', 'line-grad']
 DEFAULT_PARAMS = {
-    'path_in': os.path.join(tl_data.update_path('data_images'),
-                            'imaginal_discs', 'gene', '*.png'),
-    'path_out': os.path.join(tl_data.update_path('data_images'),
-                             'imaginal_discs', 'gene_cut'),
+    'path_in': os.path.join(utils.update_path('data_images'), 'imaginal_discs', 'gene', '*.png'),
+    'path_out': os.path.join(utils.update_path('data_images'), 'imaginal_discs', 'gene_cut'),
 }
 
 
@@ -59,7 +57,7 @@ def args_parse_params(params):
 
     args = vars(parser.parse_args())
     for k in (k for k in args if k.startswith('path_')):
-        p = tl_data.update_path(os.path.dirname(args[k]))
+        p = utils.update_path(os.path.dirname(args[k]))
         assert os.path.exists(p), 'missing (%s): %s' % (k, p)
         args[k] = os.path.join(p, os.path.basename(args[k]))
     return args

@@ -359,12 +359,12 @@ def generate_conf_suffix(d_params):
 
 
 class Experiment(object):
-    """
-    main_train class for APD experiments State-of-the-Art and BPDL
+    """ main_train class for APD experiments State-of-the-Art and BPDL
 
     SINGLE experiment:
     >>> import glob
-    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
+    >>> params = {'dataset': DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
     >>> expt = Experiment(params, time_stamp=False)
@@ -375,7 +375,8 @@ class Experiment(object):
 
     SEQUENTIAL example:
     >>> import glob
-    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
+    >>> params = {'dataset': DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
     >>> expt = Experiment(params, time_stamp=False)
@@ -386,7 +387,8 @@ class Experiment(object):
 
     PARALLEL example:
     >>> import glob
-    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
+    >>> params = {'dataset': DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS,
     ...           'nb_workers': 2}
@@ -616,8 +618,7 @@ class Experiment(object):
         :param str suffix:
         """
         n_img = NAME_ATLAS.format(suffix)
-        export_image(self.params.get('path_exp'), atlas, n_img,
-                             stretch_range=False)
+        export_image(self.params.get('path_exp'), atlas, n_img, stretch_range=False)
         path_atlas_rgb = os.path.join(self.params.get('path_exp'),
                                       n_img + '_rgb.png')
         logging.debug('exporting RGB atlas: %s', path_atlas_rgb)

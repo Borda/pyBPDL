@@ -8,6 +8,7 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import re
 import logging
+import shutil
 import multiprocessing.pool
 import multiprocessing as mproc
 from functools import wraps

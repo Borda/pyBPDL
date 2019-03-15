@@ -10,7 +10,7 @@ import logging
 import glob
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.data_utils as tl_data
+import bpdl.utilities as utils
 import experiments.experiment_general as e_gen
 import experiments.experiment_methods as e_mthd
 import experiments.run_experiments as r_expt
@@ -117,7 +117,7 @@ def test_experiments_postprocessing():
         'name_results': [e_gen.RESULTS_CSV],
         'name_config': e_gen.CONFIG_JSON,
         'nb_workers': 2,
-        'path': tl_data.update_path('results')
+        'path': utils.update_path('results')
     }
 
     dir_expts = glob.glob(os.path.join(params['path'], '*'))

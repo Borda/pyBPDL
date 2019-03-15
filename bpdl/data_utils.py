@@ -8,7 +8,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import glob
 import logging
-import shutil
 import warnings
 import itertools
 import multiprocessing as mproc
@@ -30,7 +29,7 @@ from scipy import ndimage
 from skimage import io, draw, transform
 from PIL import Image
 
-from bpdl.utilities import wrap_execute_sequence
+from bpdl.utilities import wrap_execute_sequence, create_clean_folder
 
 NB_THREADS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
@@ -459,6 +458,7 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> path_dir = create_clean_folder(path_dir)
     >>> imgs_patterns = dictionary_generate_atlas(path_dir)
+    >>> import shutil
     >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
     logging.info('generate Atlas composed from %i patterns and image size %r',
@@ -525,6 +525,7 @@ def dictionary_generate_rnd_pattern(path_out=None,
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0]], dtype=uint8)
+    >>> import shutil
     >>> shutil.rmtree(p_dir, ignore_errors=True)
     """
     logging.info('generate Dict. composed from %i patterns and img. size %r',
@@ -841,6 +842,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
             [0, 0, 0, 0, 0]], dtype=uint8)]
     >>> os.path.isdir(dir_name)
     True
+    >>> import shutil
     >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
     logging.info('apply costume function "%s" on %i samples with coef. %f',
@@ -1155,6 +1157,7 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
            [0, 1, 1, 0, 0, 1, 1, 1, 1, 0],
            [1, 0, 1, 0, 1, 1, 0, 1, 1, 0],
            [0, 1, 0, 1, 1, 1, 1, 1, 0, 1]], dtype=uint8)
+    >>> import shutil
     >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
     assert os.path.isdir(path_dir), 'missing atlas directory: %s' % path_dir
@@ -1203,6 +1206,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_workers=1):
            [ 0.9,  0.4,  0.4,  0.9,  0.8,  0.7,  0.1,  0.9,  0.7,  1. ]])
     >>> im_names   # doctest: +ELLIPSIS
     ('sample_00000', 'sample_00001', ..., 'sample_00034', 'sample_00035')
+    >>> import shutil
     >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
     create_clean_folder(path_out)

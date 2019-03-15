@@ -28,7 +28,6 @@ import pandas as pd
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.utilities as utils
-import bpdl.data_utils as tl_data
 import experiments.experiment_general as e_gen
 
 NAME_INPUT_CONFIG = 'resultStat.txt'
@@ -73,7 +72,7 @@ def parse_arg_params(params):
                         help='number of jobs running in parallel')
 
     args = vars(parser.parse_args())
-    args['path'] = tl_data.update_path(args['path'])
+    args['path'] = utils.update_path(args['path'])
     assert os.path.isdir(args['path']), 'missing: %s' % args['path']
     return args
 

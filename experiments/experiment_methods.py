@@ -435,8 +435,7 @@ class ExperimentBPDL(Experiment):
                 % (len(images_rct), len(deforms))
             # apply the estimated deformation
             images_rct = warp2d_images_deformations(images_rct, deforms,
-                                                           method='nearest',
-                                                           inverse=True)
+                                                    method='nearest', inverse=True)
             tag, diff = self._evaluate_reconstruct(images_rct, im_type='input')
             stat['reconst. diff %s deform' % tag] = diff
         return stat

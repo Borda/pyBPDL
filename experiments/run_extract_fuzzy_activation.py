@@ -34,8 +34,8 @@ import experiments.run_cut_minimal_images as r_cut
 
 NB_THREADS = int(mproc.cpu_count() * .75)
 PARAMS = {
-    'path_in': os.path.join(tl_data.update_path('data_images/ovary_stage-3/image'), '*.png'),
-    'path_out': tl_data.update_path('data_images/ovary_stage-3/gene'),
+    'path_in': os.path.join(utils.update_path('data_images/ovary_stage-3/image'), '*.png'),
+    'path_out': utils.update_path('data_images/ovary_stage-3/gene'),
 }
 
 

@@ -443,7 +443,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     >>> luts = np.array([[0, 1, 0]] * 3 + [[0, 0, 1]] * 3 + [[0, 1, 1]] * 3)
     >>> images = [lut[atlas] for lut in luts]
     >>> w_bins = luts[:, 1:]
-    >>> init_atlas = ptn_atlas.init_atlas_mosaic(atlas.shape, nb_patterns=2,
+    >>> init_atlas = init_atlas_mosaic(atlas.shape, nb_patterns=2,
     ...                                         coef=1.5, rand_seed=0)
     >>> init_atlas
     array([[1, 1, 1, 1, 2, 2, 2, 2, 1, 1, 1, 1],

@@ -72,7 +72,7 @@ def parse_arg_params():
 
     args = vars(parser.parse_args())
     logging.debug('ARG PARAMETERS: \n %r', args)
-    args['path_expt'] = tl_data.update_path(args['path_expt'])
+    args['path_expt'] = utils.update_path(args['path_expt'])
     assert os.path.exists(args['path_expt']), 'missing: %s' % args['path_expt']
     return args
 
