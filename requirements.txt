@@ -12,5 +12,5 @@ gco-wrapper>=3.0.3
 # numba>=0.22.1
 nibabel>=2.1.0
 nilearn>=0.3.1
-dipy>=0.11.0
+dipy>=0.11.0,<0.16.0  # failing for py2 in numpy
 SimpleITK>=1.0.1
