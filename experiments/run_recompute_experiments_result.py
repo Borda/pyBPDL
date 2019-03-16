@@ -33,7 +33,6 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import bpdl.metric_similarity as tl_metric
-import experiments.experiment_general as e_gen
 import experiments.run_dataset_generate as r_data
 import experiments.run_parse_experiments_result as r_parse
 
@@ -174,7 +173,7 @@ def parse_experiments(params):
     :param {str: ...} params:
     """
     logging.info('running recompute Experiments results')
-    logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(utils.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
     nb_workers = params.get('nb_workers', NB_THREADS)
 

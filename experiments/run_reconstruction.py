@@ -37,7 +37,6 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import bpdl.registration as tl_reg
-from experiments import experiment_general as expt
 
 NB_THREADS = int(mproc.cpu_count() * .9)
 FIGURE_SIZE = (20, 8)
@@ -250,7 +249,7 @@ def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
 
 def main(params):
     """ process complete list of experiments """
-    logging.info(expt.string_dict(params, desc='PARAMETERS:'))
+    logging.info(utils.string_dict(params, desc='PARAMETERS:'))
     list_expt = list_experiments(params['path_expt'], params['name_expt'])
     assert len(list_expt) > 0, 'No experiments found!'
     params['path_dataset'] = get_path_dataset(params['path_expt'])

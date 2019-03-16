@@ -188,7 +188,7 @@ def parse_experiments(params):
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')
-    logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(utils.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.isdir(params['path']), 'missing "%s"' % params['path']
     nb_workers = params.get('nb_workers', NB_THREADS)
 

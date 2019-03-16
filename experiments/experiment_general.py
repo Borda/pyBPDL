@@ -34,7 +34,8 @@ from bpdl.data_utils import (
     NB_BIN_PATTERNS, DIR_MANE_SYNTH_DATASET, GAUSS_NOISE, DIR_NAME_DICTIONARY, export_image,
     dataset_compose_atlas, dataset_load_weights, dataset_load_images, find_images,
     format_table_weights)
-from bpdl.utilities import wrap_execute_sequence, convert_numerical, update_path
+from bpdl.utilities import (wrap_execute_sequence, convert_numerical, update_path,
+                            is_list_like, string_dict)
 from bpdl.pattern_atlas import reconstruct_samples
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
 
@@ -199,7 +200,7 @@ def parse_params(default_params, methods):
     :return {str: ...}:
     """
     parser = create_args_parser(default_params, methods)
-    params = copy_dict(default_params)
+    params = copy.deepcopy(default_params)
     arg_params = parse_arg_params(parser)
 
     params.update(arg_params)
@@ -300,42 +301,6 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
     log.addHandler(fh)
 
 
-def string_dict(d, desc='DICTIONARY:', offset=30):
-    """ transform dictionary to a formatted string
-
-    :param {} d: dictionary with parameters
-    :param int offset: length between name and value
-    :param str desc: dictionary title
-    :return str:
-
-    >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
-    \'DICTIONARY:\\n"abc": 123\'
-    """
-    s = desc + '\n'
-    tmp_name = '{:' + str(offset) + 's} {}'
-    rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
-    s += '\n'.join(rows)
-    return str(s)
-
-
-def copy_dict(d):
-    """ alternative of deep copy without pickle on in first level
-    Nose testing - TypeError: can't pickle dict_keys objects
-
-    :param {} d: dictionary
-    :return {}:
-    >>> d1 = {'a': [0, 1]}
-    >>> d2 = copy_dict(d1)
-    >>> d2['a'].append(3)
-    >>> d1
-    {'a': [0, 1]}
-    >>> d2
-    {'a': [0, 1, 3]}
-    """
-    d_new = copy.deepcopy(d)
-    return d_new
-
-
 def generate_conf_suffix(d_params):
     """ generating suffix strung according given params
 
@@ -353,6 +318,7 @@ def generate_conf_suffix(d_params):
     suffix += '_'.join('{}={}'.format(k.replace('_', '-'), d_params[k])
                        for k in sorted(d_params) if k != 'param_idx')
     return suffix
+
 
 # =============================================================================
 # =============================================================================
@@ -526,7 +492,7 @@ class Experiment(object):
 
         # in case it single value make it iterable
         if is_list_like(iter_params):
-            self.iter_params = copy_dict(iter_params)
+            self.iter_params = copy.deepcopy(iter_params)
         elif isinstance(iter_params, dict):
             logging.info(string_dict(iter_params, desc='ITERATE PARAMETERS:'))
             self.iter_params = expand_params(iter_params)
@@ -572,8 +538,8 @@ class Experiment(object):
         :param {str: ...} d_params: used specific configuration
         :return {str: ...}: output statistic
         """
-        detail = copy_dict(self.params)
-        detail.update(copy_dict(d_params))
+        detail = copy.deepcopy(self.params)
+        detail.update(copy.deepcopy(d_params))
         detail['name_suffix'] = generate_conf_suffix(d_params)
 
         # in case you chose only a subset of images
@@ -728,53 +694,9 @@ class Experiment(object):
                 fp.write('\n{}'.format(df_stat))
             logging.debug('statistic: \n%r', df_stat)
 
+
 # =============================================================================
 # =============================================================================
-
-
-def is_list_like(var):
-    """ check if the variable is iterable
-
-    :param var:
-    :return bool:
-
-    >>> is_list_like('abc')
-    False
-    >>> is_list_like(123.)
-    False
-    >>> is_list_like([0])
-    True
-    >>> is_list_like((1, ))
-    True
-    >>> is_list_like(range(2))
-    True
-    """
-    try:  # for python 3
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, range, np.ndarray, types.GeneratorType)]
-    except Exception:  # for python 2
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, np.ndarray, types.GeneratorType)]
-    return any(is_iter)
-
-
-def is_iterable(var):
-    """ check if the variable is iterable
-
-    :param var:
-    :return bool:
-
-    >>> is_iterable('abc')
-    False
-    >>> is_iterable(123.)
-    False
-    >>> is_iterable((1, ))
-    True
-    >>> is_iterable(range(2))
-    True
-    """
-    res = (hasattr(var, '__iter__') and not isinstance(var, str))
-    return res
 
 
 def extend_list_params(list_params, name_param, list_options):
@@ -814,7 +736,7 @@ def extend_list_params(list_params, name_param, list_options):
 def simplify_params(dict_params):
     """ extract simple configuration dictionary
 
-    :return:
+    :return {}:
 
     >>> params = simplify_params({'t': 'abc', 'n': [1, 2]})
     >>> pd.Series(params).sort_index()  #doctest: +NORMALIZE_WHITESPACE
@@ -832,8 +754,9 @@ def simplify_params(dict_params):
 def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     """ extend parameters to a list
 
-    :param {} simple_config:
-    :param {} dict_params:
+    :param {} dict_params: input dictionary with params
+    :param {} simple_config: simple config dictionary
+    :param [str] skip_patterns: ignored configs
     :return:
 
     >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),

@@ -17,6 +17,7 @@ from nilearn.decomposition import CanICA, DictLearning
 from skimage import segmentation
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+from bpdl.utilities import string_dict
 from bpdl.data_utils import relabel_boundary_background
 from bpdl.pattern_atlas import (
     init_atlas_grid, init_atlas_mosaic, init_atlas_random, init_atlas_gauss_watershed_2d,
@@ -25,7 +26,7 @@ from bpdl.pattern_atlas import (
 from bpdl.dictionary_learning import reset_atlas_background, bpdl_pipeline
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
 from bpdl.registration import warp2d_images_deformations
-from experiments.experiment_general import Experiment, string_dict
+from experiments.experiment_general import Experiment
 
 NAME_DEFORMS = 'deformations{}.npz'
 

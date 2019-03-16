@@ -7,6 +7,7 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 # from __future__ import absolute_import
 import os
 import re
+import types
 import logging
 import shutil
 import multiprocessing.pool
@@ -336,3 +337,66 @@ def try_decorator(func):
         except Exception:
             logging.exception('%r with %r and %r', func.__name__, args, kwargs)
     return wrap
+
+
+def is_list_like(var):
+    """ check if the variable is iterable
+
+    :param var:
+    :return bool:
+
+    >>> is_list_like('abc')
+    False
+    >>> is_list_like(123.)
+    False
+    >>> is_list_like([0])
+    True
+    >>> is_list_like((1, ))
+    True
+    >>> is_list_like(range(2))
+    True
+    """
+    try:  # for python 3
+        is_iter = [isinstance(var, tp) for tp
+                   in (list, tuple, range, np.ndarray, types.GeneratorType)]
+    except Exception:  # for python 2
+        is_iter = [isinstance(var, tp) for tp
+                   in (list, tuple, np.ndarray, types.GeneratorType)]
+    return any(is_iter)
+
+
+def is_iterable(var):
+    """ check if the variable is iterable
+
+    :param var:
+    :return bool:
+
+    >>> is_iterable('abc')
+    False
+    >>> is_iterable(123.)
+    False
+    >>> is_iterable((1, ))
+    True
+    >>> is_iterable(range(2))
+    True
+    """
+    res = (hasattr(var, '__iter__') and not isinstance(var, str))
+    return res
+
+
+def string_dict(d, desc='DICTIONARY:', offset=30):
+    """ transform dictionary to a formatted string
+
+    :param {} d: dictionary with parameters
+    :param int offset: length between name and value
+    :param str desc: dictionary title
+    :return str:
+
+    >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
+    \'DICTIONARY:\\n"abc": 123\'
+    """
+    s = desc + '\n'
+    tmp_name = '{:' + str(offset) + 's} {}'
+    rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
+    s += '\n'.join(rows)
+    return str(s)
