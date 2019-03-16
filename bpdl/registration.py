@@ -20,13 +20,12 @@ from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
 from dipy.align.metrics import SSDMetric
 
-import bpdl.utilities as utils
-import bpdl.pattern_atlas as ptn_atlas
+from bpdl.utilities import wrap_execute_sequence
 
 NB_THREADS = int(mproc.cpu_count() * .8)
 
-LIST_SDR_PARAMS = ['metric', 'level_iters', 'step_length', 'ss_sigma_factor',
-                   'opt_tol', 'inv_iter', 'inv_tol', 'callback']
+LIST_SDR_PARAMS = ('metric', 'level_iters', 'step_length', 'ss_sigma_factor',
+                   'opt_tol', 'inv_iter', 'inv_tol', 'callback')
 DIPY_DEAMONS_PARAMS = dict(
     step_length=0.1,
     level_iters=[30, 50],
@@ -240,8 +239,7 @@ def warp2d_apply_deform_field(img, deform, method='linear'):
     assert img.ndim == 2, 'expected only 2D image'
     assert deform.ndim == 3, 'expected only 2D deformation'
     assert img.shape == deform.shape[:-1], \
-        'image %s and deform %s size should match' \
-        % (repr(img.shape), repr(deform.shape))
+        'image %r and deform %r size should match' % (img.shape, deform.shape)
     grid_x, grid_y = np.mgrid[0:img.shape[0], 0:img.shape[1]]
     deform_x = deform[..., 0]
     deform_y = deform[..., 1]
@@ -270,12 +268,12 @@ def wrapper_warp2d_transform_image(idx_img_deform, method='linear', inverse=Fals
 
 
 def warp2d_images_deformations(list_images, list_deforms, method='linear',
-                               inverse=False, nb_jobs=NB_THREADS):
+                               inverse=False, nb_workers=NB_THREADS):
     """ deform whole set of images to expected image domain
 
     :param [ndarray] list_images:
     :param ndarray list_deforms:
-    :param int nb_jobs:
+    :param int nb_workers:
     :return: [ndarray]
 
     >>> img = np.zeros((5, 9), dtype=int)
@@ -298,8 +296,7 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear',
                            method=method, inverse=inverse)
     list_imgs_wrap = [None] * len(list_images)
     list_items = zip(range(len(list_images)), list_images, list_deforms)
-    for idx, img_w in utils.wrap_execute_sequence(_wrap_deform, list_items,
-                                                  nb_jobs, desc=None):
+    for idx, img_w in wrap_execute_sequence(_wrap_deform, list_items, nb_workers, desc=None):
         list_imgs_wrap[idx] = img_w
 
     return list_imgs_wrap
@@ -339,7 +336,7 @@ def wrapper_register_demons_image_weights(idx_img_weights, atlas, smooth_coef,
 def register_images_to_atlas_demons(list_images, atlas, list_weights,
                                     smooth_coef=1., params=None,
                                     interp_method='linear', inverse=False,
-                                    rm_mean=True, nb_jobs=NB_THREADS):
+                                    rm_mean=True, nb_workers=NB_THREADS):
     """ register whole set of images to estimated atlas and weights
     IDEA: think about parallel registration per sets as for loading images
 
@@ -348,9 +345,10 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     :param ndarray list_weights:
     :param float coef:
     :param {str: ...} params:
-    :param int nb_jobs:
+    :param int nb_workers:
     :return: [ndarray], [ndarray]
 
+    >>> import bpdl.pattern_atlas as ptn_atlas
     >>> np.random.seed(42)
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -368,9 +366,9 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-    >>> _, _ = register_images_to_atlas_demons(imgs, atlas, w_bins, nb_jobs=1)
+    >>> _, _ = register_images_to_atlas_demons(imgs, atlas, w_bins, nb_workers=1)
     >>> imgs_w, deforms = register_images_to_atlas_demons(imgs, atlas, w_bins,
-    ...                     smooth_coef=20., interp_method='nearest', nb_jobs=2)
+    ...                     smooth_coef=20., interp_method='nearest', nb_workers=2)
     >>> np.sum(imgs_w[0])
     0
     >>> imgs_w[1]  # doctest: +SKIP
@@ -398,8 +396,8 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
                                 atlas=atlas, smooth_coef=smooth_coef,
                                 params=params, interp_method=interp_method,
                                 inverse=inverse)
-    for idx, deform in utils.wrap_execute_sequence(
-                            _wrapper_register, iterations, nb_jobs, desc=None):
+    for idx, deform in wrap_execute_sequence(_wrapper_register, iterations,
+                                             nb_workers, desc=None):
         list_deform[idx] = deform
 
     # remove mean transform
@@ -410,8 +408,8 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     _wrapper_warp = partial(wrapper_warp2d_transform_image,
                             method='linear', inverse=False)
     iterations = zip(range(len(list_images)), list_images, list_deform)
-    for idx, img_w in utils.wrap_execute_sequence(_wrapper_warp, iterations,
-                                                  nb_jobs, desc=None):
+    for idx, img_w in wrap_execute_sequence(_wrapper_warp, iterations, nb_workers,
+                                            desc=None):
         list_imgs_wrap[idx] = img_w
 
     return list_imgs_wrap, list_deform
@@ -435,8 +433,7 @@ def subtract_mean_deform(list_deform, name):
 class SmoothSymmetricDiffeomorphicRegistration(SymmetricDiffeomorphicRegistration):
 
     def __init__(self, metric, smooth_sigma=0.5, **kwargs):
-        super(SmoothSymmetricDiffeomorphicRegistration, self).__init__(metric,
-                                                                       **kwargs)
+        super(SmoothSymmetricDiffeomorphicRegistration, self).__init__(metric, **kwargs)
         self.smooth_sigma = smooth_sigma
 
     def update(self, current_displacement, new_displacement,

@@ -7,9 +7,6 @@ __pycache__/
 *.cpp
 *.so
 
-# installed libraries
-libs/
-
 # temporary structure
 build/
 output/
@@ -26,7 +23,6 @@ temp/
 # Unit test / coverage reports
 htmlcov/
 .tox/
-pytest.*
 .coverage
 .coverage.*
 .cache

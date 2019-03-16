@@ -4,11 +4,11 @@ per ech folder and add final statistic
 
 EXAMPLES:
 >> python run_parse_experiments_result.py \
-    -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
+    -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --name_results results.csv --name_config config.json --func_stat mean
 
 >> python run_parse_experiments_result.py \
-    -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
+    -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --name_results results_NEW.csv --name_config config.json --func_stat none
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
@@ -19,7 +19,6 @@ import sys
 import glob
 import json
 import argparse
-import traceback
 import logging
 import multiprocessing as mproc
 from functools import partial
@@ -29,7 +28,6 @@ import pandas as pd
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.utilities as utils
-import bpdl.data_utils as tl_data
 import experiments.experiment_general as e_gen
 
 NAME_INPUT_CONFIG = 'resultStat.txt'
@@ -57,24 +55,24 @@ def parse_arg_params(params):
     :return: argparse
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path', type=str, required=True,
+    parser.add_argument('-i', '--path', type=str, required=True,
                         help='path to set of experiments')
-    parser.add_argument('-conf', '--name_config', type=str, required=False,
+    parser.add_argument('-c', '--name_config', type=str, required=False,
                         help='config file name', default=params['name_config'])
-    parser.add_argument('-res', '--name_results', type=str, required=False,
+    parser.add_argument('-r', '--name_results', type=str, required=False,
                         nargs='*', default=params['name_results'],
                         help='result file name')
-    parser.add_argument('-cols', '--result_columns', type=str, required=False,
+    parser.add_argument('--result_columns', type=str, required=False,
                         default=None, nargs='*',
                         help='important columns from results')
-    parser.add_argument('-fn', '--func_stat', type=str, required=False,
+    parser.add_argument('-f', '--func_stat', type=str, required=False,
                         help='type od stat over results', default='none')
-    parser.add_argument('--nb_jobs', type=int, required=False,
+    parser.add_argument('--nb_workers', type=int, required=False,
                         default=NB_THREADS,
                         help='number of jobs running in parallel')
 
     args = vars(parser.parse_args())
-    args['path'] = tl_data.update_path(args['path'])
+    args['path'] = utils.update_path(args['path'])
     assert os.path.isdir(args['path']), 'missing: %s' % args['path']
     return args
 
@@ -89,7 +87,7 @@ def parse_results_csv_summary(path_result, cols_sel, func_stat):
     """
     dict_result = {}
     df_res = load_results_csv(path_result, cols_sel)
-    if df_res is None or len(df_res) == 0:
+    if df_res is None or df_res.empty:
         return dict_result
     for col in df_res.columns:
         if df_res[col].dtype == int or df_res[col].dtype == float:
@@ -135,6 +133,7 @@ def load_multiple_results(path_expt, func_stat, params):
     return df_results
 
 
+@utils.try_decorator
 def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
@@ -149,7 +148,7 @@ def parse_experiment_folder(path_expt, params):
         dict_info = json.load(open(path_config, 'r'))
     else:
         dict_info = e_gen.parse_config_txt(path_config)
-    logging.debug(' -> loaded params: %s', repr(dict_info.keys()))
+    logging.debug(' -> loaded params: %r', dict_info.keys())
 
     dict_info.update(count_folders_subdirs(path_expt))
     df_info = pd.DataFrame().from_dict(dict_info, orient='index').T
@@ -157,14 +156,13 @@ def parse_experiment_folder(path_expt, params):
         func_stat = DICT_STATISTIC_FUNC.get(params['func_stat'], None)
         df_results = load_multiple_results(path_expt, func_stat, params)
     except Exception:
-        logging.error(traceback.format_exc())
+        logging.exception('load_multiple_results: %s', path_expt)
         df_results = pd.DataFrame()
 
     if len(df_results) == 0:
         return df_results
 
-    logging.debug('  -> results params: %s',
-                  repr(df_results.columns.tolist()))
+    logging.debug('  -> results params: %r', df_results.columns.tolist())
     list_cols = [c for c in df_info.columns
                  if c not in df_results.columns]
     df_infos = pd.concat([df_info[list_cols]] * len(df_results),
@@ -174,30 +172,12 @@ def parse_experiment_folder(path_expt, params):
     return df_results
 
 
-def try_parse_experiment_folder(path_expt, params):
-    """
-
-    :param str path_expt:
-    :param params: {str: ...}
-    :return:
-    """
-    try:
-        df_folder = parse_experiment_folder(path_expt, params)
-    except Exception:
-        logging.warning('no data extracted from folder %s',
-                        os.path.basename(path_expt))
-        logging.warning(traceback.format_exc())
-        df_folder = None
-    return df_folder
-
-
 def append_df_folder(df_all, df_folder):
     try:
         # df = pd.concat([df, df_folder], ignore_index=True)
         df_all = df_all.append(df_folder, ignore_index=True)
     except Exception:
-        logging.warning('appending fail for DataFrame...')
-        logging.error(traceback.format_exc())
+        logging.exception('appending fail for DataFrame...')
     return df_all
 
 
@@ -208,18 +188,18 @@ def parse_experiments(params):
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')
-    logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(utils.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.isdir(params['path']), 'missing "%s"' % params['path']
-    nb_jobs = params.get('nb_jobs', NB_THREADS)
+    nb_workers = params.get('nb_workers', NB_THREADS)
 
     df_all = pd.DataFrame()
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
                  if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
 
-    _wrapper_parse_folder = partial(try_parse_experiment_folder, params=params)
+    _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
     for df_folder in utils.wrap_execute_sequence(_wrapper_parse_folder,
-                                                 path_dirs, nb_jobs):
+                                                 path_dirs, nb_workers):
         df_all = append_df_folder(df_all, df_folder)
 
     if isinstance(params['name_results'], list):

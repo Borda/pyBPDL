@@ -4,21 +4,21 @@ run experiments with Stat-of-the-art methods
 Example run:
 
 >> python run_experiments.py --type synth \
-    -in /mnt/F464B42264B3E590/TEMP/apdDataset_00 \
-    -out /mnt/F464B42264B3E590/TEMP/experiments_APD \
-    --nb_jobs 1 
+    -i /mnt/F464B42264B3E590/TEMP/apdDataset_00 \
+    -o /mnt/F464B42264B3E590/TEMP/experiments_APD \
+    --nb_workers 1
 
 >> python run_experiments.py --type synth \
-    -in ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APD
+    -i ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APD
 
 >> python run_experiments.py --type synth  --method BPDL \
-    -in ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth2 \
+    -i ~/Medical-drosophila/synthetic_data/apdDataset_v1 \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth2 \
 
 >> python run_experiments.py --type real \
-    -in ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
+    -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
     --dataset gene_ssmall
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
@@ -26,12 +26,14 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 import os
 import sys
-import gc, time
+import gc
+import time
 import logging
 
 import numpy as np
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
+import bpdl.utilities as tl_utils
 import bpdl.data_utils as tl_data
 import bpdl.dictionary_learning as dl
 import bpdl.pattern_atlas as ptn_dict
@@ -102,7 +104,7 @@ def experiment_pipeline_alpe_showcase(path_out):
 
 
 def experiment_iterate(params, iter_params, user_gt):
-    if not expt_gen.is_list_like(params['dataset']):
+    if not tl_utils.is_list_like(params['dataset']):
         params['dataset'] = [params['dataset']]
 
     # tqdm_bar = tqdm.tqdm(total=len(l_params))
@@ -120,9 +122,9 @@ def experiment_iterate(params, iter_params, user_gt):
 
 
 def filter_iterable_params(params):
+    _any_special = lambda k: any(x in k for x in SPECIAL_EXPT_PARAMS)
     d_iter = {k: params[k] for k in params
-              if expt_gen.is_iterable(params[k])
-              and not any(x in k for x in SPECIAL_EXPT_PARAMS)}
+              if tl_utils.is_iterable(params[k]) and not _any_special(k)}
     return d_iter
 
 
@@ -132,7 +134,7 @@ def experiments_synthetic(params=SYNTH_PARAMS):
     :param {str: ...} params:
     """
     params = expt_gen.parse_params(params, LIST_METHODS)
-    logging.info(expt_gen.string_dict(params, desc='PARAMETERS'))
+    logging.info(tl_utils.string_dict(params, desc='PARAMETERS'))
 
     iter_params = filter_iterable_params(params)
     # iter_params = {
@@ -151,7 +153,7 @@ def experiments_real(params=REAL_PARAMS):
     :param {str: ...} params:
     """
     params = expt_gen.parse_params(params, LIST_METHODS)
-    logging.info(expt_gen.string_dict(params, desc='PARAMETERS'))
+    logging.info(tl_utils.string_dict(params, desc='PARAMETERS'))
 
     iter_params = filter_iterable_params(params)
     # iter_params = {

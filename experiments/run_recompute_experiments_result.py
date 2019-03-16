@@ -3,7 +3,7 @@ walk over all experiment folders and ...
 
 EXAMPLES:
 >> python run_recompute_experiments_result.py \
-    -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth
+    -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -12,15 +12,15 @@ import os
 import sys
 import glob
 import json
-import traceback
 import logging
-import gc, time
+import gc
+import time
 import multiprocessing as mproc
 from functools import partial
 
 import matplotlib
 if os.environ.get('DISPLAY', '') == '':
-    # logging.warning('No display found. Using non-interactive Agg backend.')
+    print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
 import numpy as np
@@ -33,7 +33,6 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 import bpdl.utilities as utils
 import bpdl.data_utils as tl_data
 import bpdl.metric_similarity as tl_metric
-import experiments.experiment_general as e_gen
 import experiments.run_dataset_generate as r_data
 import experiments.run_parse_experiments_result as r_parse
 
@@ -103,6 +102,7 @@ def export_atlas_both(atlas_gt, atlas, path_out_img, fig_size=FIGURE_SIZE):
     plt.close(fig)
 
 
+@utils.try_decorator
 def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
@@ -115,7 +115,7 @@ def parse_experiment_folder(path_expt, params):
     assert path_config.endswith('.json'), '%s' % path_config
     assert os.path.exists(path_config), 'missing config: %s' % path_config
     dict_info = json.load(open(path_config, 'r'))
-    logging.debug(' -> loaded params: %s', repr(dict_info.keys()))
+    logging.debug(' -> loaded params: %r', dict_info.keys())
 
     path_results = os.path.join(path_expt, params['name_results'])
     assert path_results.endswith('.csv'), '%s' % path_results
@@ -167,31 +167,22 @@ def parse_experiment_folder(path_expt, params):
     gc.collect(), time.sleep(1)
 
 
-def try_parse_folder(path_expt, params):
-    """ just a wrapper to cover all paring as try  """
-    try:
-        parse_experiment_folder(path_expt, params)
-    except Exception:
-        logging.warning(traceback.format_exc())
-
-
 def parse_experiments(params):
     """ with specific input parameters wal over result folder and parse it
 
     :param {str: ...} params:
     """
     logging.info('running recompute Experiments results')
-    logging.info(e_gen.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(utils.string_dict(params, desc='ARGUMENTS:'))
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
-    nb_jobs = params.get('nb_jobs', NB_THREADS)
+    nb_workers = params.get('nb_workers', NB_THREADS)
 
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
                  if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
 
-    _wrapper_parse_folder = partial(try_parse_folder,
-                                    params=params)
-    list(utils.wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_jobs))
+    _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
+    list(utils.wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_workers))
 
 
 if __name__ == '__main__':

@@ -3,8 +3,8 @@ Extracting the gene activation in case it is separate image channel
 
 
 >>  python run_extract_fuzzy_activation.py \
-    -in "../data_images/ovary_stage-2/image/*.png" \
-    -out ../data_images/ovary_stage-2/gene
+    -i "../data_images/ovary_stage-2/image/*.png" \
+    -o ../data_images/ovary_stage-2/gene
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -19,7 +19,7 @@ from functools import partial
 
 import matplotlib
 if os.environ.get('DISPLAY', '') == '':
-    # logging.warning('No display found. Using non-interactive Agg backend.')
+    print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
 import numpy as np
@@ -34,8 +34,8 @@ import experiments.run_cut_minimal_images as r_cut
 
 NB_THREADS = int(mproc.cpu_count() * .75)
 PARAMS = {
-    'path_in': os.path.join(tl_data.update_path('data_images/ovary_stage-3/image'), '*.png'),
-    'path_out': tl_data.update_path('data_images/ovary_stage-3/gene'),
+    'path_in': os.path.join(utils.update_path('data_images/ovary_stage-3/image'), '*.png'),
+    'path_out': utils.update_path('data_images/ovary_stage-3/gene'),
 }
 
 
@@ -74,7 +74,7 @@ def extract_activation(path_img, path_out):
     tl_data.export_image(path_out, im_gene, name)
 
 
-def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
+def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     assert os.path.isdir(os.path.dirname(path_pattern_in)), \
         'missing: %s' % path_pattern_in
     assert os.path.isdir(os.path.dirname(path_out)), \
@@ -88,7 +88,7 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     logging.info('found images: %i', len(list_img_paths))
 
     _wrapper_extract = partial(extract_activation, path_out=path_out)
-    list(utils.wrap_execute_sequence(_wrapper_extract, list_img_paths, nb_jobs))
+    list(utils.wrap_execute_sequence(_wrapper_extract, list_img_paths, nb_workers))
 
 
 if __name__ == '__main__':
@@ -97,6 +97,6 @@ if __name__ == '__main__':
 
     params = r_cut.args_parse_params(PARAMS)
     main(params['path_in'], params['path_out'],
-         nb_jobs=params['nb_jobs'])
+         nb_workers=params['nb_workers'])
 
     logging.info('DONE')

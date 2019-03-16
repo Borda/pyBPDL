@@ -8,17 +8,15 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import glob
 import logging
-import shutil
 import warnings
 import itertools
 import multiprocessing as mproc
-from functools import partial
+from functools import partial, wraps
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
-if os.environ.get('DISPLAY', '') == '' \
-        and matplotlib.rcParams['backend'] != 'agg':
-    # logging.warning('No display found. Using non-interactive Agg backend.')
+if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
+    print('No display found. Using non-interactive Agg backend.')
     # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
@@ -31,7 +29,7 @@ from scipy import ndimage
 from skimage import io, draw, transform
 from PIL import Image
 
-import bpdl.utilities as utils
+from bpdl.utilities import wrap_execute_sequence, create_clean_folder
 
 NB_THREADS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
@@ -51,35 +49,6 @@ COLUMN_NAME = 'ptn_{:02d}'
 GAUSS_NOISE = [0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001]
 
 
-def update_path(path_file, lim_depth=5, absolute=True):
-    """ bubble in the folder tree up intil it found desired file
-    otherwise return original one
-
-    :param str path_file: path
-    :param int lim_depth: length of bubble attempted
-    :param bool absolute: absolute path
-    :return str:
-
-    >>> path = 'sample_file.test'
-    >>> f = open(path, 'w')
-    >>> update_path(path, absolute=False)
-    'sample_file.test'
-    >>> os.remove(path)
-    """
-    if path_file.startswith('/'):
-        return path_file
-    elif path_file.startswith('~'):
-        path_file = os.path.expanduser(path_file)
-    else:
-        for _ in range(lim_depth):
-            if os.path.exists(path_file):
-                break
-            path_file = os.path.join('..', path_file)
-    if absolute:
-        path_file = os.path.abspath(path_file)
-    return path_file
-
-
 def io_image_decorate(func):
     """ costume decorator to suppers debug messages from the PIL function
     to suppress PIl debug logging
@@ -88,6 +57,7 @@ def io_image_decorate(func):
     :param func:
     :return:
     """
+    @wraps(func)
     def wrap(*args, **kwargs):
         log_level = logging.getLogger().getEffectiveLevel()
         logging.getLogger().setLevel(logging.INFO)
@@ -210,8 +180,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
     """
-    logging.debug('deform image plane by elastic transform with grid %s',
-                  repr(grid_size))
+    logging.debug('deform image plane by elastic transform with grid %r', grid_size)
     # logging.debug(im.shape)
     im_size = im.shape[-2:]
     tform = create_elastic_deform_2d(im_size, coef, grid_size, rand_seed)
@@ -225,7 +194,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
                     for i in range(im.shape[0])]
         img = np.array(im_stack)
     else:
-        logging.error('not supported image dimension - %s' % repr(im.shape))
+        logging.error('not supported image dimension - %r' % im.shape)
         img = im.copy()
     img = np.array(img, dtype=np.uint8)
     return img
@@ -258,7 +227,7 @@ def frequent_boundary_label(image):
         labels = np.hstack([sl.ravel() for sl in slices])
     else:
         labels = np.array([0])
-        logging.warning('wrong image dimension - %s', repr(image.shape))
+        logging.warning('wrong image dimension - %r', image.shape)
     bg = np.argmax(np.bincount(labels)) \
         if np.issubdtype(image.dtype, np.integer) else np.median(labels)
     return bg
@@ -386,27 +355,6 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     return img
 
 
-def create_clean_folder(path_dir):
-    """ create empty folder and while the folder exist clean all files
-
-    :param str path_dir: path
-    :return str:
-
-    >>> path_dir = os.path.abspath('sample_dir')
-    >>> path_dir = create_clean_folder(path_dir)
-    >>> os.path.exists(path_dir)
-    True
-    >>> shutil.rmtree(path_dir, ignore_errors=True)
-    """
-    if os.path.isdir(os.path.dirname(path_dir)):
-        logging.warning('existing folder will be cleaned: %s', path_dir)
-    logging.info('create clean folder "%s"', path_dir)
-    if os.path.exists(path_dir):
-        shutil.rmtree(path_dir, ignore_errors=True)
-    os.mkdir(path_dir)
-    return path_dir
-
-
 def extract_image_largest_element(img_binary, labeled=None):
     """ take a binary image and find all independent segments,
     then keep just the largest segment and rest set as 0
@@ -475,8 +423,8 @@ def atlas_filter_larges_components(atlas):
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0]], dtype=uint8)
     """
     # export to dictionary
-    logging.info('... post-processing over generated patterns: %s',
-                 repr(np.unique(atlas).tolist()))
+    logging.info('... post-processing over generated patterns: %r',
+                 np.unique(atlas).tolist())
     atlas_new = np.zeros(atlas.shape, dtype=np.uint8)
     imgs_patterns = []
     for i, idx in enumerate(np.unique(atlas)[1:]):
@@ -510,10 +458,11 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> path_dir = create_clean_folder(path_dir)
     >>> imgs_patterns = dictionary_generate_atlas(path_dir)
+    >>> import shutil
     >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
-    logging.info('generate Atlas composed from %i patterns and image size %s',
-                 nb_patterns, repr(im_size))
+    logging.info('generate Atlas composed from %i patterns and image size %r',
+                 nb_patterns, im_size)
     out_dir = os.path.join(path_out, dir_name)
     create_clean_folder(out_dir)
     atlas = np.zeros(im_size, dtype=np.uint8)
@@ -529,7 +478,7 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     export_image(out_dir, atlas_def, 'atlas')
     # in case run in DEBUG show atlas and wait till close
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
-        logging.debug('labels: %s', repr(np.unique(atlas_def)))
+        logging.debug('labels: %r', np.unique(atlas_def))
         atlas_show = atlas_def if atlas_def.ndim == 2 \
             else atlas_def[int(atlas_def.shape[0] / 2)]
         plt.imshow(atlas_show)
@@ -576,10 +525,11 @@ def dictionary_generate_rnd_pattern(path_out=None,
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0],
            [  0,   0,   0,   0,   0,   0,   0,   0]], dtype=uint8)
+    >>> import shutil
     >>> shutil.rmtree(p_dir, ignore_errors=True)
     """
-    logging.info('generate Dict. composed from %i patterns and img. size %s',
-                 nb_patterns, repr(im_size))
+    logging.info('generate Dict. composed from %i patterns and img. size %r',
+                 nb_patterns, im_size)
     if path_out is not None:
         path_out = os.path.join(path_out, dir_name)
         create_clean_folder(path_out)
@@ -631,7 +581,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     # if there is non above threshold select one random
     if not any(bool_combine):
         bool_combine[np.random.randint(0, len(bool_combine))] = True
-    logging.debug('combination vector is %s', repr(bool_combine.tolist()))
+    logging.debug('combination vector is %r', bool_combine.tolist())
     im = sum(np.asarray(im_ptns)[bool_combine])
     # convert sum to union such as all above 0 set as 1
     im[im > 0.] = 1
@@ -645,7 +595,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
 
 def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES,
                                     ptn_ration=RND_PATTERN_OCCLUSION,
-                                    nb_jobs=NB_THREADS, rand_seed=None):
+                                    nb_workers=NB_THREADS, rand_seed=None):
     """ generate a Binary dataset composed from N samples and given ration
     of pattern occlusion
 
@@ -654,7 +604,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     :param int nb_samples: number of samples in dataset
     :param float ptn_ration: ration of how many patterns are used to create
         an input observation / image
-    :param int nb_jobs: number of running jobs
+    :param int nb_workers: number of running jobs
     :param rand_seed: random initialization
     :return (ndarray, DF): [np.array<height, width>], df<nb_imgs, nb_lbs>
 
@@ -689,12 +639,12 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     im_spls = [None] * nb_samples
     im_names = [None] * nb_samples
     im_weights = [None] * nb_samples
-    logging.debug('running in %i threads...', nb_jobs)
+    logging.debug('running in %i threads...', nb_workers)
     _wrapper_generate = partial(generate_rand_patterns_occlusion,
                                 im_ptns=im_ptns, out_dir=out_dir,
                                 ptn_ration=ptn_ration, rand_seed=rand_seed)
-    for idx, im, im_name, ptn_weights in utils.wrap_execute_sequence(
-            _wrapper_generate, range(nb_samples), nb_jobs):
+    for idx, im, im_name, ptn_weights in wrap_execute_sequence(
+            _wrapper_generate, range(nb_samples), nb_workers):
         im_spls[idx] = im
         im_names[idx] = im_name
         im_weights[idx] = ptn_weights
@@ -822,14 +772,14 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     (5, 20, 25)
     >>> os.remove(path_img)
     """
-    assert img.ndim >= 2, 'wrong image dim: %s' % repr(img.shape)
+    assert img.ndim >= 2, 'wrong image dim: %r' % img.shape
     if not os.path.exists(path_out):
         return ''
     if not isinstance(im_name, str):
         im_name = name_template.format(im_name)
     path_img = os.path.join(path_out, im_name)
-    logging.debug(' .. saving image of size %s type %s to "%s"', repr(img.shape),
-                  repr(img.dtype), path_img)
+    logging.debug(' .. saving image of size %r type %r to "%s"',
+                  img.shape, img.dtype, path_img)
     if stretch_range and img.max() > 0:
         img = img / float(img.max()) * 255
     if nifti:
@@ -845,7 +795,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
         # tif = libtiff.TIFF.open(path_img, mode='w')
         # tif.write_image(img_clip.astype(np.uint16))
     else:
-        logging.warning('not supported image format: %s', repr(img.shape))
+        logging.warning('not supported image format: %r', img.shape)
     return path_img
 
 
@@ -865,7 +815,7 @@ def wrapper_image_function(i_img, func, coef, out_dir):
 
 
 def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
-                                 nb_jobs=NB_THREADS):
+                                 nb_workers=NB_THREADS):
     """ having list if input images create an dataset with randomly deform set
     of these images and export them to the results folder
 
@@ -873,7 +823,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     :param [np.array<height, width>] imgs: raw input images
     :param str out_dir: path to the results directory
     :param float coef: a param describing the how much it is deformed (0 = None)
-    :param int nb_jobs: number of jobs running in parallel
+    :param int nb_workers: number of jobs running in parallel
     :return ndarray: [np.array<height, width>]
 
     >>> img = np.zeros((10, 5))
@@ -892,6 +842,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
             [0, 0, 0, 0, 0]], dtype=uint8)]
     >>> os.path.isdir(dir_name)
     True
+    >>> import shutil
     >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
     logging.info('apply costume function "%s" on %i samples with coef. %f',
@@ -899,10 +850,9 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     create_clean_folder(out_dir)
 
     imgs_new = [None] * len(imgs)
-    logging.debug('running in %i threads...', nb_jobs)
+    logging.debug('running in %i threads...', nb_workers)
     _apply_fn = partial(wrapper_image_function, func=func, coef=coef, out_dir=out_dir)
-    for i, im in utils.wrap_execute_sequence(_apply_fn, enumerate(imgs),
-                                             nb_jobs):
+    for i, im in wrap_execute_sequence(_apply_fn, enumerate(imgs), nb_workers):
         imgs_new[i] = im
 
     return imgs_new
@@ -1035,26 +985,26 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     return paths_img_most
 
 
-def dataset_load_images(img_paths, nb_spls=None, nb_jobs=1):
+def dataset_load_images(img_paths, nb_spls=None, nb_workers=1):
     """ load complete dataset or just a subset
 
     :param [str] img_paths: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
-    :param int nb_jobs: number of running jobs
+    :param int nb_workers: number of running jobs
     :return ([ndarray], [str]):
     """
     assert all(os.path.exists(p) for p in img_paths)
     img_paths = sorted(img_paths)[:nb_spls]
     logging.debug('number samples %i in dataset', len(img_paths))
-    if nb_jobs > 1:
-        logging.debug('running in %i threads...', nb_jobs)
+    if nb_workers > 1:
+        logging.debug('running in %i threads...', nb_workers)
         nb_load_blocks = len(img_paths) / float(BLOCK_NB_LOAD_IMAGES)
         nb_load_blocks = int(np.ceil(nb_load_blocks))
         logging.debug('estimated %i loading blocks', nb_load_blocks)
         block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
-        list_names_imgs = list(utils.wrap_execute_sequence(
-            wrapper_load_images, block_paths_img, nb_jobs=nb_jobs,
+        list_names_imgs = list(wrap_execute_sequence(
+            wrapper_load_images, block_paths_img, nb_workers=nb_workers,
             desc='loading images by blocks'))
 
         logging.debug('transforming the parallel results')
@@ -1207,34 +1157,35 @@ def dataset_compose_atlas(path_dir, img_temp_name='pattern_*'):
            [0, 1, 1, 0, 0, 1, 1, 1, 1, 0],
            [1, 0, 1, 0, 1, 1, 0, 1, 1, 0],
            [0, 1, 0, 1, 1, 1, 1, 1, 0, 1]], dtype=uint8)
+    >>> import shutil
     >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
     assert os.path.isdir(path_dir), 'missing atlas directory: %s' % path_dir
     path_imgs = find_images(path_dir, im_pattern=img_temp_name)
-    imgs, _ = dataset_load_images(path_imgs, nb_jobs=1)
+    imgs, _ = dataset_load_images(path_imgs, nb_workers=1)
     assert len(imgs) > 0, 'no patterns in input destination'
     atlas = np.zeros_like(imgs[0])
     for i, im in enumerate(imgs):
-        atlas[im == 1] = i+1
+        atlas[im == 1] = i + 1
     return np.array(atlas, dtype=np.uint8)
 
 
-def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
+def dataset_export_images(path_out, imgs, names=None, nb_workers=1):
     """ export complete dataset
 
     :param str path_out:
     :param [np.array<height, width>] imgs:
     :param names: [str] or None (use indexes)
-    :param int nb_jobs:
+    :param int nb_workers:
 
     >>> np.random.seed(0)
     >>> images = [np.random.random([15, 10]) for i in range(36)]
     >>> path_dir = os.path.abspath('sample_dataset')
     >>> os.mkdir(path_dir)
-    >>> dataset_export_images(path_dir, images, nb_jobs=2)
+    >>> dataset_export_images(path_dir, images, nb_workers=2)
     >>> path_imgs = find_images(path_dir)
-    >>> _, _ = dataset_load_images(path_imgs, nb_jobs=1)
-    >>> imgs, im_names = dataset_load_images(path_imgs, nb_jobs=2)
+    >>> _, _ = dataset_load_images(path_imgs, nb_workers=1)
+    >>> imgs, im_names = dataset_load_images(path_imgs, nb_workers=2)
     >>> len(imgs)
     36
     >>> np.round(imgs[0].astype(float), 1)
@@ -1255,6 +1206,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
            [ 0.9,  0.4,  0.4,  0.9,  0.8,  0.7,  0.1,  0.9,  0.7,  1. ]])
     >>> im_names   # doctest: +ELLIPSIS
     ('sample_00000', 'sample_00001', ..., 'sample_00034', 'sample_00035')
+    >>> import shutil
     >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
     create_clean_folder(path_out)
@@ -1263,7 +1215,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_jobs=1):
         names = range(len(imgs))
 
     mp_set = [(path_out, im, names[i]) for i, im in enumerate(imgs)]
-    list(utils.wrap_execute_sequence(wrapper_export_image, mp_set))
+    list(wrap_execute_sequence(wrapper_export_image, mp_set))
 
 
 def wrapper_export_image(mp_set):

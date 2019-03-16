@@ -6,6 +6,7 @@
 [![Run Status](https://api.shippable.com/projects/5937c15c3e246207003bc61b/badge?branch=master)](https://app.shippable.com/github/Borda/pyBPDL)
 [![Coverage Badge](https://api.shippable.com/projects/5937c15c3e246207003bc61b/coverageBadge?branch=master)](https://app.shippable.com/github/Borda/pyBPDL)
 [![CircleCI](https://circleci.com/gh/Borda/pyBPDL.svg?style=svg&circle-token=0b3f34bedf54747d32becd2f13cd0da71fef7548)](https://circleci.com/gh/Borda/pyBPDL)
+[![CodeFactor](https://www.codefactor.io/repository/github/borda/pybpdl/badge)](https://www.codefactor.io/repository/github/borda/pybpdl)
 
 We present an final step of image processing pipeline which accepts a large number of images, containing spatial expression information for thousands of genes in Drosophila imaginal discs. We assume that the gene activations are binary and can be expressed as a union of a small set of non-overlapping spatial patterns, yielding a compact representation of the spatial activation of each gene. This lends itself well to further automatic analysis, with the hope of discovering new biological relationships. Traditionally, the images were labeled manually, which was very time consuming. The key part of our work is a binary pattern dictionary learning algorithm, that takes a set of binary images and determines a set of patterns, which can be used to represent the input images with a small error.
 
@@ -118,8 +119,8 @@ To cut the set of images to the minimal size with reasonable infomation (basical
 
 ```bash
 python experiments/run_cut_minimal_images.py \
-    -in "./data_images/imaginal_discs/gene/*.png" \
-    -out ./data_images/imaginal_discs/gene_cut -thr 0.001
+    -i "./data_images/imaginal_discs/gene/*.png" \
+    -o ./data_images/imaginal_discs/gene_cut -t 0.001
 ```
 
 
@@ -129,8 +130,8 @@ Here the gene activation is presented in separate channel - green. so we just ta
 
 ```bash
 python experiments/run_extract_fuzzy_activation.py \
-    -in "./data_images/ovary_stage-2/image/*.png" \
-    -out ./data_images/ovary_stage-2/gene
+    -i "./data_images/ovary_stage-2/image/*.png" \
+    -o ./data_images/ovary_stage-2/gene
 ```
 
 Ovary in development stage 2
@@ -153,7 +154,7 @@ To collect the results we use `run_parse_experiments_result.py` which visit all 
 
 ```bash
 python run_parse_experiments_result.py \
-    -p ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
+    -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
     --fname_results results.csv --func_stat mean
 ```
 
@@ -166,16 +167,16 @@ We run just our method on both synthetic/real images using `run_experiment_apd_b
 ```bash
 python experiments/run_experiments.py \
     --type synth --method BPDL \
-    -in ./data_images/syntheticDataset_vX \
-    -out ./results -cfg ./data_images/sample_config.json \
+    -i ./data_images/syntheticDataset_vX \
+    -o ./results -c ./data_images/sample_config.json \
     --debug
 ```
  2. **Real images - drosophila**
 ```bash
 python experiments/run_experiments.py \
     --type real --method BPDL  \
-    -in ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APDL_real \
+    -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_real \
     --dataset gene_small
 ```
 
@@ -205,15 +206,15 @@ We cun all methods in the equal configuration mode on given synthetic/real data 
  1. **Synthetic datasets**
 ```bash
 python experiments/run_experiments.py \
-    -in ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v1 \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth1 \
+    -i ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v1 \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth1 \
     --method PCA ICA DL NMF BPDL
 ```
  2. **Real images - drosophila**
 ```bash
 python experiments/run_experiments.py --type real \
-    -in ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
-    -out ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
+    -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
+    -o ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
     --dataset gene_small
 ```
 
@@ -222,8 +223,8 @@ python experiments/run_experiments.py --type real \
 Since we have a results in form of estimated atlas and encoding (binary weights) for each image we can simply see the back reconstruction
 ```bash
 python experiments/run_reconstruction.py \
-    -p ./results/ExperimentBPDL_real_imaginal_disc_gene_small \
-    --nb_jobs 1 --visual
+    -e ./results/ExperimentBPDL_real_imaginal_disc_gene_small \
+    --nb_workers 1 --visual
 ```
 
 ![reconstruction](figures/reconst_imag-disc.png)
@@ -242,7 +243,7 @@ python experiments/run_parse_experiments_results.py \
 In case you need add of change a evaluation you do not need to retun all experiment since the alases and encoding is done, you can just rerun the elevation phase generating new results `results_NEW.csv`
 
 ```bash
-python experiments/run_recompute_experiments_result.py -p ./results
+python experiments/run_recompute_experiments_result.py -i ./results
 ```
  and parsing the new results
 ```bash

@@ -52,8 +52,7 @@ def convert_weights_binary2indexes(weights):
     >>> convert_weights_binary2indexes(weights)
     [array([2]), array([3]), array([0]), array([2, 3]), array([0])]
     """
-    logging.debug('convert binary weights %s to list of indexes with True',
-                  repr(weights.shape))
+    logging.debug('convert binary weights %r to list of indexes with True', weights.shape)
     # if type(weights) is np.ndarray:  weights = weights.tolist()
     w_index = [None] * weights.shape[0]
     for i in range(weights.shape[0]):

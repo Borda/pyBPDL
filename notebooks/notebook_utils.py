@@ -17,9 +17,9 @@ from IPython.display import display
 # from IPython.html.widgets import DropdownWidget as w_s
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.data_utils as tl_data
+import bpdl.utilities as utils
 
-PATH_DATA_SYNTH = tl_data.update_path('data_images')
+PATH_DATA_SYNTH = utils.update_path('data_images')
 SYNTH_DATASET = 'syntheticDataset_vX'
 # PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
 #  = 'atomicPatternDictionary_v0'
@@ -41,11 +41,11 @@ def load_dataset(path_dataset):
     list_imgs = []
     paths_imgs = glob.glob(os.path.join(path_dataset, '*' + DEFAULT_IMG_POSIX))
     reporting = [int((i + 1) * len(paths_imgs) / 5.) for i in range(5)]
-    for path_im in paths_imgs:
+    for j, path_im in enumerate(paths_imgs):
         im = io.imread(path_im)
         list_imgs.append(im / float(np.max(im)))
-        if i in reporting:
-            logging.debug(' -> loaded \t{:3.0%}'.format(i/float(len(paths_imgs))))
+        if j in reporting:
+            logging.debug(' -> loaded \t{:3.0%}'.format(j / float(len(paths_imgs))))
     return list_imgs
 
 
@@ -71,7 +71,7 @@ def show_sample_data_as_imgs(imgs, im_shape, nb_rows=5, nb_cols=3, bool_clr=Fals
 
 def bpdl_w_update_range(w_params, uq_range):
     for n in w_params:
-        if n not in uq_range or len(uq_range[n]) == 0:
+        if n not in uq_range or not np.asarray(uq_range[n]).size:
             w_params[n].visible = False
             w_params[n].max = 0
         else:
@@ -87,12 +87,12 @@ def bpdl_w_update_range(w_params, uq_range):
 
 def bpdl_w_update_param(w_params, uq_params):
     for n in w_params:
-        if n not in uq_params or len(uq_params[n]) == 0:
+        if n not in uq_params or not np.asarray(uq_params[n]).size:
             w_params[n].visible = False
         else:
             try:
                 float(uq_params[n][0])
-                vals = ['v_'+str(v) for v in uq_params[n]]
+                vals = ['v_' + str(v) for v in uq_params[n]]
             except Exception:
                 vals = uq_params[n]
             w_params[n].options = dict(zip(vals, uq_params[n]))
@@ -155,7 +155,7 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
 
 
 def bpdl_show_results(df_sel, path_imgs, idx=0, tp='gt', fig_size=(10, 5)):
-    if len(df_sel) == 0:
+    if df_sel.empty:
         return
     res = df_sel.iloc[0]
     path_atlas_gt = os.path.join(res['in_path'], res['dataset'], 'dictionary', 'atlas.png')
@@ -190,7 +190,7 @@ def find_experiment(df_data, params):
                       for n in params if n in df_data.columns])
     df_filter = df_data.query(q, engine='python')
     path_atlas = []
-    if len(df_filter) == 0:
+    if df_filter.empty:
         logging.warning('no such experiment')
     elif len(df_filter) > 0:
         assert len(df_filter) > 0
@@ -236,7 +236,7 @@ def plot_bpdl_graph_results(df_res, n_group, n_curve, iter_var='nb_labels',
         fig.suptitle('{}'.format(v), fontsize=16)
         for i, col in enumerate(l_graphs):
             for j, (idx, row) in enumerate(df_group.iterrows()):
-                if len(row[iter_var]) == 0:
+                if row[iter_var].empty:
                     continue
                 axarr[i].plot(row[iter_var], row[col], label=row[n_curve], color=clrs[j])
                 axarr[i].set_xlim([min(row[iter_var]), max(row[iter_var])])
@@ -269,9 +269,9 @@ def filter_df_results_4_plotting(df_select, iter_var='nb_labels',
             dict_samples[v][v1] = nb_samples
             df_res = df_res.append(d, ignore_index=True)
     # df_res = df_res.set_index('class')
-    logging.info('number of rows: %i columns: %s', len(df_res),
-                 repr(df_res.columns.tolist()))
-    logging.info('over samples: %s', repr(dict_samples))
+    logging.info('number of rows: %i columns: %r', len(df_res),
+                 df_res.columns.tolist())
+    logging.info('over samples: %r', dict_samples)
     return df_res, dict_samples
 
 

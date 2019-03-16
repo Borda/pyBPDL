@@ -5,7 +5,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 # from __future__ import absolute_import
 import logging
-import traceback
 
 # import numba
 import numpy as np
@@ -13,8 +12,9 @@ from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
 
-import bpdl.data_utils as tl_data
-import bpdl.pattern_weights as ptn_weight
+from bpdl.data_utils import image_deform_elastic, extract_image_largest_element
+from bpdl.pattern_weights import (weights_label_atlas_overlap_threshold,
+                                  convert_weights_binary2indexes)
 
 REINIT_PATTERN_COMPACT = True
 UNARY_BACKGROUND = 1
@@ -39,7 +39,7 @@ def init_atlas_random(im_size, nb_patterns, rand_seed=None):
            [3, 4, 1, 2, 2, 2, 4, 1, 4, 3, 1, 4],
            [4, 3, 4, 3, 4, 1, 3, 1, 1, 1, 2, 2]])
     """
-    logging.debug('initialise atlas %s as random labeling', repr(im_size))
+    logging.debug('initialise atlas %r as random labeling', im_size)
     nb_labels = nb_patterns + 1
     # reinit seed to have random samples even in the same time
     np.random.seed(rand_seed)
@@ -111,7 +111,7 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
            [4, 4, 3, 3, 1, 1, 1, 1, 3, 3, 4, 4],
            [4, 4, 3, 3, 1, 1, 2, 2, 4, 4, 2, 2]])
     """
-    logging.debug('initialise atlas %s as grid labeling', repr(im_size))
+    logging.debug('initialise atlas %r as grid labeling', im_size)
     max_label = int(np.ceil(nb_patterns * coef))
     assert max_label > 0, 'at least some labels should be reuested'
     # reinit seed to have random samples even in the same time
@@ -119,15 +119,15 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     block_size = np.ceil(np.array(im_size) / float(max_label))
     block = np.ones(block_size.astype(np.int))
     vec = list(range(max_label))
-    logging.debug('block size is %s', repr(block.shape))
+    logging.debug('block size is %r', block.shape)
     rows = []
-    for label in range(0, max_label):
+    for _ in range(0, max_label):
         vec = np.random.permutation(vec)
         row = np.hstack([block.copy() * vec[k] for k in range(max_label)])
         rows.append(row)
     mosaic = np.vstack(rows)
-    logging.debug('generated mosaic %s with labeling %s',
-                  repr(mosaic.shape), repr(np.unique(mosaic).tolist()))
+    logging.debug('generated mosaic %r with labeling %r', mosaic.shape,
+                  np.unique(mosaic).tolist())
     img_init = mosaic[:im_size[0], :im_size[1]]
     img_init = np.remainder(img_init, nb_patterns) + 1
     return np.array(img_init, dtype=np.int)
@@ -169,11 +169,10 @@ def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
            [4, 5, 5, 5, 1, 5, 0, 0, 0, 0, 0, 0],
            [1, 1, 2, 3, 5, 3, 1, 4, 3, 3, 1, 2]])
     """
-    logging.debug('initialise atlas for %i labels from %i images of shape %s '
-                  'with Otsu-Watershed', nb_patterns, len(imgs),
-                  repr(imgs[0].shape))
+    logging.debug('initialise atlas for %i labels from %i images of shape %r'
+                  ' with Otsu-Watershed', nb_patterns, len(imgs), imgs[0].shape)
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian(img_sum, 1)
+    img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
     # http://scikit-image.org/docs/dev/auto_examples/plot_otsu.html
     thresh = filters.threshold_otsu(img_gauss)
     img_otsu = (img_gauss >= thresh)
@@ -266,11 +265,10 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    logging.debug('initialise atlas for %i labels from %i images of shape %s '
-                  'with Gauss-Watershed', nb_patterns, len(imgs),
-                  repr(imgs[0].shape))
+    logging.debug('initialise atlas for %i labels from %i images of shape %r'
+                  ' with Gauss-Watershed', nb_patterns, len(imgs), imgs[0].shape)
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
-    img_gauss = filters.gaussian(img_sum, 1)
+    img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
     seeds = detect_peaks(img_gauss)
     # http://scikit-image.org/docs/dev/auto_examples/plot_watershed.html
     labels = morphology.watershed(-img_gauss, seeds)
@@ -345,8 +343,7 @@ def init_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        # logging.warning('CRASH: %s' % init_atlas_nmf.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s' % init_atlas_nmf.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -392,8 +389,7 @@ def init_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        # logging.warning('CRASH: %s' % init_atlas_fast_ica.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s' % init_atlas_fast_ica.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -437,8 +433,7 @@ def init_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        # logging.warning('CRASH: %s' % init_atlas_sparse_pca.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s' % init_atlas_sparse_pca.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -485,8 +480,7 @@ def init_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
         atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
                                                   bg_threshold)
     except Exception:
-        logging.warning('CRASH: %s' % init_atlas_dict_learn.__name__)
-        logging.warning(traceback.format_exc())
+        logging.exception('CRASH: %s', init_atlas_dict_learn.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
@@ -516,8 +510,7 @@ def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     logging.debug('initialise atlas by deforming original one')
-    res = tl_data.image_deform_elastic(atlas, coef, grid_size,
-                                       rand_seed=rand_seed)
+    res = image_deform_elastic(atlas, coef, grid_size, rand_seed=rand_seed)
     return np.array(res, dtype=np.int)
 
 
@@ -640,14 +633,14 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
             peaks = detect_peaks(dist)
             labels = morphology.watershed(-dist, peaks, mask=im_diff)
         except Exception:
-            logging.warning(traceback.format_exc())
+            logging.exception('morphology.watershed')
             labels = None
     else:
         logging.debug('.. reinit. pattern as major component')
         im_diff = morphology.closing(im_diff, morphology.disk(1))
         labels = None
     # find largest connected component
-    img_ptn = tl_data.extract_image_largest_element(im_diff, labels)
+    img_ptn = extract_image_largest_element(im_diff, labels)
     # ptn_size = np.sum(ptn) / float(np.product(ptn.shape))
     # if ptn_size < 0.01:
     #     logging.debug('new patterns was too small %f', ptn_size)
@@ -741,7 +734,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     if label_max is None:
         label_max = max(np.max(atlas), w_bins.shape[1])
     else:
-        logging.debug('compare w_bin %s to max %i', repr(w_bins.shape), label_max)
+        logging.debug('compare w_bin %r to max %i', w_bins.shape, label_max)
         for i in range(w_bins.shape[1], label_max):
             logging.debug('adding disappeared weigh column %i', i)
             w_bins = np.append(w_bins, np.zeros((w_bins.shape[0], 1)), axis=1)
@@ -752,7 +745,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     atlas_new = atlas.copy()
     labels_empty = [lb for lb in range(1, label_max + 1)
                     if np.sum(w_bins[:, lb - 1]) == 0]
-    logging.debug('reinit. following labels: %s', repr(labels_empty))
+    logging.debug('reinit. following labels: %r', labels_empty)
     for label in labels_empty:
         w_index = label - 1
         imgs_reconst = reconstruct_samples(atlas_new, w_bins)
@@ -762,8 +755,8 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
         # BE AWARE OF THIS CONSTANT, it can caused that there are weight even
         # they should not be which lead to have high unary for atlas estimation
         lim_repopulate = 1. / label_max
-        w_bins[:, w_index] = ptn_weight.weights_label_atlas_overlap_threshold(
-                                        imgs, atlas_new, label, lim_repopulate)
+        w_bins[:, w_index] = weights_label_atlas_overlap_threshold(imgs, atlas_new, label,
+                                                                   lim_repopulate)
         logging.debug('reinit. label: %i with w_bins after: %i',
                       label, np.sum(w_bins[:, w_index]))
     return atlas_new, w_bins
@@ -797,7 +790,7 @@ def atlas_split_indep_ptn(atlas, label_max):
         # skip the largest one assuming to be background
         patterns += sorted(ptn, key=lambda x: np.sum(x), reverse=True)[1:]
     patterns = sorted(patterns, key=lambda x: np.sum(x), reverse=True)
-    logging.debug('list of all areas %s', repr([np.sum(p) for p in patterns]))
+    logging.debug('list of all areas %r', [np.sum(p) for p in patterns])
     atlas_new = np.zeros(atlas.shape, dtype=np.int)
     # take just label_max largest elements
     for i, ptn in enumerate(patterns[:label_max]):
@@ -809,7 +802,7 @@ def atlas_split_indep_ptn(atlas, label_max):
     # plt.subplot(121), plt.imshow(atlas), plt.colorbar()
     # plt.subplot(122), plt.imshow(atlas_new), plt.colorbar()
     # plt.show()
-    logging.debug('atlas unique %s', repr(np.unique(atlas_new)))
+    logging.debug('atlas unique %r', np.unique(atlas_new))
     return atlas_new
 
 
@@ -849,8 +842,8 @@ def edges_in_image2d_plane(im_size, connect_diag=False):
     assert len(edges) == len(weights), 'the lengths must match'
     edges = np.array(edges)
     weights = np.array(weights)
-    logging.debug('edges for image plane are shape %s', repr(edges.shape))
-    logging.debug('edges weights are shape %s', repr(weights.shape))
+    logging.debug('edges for image plane are shape %r', edges.shape)
+    logging.debug('edges weights are shape %r', weights.shape)
     return edges, weights
 
 
@@ -904,8 +897,8 @@ def compute_relative_penalty_images_weights(imgs, weights):
     weights_ext = np.append(np.zeros((weights.shape[0], 1)), weights, axis=1)
     # logging.debug(weights_ext)
     imgs = np.array(imgs)
-    logging.debug('DIMS potts: %s, imgs %s, w_bin: %s',
-                  repr(pott_sum.shape), repr(imgs.shape), repr(weights_ext.shape))
+    logging.debug('DIMS potts: %r, imgs %r, w_bin: %r',
+                  pott_sum.shape, imgs.shape, weights_ext.shape)
     logging.debug('... walk over all pixels in each image')
     for i in range(pott_sum.shape[0]):
         for j in range(pott_sum.shape[1]):
@@ -961,7 +954,7 @@ def compute_positive_cost_images_weights(imgs, ptn_weights):
     """
     # not using any more...
     logging.debug('compute unary cost from images and related ptn_weights')
-    w_idx = ptn_weight.convert_weights_binary2indexes(ptn_weights)
+    w_idx = convert_weights_binary2indexes(ptn_weights)
     nb_lbs = ptn_weights.shape[1] + 1
     assert len(imgs) == len(w_idx), 'nb of images (%i) and weights (%i) ' \
                                     'do not match' % (len(imgs), len(w_idx))

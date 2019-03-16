@@ -1,5 +1,3 @@
-import logging
-
 import numpy as np
 
 # parse the numpy versions

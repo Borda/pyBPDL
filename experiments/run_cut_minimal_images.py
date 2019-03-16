@@ -3,8 +3,8 @@ cut the minimal image size over whole set
 
 EXAMPLES:
 >> python run_cut_minimal_images.py \
-    -in "./data_images/imaginal_discs/gene/*.png" \
-    -out ./data_images/imaginal_discs/gene_cut
+    -i "./data_images/imaginal_discs/gene/*.png" \
+    -o ./data_images/imaginal_discs/gene_cut
 
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -30,10 +30,8 @@ NAME_JSON_BBOX = 'cut_bounding_box.json'
 LOAD_SUBSET_COEF = 5
 METHODS = ['cum-info', 'line-sum', 'line-grad']
 DEFAULT_PARAMS = {
-    'path_in': os.path.join(tl_data.update_path('data_images'),
-                            'imaginal_discs', 'gene', '*.png'),
-    'path_out': os.path.join(tl_data.update_path('data_images'),
-                             'imaginal_discs', 'gene_cut'),
+    'path_in': os.path.join(utils.update_path('data_images'), 'imaginal_discs', 'gene', '*.png'),
+    'path_out': os.path.join(utils.update_path('data_images'), 'imaginal_discs', 'gene_cut'),
 }
 
 
@@ -44,22 +42,22 @@ def args_parse_params(params):
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-in', '--path_in', type=str, required=True,
+    parser.add_argument('-i', '--path_in', type=str, required=True,
                         default=params['path_in'],
                         help='path to the folder with input image dataset')
-    parser.add_argument('-out', '--path_out', type=str, required=True,
+    parser.add_argument('-o', '--path_out', type=str, required=True,
                         default=params['path_out'],
                         help='path to the output with experiment results')
-    parser.add_argument('-thr', '--threshold', type=float, required=False,
+    parser.add_argument('-t', '--threshold', type=float, required=False,
                         default=0.001, help='threshold for image information')
-    parser.add_argument('-tp', '--thr_method', type=str, required=False,
+    parser.add_argument('-m', '--thr_method', type=str, required=False,
                         default='', choices=METHODS, help='used methods')
-    parser.add_argument('--nb_jobs', type=int, required=False,
+    parser.add_argument('--nb_workers', type=int, required=False,
                         default=NB_THREADS, help='number of parallel processes')
 
     args = vars(parser.parse_args())
     for k in (k for k in args if k.startswith('path_')):
-        p = tl_data.update_path(os.path.dirname(args[k]))
+        p = utils.update_path(os.path.dirname(args[k]))
         assert os.path.exists(p), 'missing (%s): %s' % (k, p)
         args[k] = os.path.join(p, os.path.basename(args[k]))
     return args
@@ -149,7 +147,7 @@ def export_cut_image(path_img, d_bbox, path_out):
     tl_data.export_image(path_out, im_cut, name)
 
 
-def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
+def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     assert os.path.isdir(os.path.dirname(path_pattern_in)), \
         'missing: %s' % path_pattern_in
     assert os.path.isdir(os.path.dirname(path_out)), \
@@ -163,18 +161,18 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     logging.info('found images: %i', len(list_img_paths))
 
     # create partial subset with image pathes
-    list_img_paths_partial = [list_img_paths[i::nb_jobs * LOAD_SUBSET_COEF]
-                              for i in range(nb_jobs * LOAD_SUBSET_COEF)]
+    list_img_paths_partial = [list_img_paths[i::nb_workers * LOAD_SUBSET_COEF]
+                              for i in range(nb_workers * LOAD_SUBSET_COEF)]
     list_img_paths_partial = [l for l in list_img_paths_partial if len(l) > 0]
     mean_imgs = list(utils.wrap_execute_sequence(load_mean_image,
                                                  list_img_paths_partial,
-                                                 nb_jobs=nb_jobs,
+                                                 nb_workers=nb_workers,
                                                  desc='loading mean images'))
-    # imgs, im_names = tl_data.dataset_load_images(list_img_paths, nb_jobs=1)
+    # imgs, im_names = tl_data.dataset_load_images(list_img_paths, nb_workers=1)
     img_mean = np.mean(np.asarray(mean_imgs), axis=0)
     tl_data.export_image(path_out, img_mean, 'mean_image')
 
-    logging.info('original image size: %s', repr(img_mean.shape))
+    logging.info('original image size: %r', img_mean.shape)
     # bbox = find_min_bbox_cumul_sum(img_mean, params['threshold'])
     if params['thr_method'] == 'line-grad':
         bbox = find_min_bbox_grad(img_mean)
@@ -185,11 +183,11 @@ def main(path_pattern_in, path_out, nb_jobs=NB_THREADS):
     else:
         bbox = find_min_bbox_cumul_sum(img_mean, params['threshold'])
     d_bbox = export_bbox_json(path_out, bbox)
-    logging.info('found BBox: %s', repr(d_bbox))
+    logging.info('found BBox: %r', d_bbox)
 
     _cut_export = partial(export_cut_image, d_bbox=d_bbox, path_out=path_out)
     list(utils.wrap_execute_sequence(_cut_export, list_img_paths,
-                                     nb_jobs=nb_jobs,
+                                     nb_workers=nb_workers,
                                      desc='exporting cut images'))
 
 
@@ -199,6 +197,6 @@ if __name__ == '__main__':
 
     params = args_parse_params(DEFAULT_PARAMS)
     main(params['path_in'], params['path_out'],
-         nb_jobs=params['nb_jobs'])
+         nb_workers=params['nb_workers'])
 
     logging.info('DONE')

@@ -52,8 +52,8 @@ Image processing package for unsupervised pattern extraction and atlas estimatio
         "Operating System :: OS Independent",
         "Topic :: Scientific/Engineering :: Image Segmentation",
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 )

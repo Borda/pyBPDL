@@ -5,6 +5,8 @@
 
 # See doc/travis_notes.txt for some guidelines
 
+dist: xenial  # Ubuntu 16.04
+
 env:
   global:
     - CODACY_PROJECT_TOKEN=42d27066ead74eee9a090cae97328777
@@ -18,7 +20,7 @@ python:
   # - 3.4  # will be deprecated for pandas
   - 3.5
   - 3.6
-  # - 3.7  # develop
+  - 3.7
 
 # See http://docs.travis-ci.com/user/caching/#pip-cache
 cache: pip
@@ -29,23 +31,25 @@ before_install:
 
 install:
   - pip install -r requirements.txt
-  - pip install "nose>=1.3.7" coverage codecov "pytest>=3.0.5" codacy-coverage
+  - pip install nose coverage codecov pytest codacy-coverage check-manifest flake8
+  - pip list
 
 before_script:
   - mkdir results
 #  - python setup.py build_ext --inplace
+  - check-manifest
+  - python setup.py check -m -s
 
 script:
+  - unset DISPLAY
   - nosetests bpdl -v --exe --with-doctest --with-xunit --with-coverage --cover-package=bpdl
   - python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
   - nosetests experiments -v --exe --with-doctest --with-xunit
-  - python setup.py check -m -s
+  - flake8 . --ignore=E402,E731 --max-line-length=100
 
 after_success:
   - python setup.py install
-#  - codecov  # public repository on Travis CI
-  # private repository on Travis CI
-  - codecov -t 9507eeee-6a1e-4313-87fa-f73064c539c9
+  - codecov  # public repository on Travis CI
   - coverage xml
   - python-codacy-coverage -r coverage.xml
   - coverage report

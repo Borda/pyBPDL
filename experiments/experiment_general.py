@@ -9,35 +9,35 @@ import os
 import sys
 import time
 import re
-import glob
 import logging
 import argparse
 import shutil
 import random
 import json
 import copy
-import traceback
 import types
 import collections
 import multiprocessing as mproc
 
 import matplotlib
-if os.environ.get('DISPLAY', '') == '' \
-        and matplotlib.rcParams['backend'] != 'agg':
-    # logging.warning('No display found. Using non-interactive Agg backend.')
+if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
+    print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import tqdm
 import numpy as np
 import pandas as pd
 from sklearn import metrics
 import matplotlib.pylab as plt
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.data_utils as tl_data
-import bpdl.utilities as tl_utils
-import bpdl.pattern_atlas as ptn_dict
-import bpdl.pattern_weights as ptn_weight
+from bpdl.data_utils import (
+    NB_BIN_PATTERNS, DIR_MANE_SYNTH_DATASET, GAUSS_NOISE, DIR_NAME_DICTIONARY, export_image,
+    dataset_compose_atlas, dataset_load_weights, dataset_load_images, find_images,
+    format_table_weights)
+from bpdl.utilities import (wrap_execute_sequence, convert_numerical, update_path,
+                            is_list_like, string_dict)
+from bpdl.pattern_atlas import reconstruct_samples
+from bpdl.pattern_weights import weights_image_atlas_overlap_major
 
 FORMAT_DT = '%Y%m%d-%H%M%S'
 CONFIG_JSON = 'config.json'
@@ -69,10 +69,10 @@ if sys.version_info.major == 2:
     copy_reg.pickle(types.MethodType, _reduce_method)
 
 NB_THREADS = int(mproc.cpu_count() * .8)
-PATH_DATA_SYNTH = tl_data.update_path('data_images')
-PATH_DATA_REAL_DISC = os.path.join(tl_data.update_path('data_images'), 'imaginal_discs')
-PATH_DATA_REAL_OVARY = os.path.join(tl_data.update_path('data_images'), 'ovary_stage-2')
-PATH_RESULTS = tl_data.update_path('results')
+PATH_DATA_SYNTH = update_path('data_images')
+PATH_DATA_REAL_DISC = os.path.join(update_path('data_images'), 'imaginal_discs')
+PATH_DATA_REAL_OVARY = os.path.join(update_path('data_images'), 'ovary_stage-2')
+PATH_RESULTS = update_path('results')
 DEFAULT_PARAMS = {
     'type': None,
     'computer': repr(os.uname()),
@@ -81,7 +81,7 @@ DEFAULT_PARAMS = {
     'init_tp': 'random-mosaic-2',  # random, greedy, , GT-deform
     'max_iter': 150,  # 250, 25
     'gc_regul': 1e-9,
-    'nb_labels': tl_data.NB_BIN_PATTERNS + 1,
+    'nb_labels': NB_BIN_PATTERNS + 1,
     'runs': range(NB_THREADS),
     'gc_reinit': True,
     'ptn_compact': False,
@@ -93,14 +93,13 @@ DEFAULT_PARAMS = {
     'dataset': [''],
 }
 
-SYNTH_DATASET_NAME = tl_data.DIR_MANE_SYNTH_DATASET
+SYNTH_DATASET_NAME = DIR_MANE_SYNTH_DATASET
 SYNTH_PATH_APD = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME)
 
 SYNTH_SUBSETS = ['raw', 'noise', 'deform', 'defNoise']
 SYNTH_SUB_DATASETS_BINARY = ['datasetBinary_' + n for n in SYNTH_SUBSETS]
 SYNTH_SUB_DATASETS_FUZZY = ['datasetFuzzy_' + n for n in SYNTH_SUBSETS]
-SYNTH_SUB_DATASETS_FUZZY_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d
-                                  for d in tl_data.GAUSS_NOISE]
+SYNTH_SUB_DATASETS_FUZZY_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d for d in GAUSS_NOISE]
 
 SYNTH_PARAMS = DEFAULT_PARAMS.copy()
 SYNTH_PARAMS.update({
@@ -132,10 +131,10 @@ def create_args_parser(dict_params, methods):
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-in', '--path_in', type=str, required=True,
+    parser.add_argument('-i', '--path_in', type=str, required=True,
                         help='path to the folder with input image dataset',
                         default=dict_params.get('path_in', ''))
-    parser.add_argument('-out', '--path_out', type=str, required=True,
+    parser.add_argument('-o', '--path_out', type=str, required=True,
                         help='path to the output with experiment results',
                         default=dict_params.get('path_out', ''))
     parser.add_argument('-t', '--type', type=str, required=False,
@@ -143,21 +142,21 @@ def create_args_parser(dict_params, methods):
                         default='real', choices=['real', 'synth'])
     parser.add_argument('-n', '--name', type=str, required=False,
                         help='specific name for this experiment', default=None)
-    parser.add_argument('-ds', '--dataset', type=str, required=False,
+    parser.add_argument('-d', '--dataset', type=str, required=False,
                         nargs='+', help='names of used datasets', default=None)
-    parser.add_argument('-ptn', '--nb_patterns', type=int, required=False,
+    parser.add_argument('-p', '--nb_patterns', type=int, required=False,
                         nargs='+', help='numbers of estimated patterns',
                         default=None)
-    parser.add_argument('--nb_jobs', type=int, required=False,
+    parser.add_argument('--nb_workers', type=int, required=False,
                         help='number of processes running in parallel',
                         default=NB_THREADS)
     parser.add_argument('--method', type=str, required=False, nargs='+',
                         default=None, help='possible APD methods',
                         choices=methods)
-    parser.add_argument('-imgs', '--list_images', type=str, required=False,
+    parser.add_argument('--list_images', type=str, required=False,
                         help='CSV file with list of images, supress `path_in`',
                         default=None)
-    parser.add_argument('-cfg', '--path_config', type=str, required=False,
+    parser.add_argument('-c', '--path_config', type=str, required=False,
                         help='path to JSON configuration file',
                         default=None)
     parser.add_argument('--debug', required=False, action='store_true',
@@ -177,7 +176,7 @@ def parse_arg_params(parser):
     # remove not filled parameters
     args = {k: args[k] for k in args if args[k] is not None}
     for n in (k for k in args if k.startswith('path_') and args[k] is not None):
-        args[n] = tl_data.update_path(args[n])
+        args[n] = update_path(args[n])
         assert os.path.exists(args[n]), '%s' % args[n]
     for flag in ['nb_patterns', 'method']:
         if flag in args and not isinstance(args[flag], list):
@@ -201,7 +200,7 @@ def parse_params(default_params, methods):
     :return {str: ...}:
     """
     parser = create_args_parser(default_params, methods)
-    params = copy_dict(default_params)
+    params = copy.deepcopy(default_params)
     arg_params = parse_arg_params(parser)
 
     params.update(arg_params)
@@ -302,43 +301,6 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
     log.addHandler(fh)
 
 
-def string_dict(d, desc='DICTIONARY:', offset=30):
-    """ transform dictionary to a formatted string
-
-    :param {} d: dictionary with parameters
-    :param int offset: length between name and value
-    :param str desc: dictionary title
-    :return str:
-
-    >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
-    \'DICTIONARY:\\n"abc": 123\'
-    """
-    s = desc + '\n'
-    tmp_name = '{:' + str(offset) + 's} {}'
-    rows = [tmp_name.format('"{}":'.format(n), repr(d[n]))
-            for n in sorted(d)]
-    s += '\n'.join(rows)
-    return str(s)
-
-
-def copy_dict(d):
-    """ alternative of deep copy without pickle on in first level
-    Nose testing - TypeError: can't pickle dict_keys objects
-
-    :param {} d: dictionary
-    :return {}:
-    >>> d1 = {'a': [0, 1]}
-    >>> d2 = copy_dict(d1)
-    >>> d2['a'].append(3)
-    >>> d1
-    {'a': [0, 1]}
-    >>> d2
-    {'a': [0, 1, 3]}
-    """
-    d_new = copy.deepcopy(d)
-    return d_new
-
-
 def generate_conf_suffix(d_params):
     """ generating suffix strung according given params
 
@@ -357,16 +319,18 @@ def generate_conf_suffix(d_params):
                        for k in sorted(d_params) if k != 'param_idx')
     return suffix
 
+
 # =============================================================================
 # =============================================================================
 
 
 class Experiment(object):
-    """
-    main_train class for APD experiments State-of-the-Art and BPDL
+    """ main_train class for APD experiments State-of-the-Art and BPDL
 
     SINGLE experiment:
-    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    >>> import glob
+    >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
+    >>> params = {'dataset': DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
     >>> expt = Experiment(params, time_stamp=False)
@@ -376,7 +340,9 @@ class Experiment(object):
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
 
     SEQUENTIAL example:
-    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    >>> import glob
+    >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
+    >>> params = {'dataset': DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS}
     >>> expt = Experiment(params, time_stamp=False)
@@ -386,10 +352,12 @@ class Experiment(object):
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
 
     PARALLEL example:
-    >>> params = {'dataset': tl_data.DEFAULT_NAME_DATASET,
+    >>> import glob
+    >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
+    >>> params = {'dataset': DEFAULT_NAME_DATASET,
     ...           'path_in': os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME),
     ...           'path_out': PATH_RESULTS,
-    ...           'nb_jobs': 2}
+    ...           'nb_workers': 2}
     >>> expt = Experiment(params, time_stamp=False)
     >>> expt.run(gt=False, iter_params=[{'r': 0}, {'r': 1}])
     >>> len(glob.glob(os.path.join(PATH_RESULTS, 'Experiment__*')))
@@ -464,27 +432,24 @@ class Experiment(object):
 
         :param {str: ...} params: parameter settings
         """
-        path_atlas = os.path.join(self.params.get('path_in'),
-                                  tl_data.DIR_NAME_DICTIONARY)
-        self._gt_atlas = tl_data.dataset_compose_atlas(path_atlas)
+        path_atlas = os.path.join(self.params.get('path_in'), DIR_NAME_DICTIONARY)
+        self._gt_atlas = dataset_compose_atlas(path_atlas)
         if self.params.get('list_images') is not None:
             img_names = [os.path.splitext(os.path.basename(p))[0]
                          for p in self._list_img_paths]
-            self._gt_encoding = tl_data.dataset_load_weights(self.path_data,
-                                                             img_names=img_names)
+            self._gt_encoding = dataset_load_weights(self.path_data, img_names=img_names)
         else:
-            self._gt_encoding = tl_data.dataset_load_weights(self.params.get('path_in'))
-        self._gt_images = ptn_dict.reconstruct_samples(self._gt_atlas,
-                                                       self._gt_encoding)
+            self._gt_encoding = dataset_load_weights(self.params.get('path_in'))
+        self._gt_images = reconstruct_samples(self._gt_atlas, self._gt_encoding)
         # self._images = [im.astype(np.uint8, copy=False) for im in self._images]
 
     def _load_images(self):
         """ load image data """
-        self._images, self._image_names = tl_data.dataset_load_images(
-            self._list_img_paths, nb_jobs=self.params.get('nb_jobs', 1))
+        self._images, self._image_names = dataset_load_images(
+            self._list_img_paths, nb_workers=self.params.get('nb_workers', 1))
         shapes = [im.shape for im in self._images]
-        assert len(set(shapes)) == 1, 'multiple image sizes found: %s' \
-                                      % repr(collections.Counter(shapes))
+        assert len(set(shapes)) == 1, 'multiple image sizes found: %r' \
+                                      % collections.Counter(shapes)
 
     def __load_data(self, gt=True):
         """ load all required data for APD and also ground-truth if required
@@ -504,7 +469,7 @@ class Experiment(object):
                                                    os.path.basename(path_csv)))
             self._list_img_paths = load_list_img_names(path_csv)
         else:
-            self._list_img_paths = tl_data.find_images(self.path_data)
+            self._list_img_paths = find_images(self.path_data)
 
         assert len(self._list_img_paths) > 0, 'no images found'
         self._load_images()
@@ -527,7 +492,7 @@ class Experiment(object):
 
         # in case it single value make it iterable
         if is_list_like(iter_params):
-            self.iter_params = copy_dict(iter_params)
+            self.iter_params = copy.deepcopy(iter_params)
         elif isinstance(iter_params, dict):
             logging.info(string_dict(iter_params, desc='ITERATE PARAMETERS:'))
             self.iter_params = expand_params(iter_params)
@@ -544,54 +509,16 @@ class Experiment(object):
         """ perform experiment as sequence of iterated configurations """
         if is_list_like(self.iter_params):
             logging.info('iterate over %i configurations', len(self.iter_params))
-            nb_jobs = self.params.get('nb_jobs', 1)
-            if nb_jobs > 1:
-                self.__perform_sequence_parellel(nb_jobs)
-            else:
-                self.__perform_sequence_serial()
+            nb_workers = self.params.get('nb_workers', 1)
+
+            for detail in wrap_execute_sequence(self._perform_once, self.iter_params,
+                                                nb_workers, desc='experiments'):
+                self.df_results = self.df_results.append(detail, ignore_index=True)
+                logging.debug('partial results: %r', detail)
         else:
             logging.debug('perform single configuration')
             detail = self._perform_once({})
             self.df_results = pd.DataFrame([detail])
-
-    def __perform_sequence_serial(self):
-        """ Iteratively change a single experiment parameter with the same data
-        """
-        logging.info('perform_sequence in single thread')
-        tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
-        for d_params in self.iter_params:
-            # self.params.update(d_params)
-            tqdm_bar.set_description(d_params.get('param_idx', ''))
-            logging.debug(' -> set iterable %s', repr(d_params))
-
-            detail = self._perform_once(d_params)
-
-            self.df_results = self.df_results.append(detail, ignore_index=True)
-            # just partial export
-            logging.debug('partial results: %s', repr(detail))
-            tqdm_bar.update()
-
-    def __perform_sequence_parellel(self, nb_jobs):
-        """ perform sequence in multiprocessing pool """
-        logging.debug('perform_sequence in %i threads for %i values',
-                      nb_jobs, len(self.iter_params))
-        # ISSUE with passing large date to processes so the images are saved
-        # and loaded in particular process again
-        # p_imgs = os.path.join(self.params.get('path_exp'), 'input_images.npz')
-        # np.savez(open(p_imgs, 'w'), imgs=self._images)
-
-        tqdm_bar = tqdm.tqdm(total=len(self.iter_params))
-        pool = tl_utils.NDPool(nb_jobs)
-        for detail in pool.imap_unordered(self._perform_once, self.iter_params):
-            self.df_results = self.df_results.append(detail, ignore_index=True)
-            logging.debug('partial results: %s', repr(detail))
-            # just partial export
-            tqdm_bar.update()
-        pool.close()
-        pool.join()
-
-        # remove temporary image file
-        # os.remove(p_imgs)
 
     def _estimate_atlas_weights(self, images, params):
         """ This is the method to be be over written by individual methods
@@ -611,8 +538,8 @@ class Experiment(object):
         :param {str: ...} d_params: used specific configuration
         :return {str: ...}: output statistic
         """
-        detail = copy_dict(self.params)
-        detail.update(copy_dict(d_params))
+        detail = copy.deepcopy(self.params)
+        detail.update(copy.deepcopy(d_params))
         detail['name_suffix'] = generate_conf_suffix(d_params)
 
         # in case you chose only a subset of images
@@ -625,24 +552,21 @@ class Experiment(object):
             t = time.time()
             atlas, weights, extras = self._estimate_atlas_weights(images, detail)
             detail['time'] = time.time() - t
-        except Exception:  # todo, optionaly remove this try/catch
-            logging.error('FAIL estimate atlas for %s with %s',
-                          str(self.__class__), repr(detail))
-            logging.error(traceback.format_exc())
+        except Exception:  # todo, optionally remove this try/catch
+            logging.exception('FAIL estimate atlas for %r with %r', self.__class__, detail)
             atlas = np.zeros_like(self._images[0])
             weights = np.zeros((len(self._images), 0))
             extras = None
             detail['time'] = -0.
 
-        logging.debug('estimated atlas of size %s and labels %s',
-                      repr(atlas.shape), repr(np.unique(atlas).tolist()))
+        logging.debug('estimated atlas of size %r and labels %r', atlas.shape,
+                      np.unique(atlas).tolist())
 
-        weights_all = [ptn_weight.weights_image_atlas_overlap_major(img, atlas)
-                       for img in self._images]
+        weights_all = [weights_image_atlas_overlap_major(img, atlas) for img in self._images]
         weights_all = np.array(weights_all)
 
-        logging.debug('estimated weights of size %s and summing %s',
-                      repr(weights_all.shape), repr(np.sum(weights_all, axis=0)))
+        logging.debug('estimated weights of size %r and summing %r',
+                      weights_all.shape, np.sum(weights_all, axis=0))
 
         self._export_atlas(atlas, suffix=detail['name_suffix'])
         self._export_coding(weights_all, suffix=detail['name_suffix'])
@@ -660,8 +584,7 @@ class Experiment(object):
         :param str suffix:
         """
         n_img = NAME_ATLAS.format(suffix)
-        tl_data.export_image(self.params.get('path_exp'), atlas, n_img,
-                             stretch_range=False)
+        export_image(self.params.get('path_exp'), atlas, n_img, stretch_range=False)
         path_atlas_rgb = os.path.join(self.params.get('path_exp'),
                                       n_img + '_rgb.png')
         logging.debug('exporting RGB atlas: %s', path_atlas_rgb)
@@ -675,7 +598,7 @@ class Experiment(object):
         """
         if not hasattr(self, '_image_names'):
             self._image_names = [str(i) for i in range(weights.shape[0])]
-        df = tl_data.format_table_weights(self._image_names, weights)
+        df = format_table_weights(self._image_names, weights)
 
         path_csv = os.path.join(self.params.get('path_exp'),
                                 NAME_ENCODING.format(suffix))
@@ -735,7 +658,7 @@ class Experiment(object):
         :param [ndarray] weights: np.array<nb_samples, nb_patterns>
         :return {str: ...}:
         """
-        images_rct = ptn_dict.reconstruct_samples(atlas, weights)
+        images_rct = reconstruct_samples(atlas, weights)
         tag, diff = self._evaluate_reconstruct(images_rct)
         stat = {
             'atlas ARS': self.__evaluate_atlas(atlas),
@@ -769,55 +692,11 @@ class Experiment(object):
             with open(self._path_stat, 'a') as fp:
                 fp.write('\n' * 3 + 'RESULTS: \n' + '=' * 9)
                 fp.write('\n{}'.format(df_stat))
-            logging.debug('statistic: \n%s', repr(df_stat))
+            logging.debug('statistic: \n%r', df_stat)
+
 
 # =============================================================================
 # =============================================================================
-
-
-def is_list_like(var):
-    """ check if the variable is iterable
-
-    :param var:
-    :return bool:
-
-    >>> is_list_like('abc')
-    False
-    >>> is_list_like(123.)
-    False
-    >>> is_list_like([0])
-    True
-    >>> is_list_like((1, ))
-    True
-    >>> is_list_like(range(2))
-    True
-    """
-    try:  # for python 3
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, range, np.ndarray, types.GeneratorType)]
-    except Exception:  # for python 2
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, np.ndarray, types.GeneratorType)]
-    return any(is_iter)
-
-
-def is_iterable(var):
-    """ check if the variable is iterable
-
-    :param var:
-    :return bool:
-
-    >>> is_iterable('abc')
-    False
-    >>> is_iterable(123.)
-    False
-    >>> is_iterable((1, ))
-    True
-    >>> is_iterable(range(2))
-    True
-    """
-    res = (hasattr(var, '__iter__') and not isinstance(var, str))
-    return res
 
 
 def extend_list_params(list_params, name_param, list_options):
@@ -857,7 +736,7 @@ def extend_list_params(list_params, name_param, list_options):
 def simplify_params(dict_params):
     """ extract simple configuration dictionary
 
-    :return:
+    :return {}:
 
     >>> params = simplify_params({'t': 'abc', 'n': [1, 2]})
     >>> pd.Series(params).sort_index()  #doctest: +NORMALIZE_WHITESPACE
@@ -875,8 +754,9 @@ def simplify_params(dict_params):
 def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     """ extend parameters to a list
 
-    :param {} simple_config:
-    :param {} dict_params:
+    :param {} dict_params: input dictionary with params
+    :param {} simple_config: simple config dictionary
+    :param [str] skip_patterns: ignored configs
     :return:
 
     >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),
@@ -931,7 +811,28 @@ def parse_config_txt(path_config):
         return {}
     with open(path_config, 'r') as fp:
         text = ''.join(fp.readlines())
-    rec = re.compile('"(\S+)":\s+(.*)')
-    dict_config = {n: tl_utils.convert_numerical(v)
+    rec = re.compile(r'"(\S+)":\s+(.*)')
+    dict_config = {n: convert_numerical(v)
                    for n, v in rec.findall(text) if len(v) > 0}
     return dict_config
+
+
+def activate_sigm(x, shift=0.12, slope=35.):
+    """ transformation function for gene activations
+
+    :param x: input values in range (0, 1)
+    :param shift: shift the slope
+    :param slope: steepness of the slope
+    :return float: values in range (0, 1)
+
+    >>> activate_sigm(0)
+    0.0
+    >>> activate_sigm(0.1)  # doctest: +ELLIPSIS
+    0.32...
+    >>> activate_sigm(1)
+    1.0
+    """
+    sigm = lambda x, a, b: 1. / (1 + np.exp(b * (- x + a)))
+    sigm_0, sigm_inf = sigm(0, shift, slope), sigm(1, shift, slope)
+    val = (sigm(x, shift, slope) - sigm_0) / (sigm_inf - sigm_0)
+    return val

@@ -14,40 +14,44 @@ jobs:
       - run:
           name: Install PyPI dependences
           command: |
-            sudo pip install nose coverage pytest pytest-cov
+            sudo pip install nose coverage pytest pytest-cov flake8
+            sudo pip install -U backports.functools_lru_cache  # required for matplotlib @py2
             pip install -r requirements.txt --user
+            pip list
 
       - run:
           name: Testing
           command: |
+            unset DISPLAY
             python --version ; pip --version ; pwd ; ls -l
             rm -rf data_images/syntheticDataset_vX
             mkdir results && mkdir test-reports
+            python setup.py check -m -s
             python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
             python experiments/run_dataset_add_noise.py -p ./data_images
             coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
             coverage report && coverage xml -o test-reports/coverage.xml
-            python setup.py check -m -s
+            flake8 . --ignore=E402,E731 --max-line-length=100
 
       - run:
           name: Experiments (pre-processing)
           command: |
             rm -rf results && mkdir results
-            python experiments/run_cut_minimal_images.py -in "./data_images/imaginal_discs/gene/*.png" -out ./data_images/imaginal_discs/gene_cut
-            python experiments/run_extract_fuzzy_activation.py -in "./data_images/ovary_stage-2/image/*.png" -out ./data_images/ovary_stage-2/gene
-            python experiments/run_extract_fuzzy_activation.py -in "./data_images/ovary_stage-3/image/*.png" -out ./data_images/ovary_stage-3/gene
+            python experiments/run_cut_minimal_images.py -i "./data_images/imaginal_discs/gene/*.png" -o ./data_images/imaginal_discs/gene_cut
+            python experiments/run_extract_fuzzy_activation.py -i "./data_images/ovary_stage-2/image/*.png" -o ./data_images/ovary_stage-2/gene
+            python experiments/run_extract_fuzzy_activation.py -i "./data_images/ovary_stage-3/image/*.png" -o ./data_images/ovary_stage-3/gene
       - run:
           name: Experiments (main body)
           command: |
-            python experiments/run_experiments.py --type synth -in ./data_images/syntheticDataset_vX -out ./results -cfg ./data_images/sample_config.json
-            python experiments/run_experiments.py --type real -in ./data_images/imaginal_discs -out ./results --dataset gene_small --nb_jobs 2
-            python experiments/run_reconstruction.py -p ./results/ExperimentBPDL_real_imaginal_discs_gene_small --visual
+            python experiments/run_experiments.py --type synth -i ./data_images/syntheticDataset_vX -o ./results -c ./data_images/sample_config.json
+            python experiments/run_experiments.py --type real -i ./data_images/imaginal_discs -o ./results --dataset gene_small --nb_workers 2
+            python experiments/run_reconstruction.py -e ./results/ExperimentBPDL_real_imaginal_discs_gene_small --visual
       - run:
           name: Experiments (post-processing)
           command: |
-            python experiments/run_parse_experiments_result.py -p ./results -res results.csv
-            python experiments/run_recompute_experiments_result.py -p ./results
-            python experiments/run_parse_experiments_result.py -p ./results -res results_NEW.csv
+            python experiments/run_parse_experiments_result.py -i ./results -r results.csv
+            python experiments/run_recompute_experiments_result.py -i ./results
+            python experiments/run_parse_experiments_result.py -i ./results -r results_NEW.csv
 
       - run:
           name: Install this package
