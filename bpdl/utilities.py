@@ -212,7 +212,8 @@ def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
             tqdm_bar.update() if tqdm_bar is not None else None
             yield out
 
-    tqdm_bar.close() if tqdm_bar is not None else None
+    # failing on Shippable
+    # tqdm_bar.close() if tqdm_bar is not None else None
 
 
 def estimate_rolling_ball(points, tangent_smooth=1, max_diam=1e6, step_tol=1e-3):
