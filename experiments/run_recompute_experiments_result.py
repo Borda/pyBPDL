@@ -11,7 +11,6 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import sys
 import glob
-import json
 import logging
 import gc
 import time
@@ -23,6 +22,7 @@ if os.environ.get('DISPLAY', '') == '':
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
+import yaml
 import numpy as np
 import pandas as pd
 import matplotlib.pylab as plt
@@ -30,13 +30,13 @@ from PIL import Image
 from skimage.segmentation import relabel_sequential
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.utilities as utils
-import bpdl.data_utils as tl_data
-import bpdl.metric_similarity as tl_metric
-import experiments.run_dataset_generate as r_data
-import experiments.run_parse_experiments_result as r_parse
+from bpdl.utilities import try_decorator, string_dict, wrap_execute_sequence
+from bpdl.data_utils import DIR_NAME_DICTIONARY, dataset_compose_atlas, export_image
+from bpdl.metric_similarity import relabel_max_overlap_unique, compute_classif_metrics
+from experiments.run_dataset_generate import NAME_CONFIG
+from experiments.run_parse_experiments_result import parse_arg_params
 
-NAME_INPUT_CONFIG = r_data.NAME_CONFIG
+NAME_INPUT_CONFIG = NAME_CONFIG
 NAME_INPUT_RESULT = 'results.csv'
 NAME_OUTPUT_RESULT = 'results_NEW.csv'
 SUB_PATH_GT_ATLAS = os.path.join('dictionary', 'atlas.png')
@@ -102,7 +102,7 @@ def export_atlas_both(atlas_gt, atlas, path_out_img, fig_size=FIGURE_SIZE):
     plt.close(fig)
 
 
-@utils.try_decorator
+@try_decorator
 def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
@@ -112,9 +112,9 @@ def parse_experiment_folder(path_expt, params):
     assert os.path.isdir(path_expt), 'missing EXPERIMENT: %s' % path_expt
 
     path_config = os.path.join(path_expt, params['name_config'])
-    assert path_config.endswith('.json'), '%s' % path_config
+    assert any(path_config.endswith(ext) for ext in ['.yaml', '.yml']), '%s' % path_config
     assert os.path.exists(path_config), 'missing config: %s' % path_config
-    dict_info = json.load(open(path_config, 'r'))
+    dict_info = yaml.load(open(path_config, 'r'))
     logging.debug(' -> loaded params: %r', dict_info.keys())
 
     path_results = os.path.join(path_expt, params['name_results'])
@@ -131,12 +131,11 @@ def parse_experiment_folder(path_expt, params):
     # TODO: add recompute reconstruction error
 
     # load the GT atlas
-    path_atlas = os.path.join(dict_info['path_in'],
-                              tl_data.DIR_NAME_DICTIONARY)
-    atlas_gt = tl_data.dataset_compose_atlas(path_atlas)
+    path_atlas = os.path.join(dict_info['path_in'], DIR_NAME_DICTIONARY)
+    atlas_gt = dataset_compose_atlas(path_atlas)
     path_atlas_gt = os.path.join(dict_info['path_in'], SUB_PATH_GT_ATLAS)
     atlas_name = str(os.path.splitext(os.path.basename(path_atlas_gt))[0])
-    tl_data.export_image(os.path.dirname(path_atlas_gt), atlas_gt, atlas_name)
+    export_image(os.path.dirname(path_atlas_gt), atlas_gt, atlas_name)
     plt.imsave(os.path.splitext(path_atlas_gt)[0] + '_visual.png', atlas_gt)
 
     results_new = []
@@ -147,10 +146,9 @@ def parse_experiment_folder(path_expt, params):
         atlas_name = NAME_PATTERN_ATLAS % dict_row['name_suffix']
         atlas = load_atlas(os.path.join(path_expt, atlas_name))
         # try to find the mest match among patterns / labels
-        atlas = tl_metric.relabel_max_overlap_unique(atlas_gt, atlas)
+        atlas = relabel_max_overlap_unique(atlas_gt, atlas)
         # recompute the similarity measure
-        dict_measure = tl_metric.compute_classif_metrics(atlas_gt.ravel(),
-                                                         atlas.ravel())
+        dict_measure = compute_classif_metrics(atlas_gt.ravel(), atlas.ravel())
         dict_measure = {'atlas %s' % k: dict_measure[k] for k in dict_measure}
         dict_row.update(dict_measure)
         results_new.append(dict_row)
@@ -173,7 +171,7 @@ def parse_experiments(params):
     :param {str: ...} params:
     """
     logging.info('running recompute Experiments results')
-    logging.info(utils.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(string_dict(params, desc='ARGUMENTS:'))
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
     nb_workers = params.get('nb_workers', NB_THREADS)
 
@@ -182,14 +180,14 @@ def parse_experiments(params):
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
-    list(utils.wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_workers))
+    list(wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_workers))
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     logging.info('running...')
 
-    params = r_parse.parse_arg_params(PARAMS)
+    params = parse_arg_params(PARAMS)
     parse_experiments(params)
 
     logging.info('DONE')

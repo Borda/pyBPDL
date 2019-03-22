@@ -510,8 +510,8 @@ def dictionary_generate_rnd_pattern(path_out=None,
 
     >>> p_dir = 'sample_rnd_pattern'
     >>> os.mkdir(p_dir)
-    >>> _list_img_paths = dictionary_generate_rnd_pattern(nb_patterns=3,
-    ...                         im_size=(10, 8), path_out=p_dir, rand_seed=0)
+    >>> _list_img_paths = dictionary_generate_rnd_pattern(
+    ...     nb_patterns=3, im_size=(10, 8), path_out=p_dir, rand_seed=0)
     >>> len(_list_img_paths)
     3
     >>> _list_img_paths[1]
@@ -559,8 +559,8 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     >>> img1[2:5, 5:10] = 1
     >>> img2 = np.zeros((6, 15), dtype=int)
     >>> img2[3:6, 2:13] = 1
-    >>> idx, im, im_name, ptn_weights = generate_rand_patterns_occlusion(
-    ...                                     0, [img1, img2], rand_seed=0)
+    >>> idx, im, im_name, ptn_weights = generate_rand_patterns_occlusion(0, [img1, img2],
+    ...                                                                  rand_seed=0)
     >>> idx
     0
     >>> im
@@ -654,8 +654,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     return im_spls, df_weights
 
 
-def format_table_weights(list_names, list_weights,
-                         index_name='image', col_name=COLUMN_NAME):
+def format_table_weights(list_names, list_weights, index_name='image', col_name=COLUMN_NAME):
     """ format the output table with patterns
 
     :param list_names:

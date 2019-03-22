@@ -9,20 +9,23 @@ import sys
 import logging
 import argparse
 import inspect
-import json
 import multiprocessing as mproc
 from functools import partial
 
+import yaml
+
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.data_utils as tl_data
-import bpdl.utilities as utils
+from bpdl.utilities import update_path
+from bpdl.data_utils import (
+    DIR_MANE_SYNTH_DATASET, CSV_NAME_WEIGHTS, dictionary_generate_atlas,
+    dataset_binary_combine_patterns, dataset_apply_image_function, image_deform_elastic,
+    add_image_binary_noise, image_transform_binary2fuzzy, add_image_fuzzy_pepper_noise)
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
-DEFAULT_PATH_DATA = utils.update_path('data_images')
-DEFAULT_PATH_APD = os.path.join(DEFAULT_PATH_DATA,
-                                tl_data.DIR_MANE_SYNTH_DATASET)
-NAME_WEIGHTS = tl_data.CSV_NAME_WEIGHTS
-NAME_CONFIG = 'config.json'
+DEFAULT_PATH_DATA = update_path('data_images')
+DEFAULT_PATH_APD = os.path.join(DEFAULT_PATH_DATA, DIR_MANE_SYNTH_DATASET)
+NAME_WEIGHTS = CSV_NAME_WEIGHTS
+NAME_CONFIG = 'config.yml'
 IMAGE_SIZE = {
     '2D': (64, 64),
     '3D': (16, 128, 128),
@@ -76,9 +79,8 @@ def view_func_params(frame=inspect.currentframe(), path_out=''):
     logging.info('PARAMETERS: \n%s',
                  '\n'.join('"{}": \t {}'.format(k, values[k]) for k in values))
     if os.path.exists(path_out):
-        path_json = os.path.join(path_out, NAME_CONFIG)
-        with open(path_json, 'w') as fp:
-            json.dump(values, fp)
+        with open(os.path.join(path_out, NAME_CONFIG), 'w') as fp:
+            yaml.dump(values, fp, default_flow_style=False)
     return values
 
 
@@ -104,32 +106,30 @@ def generate_all(path_out=DEFAULT_PATH_APD,
     view_func_params(inspect.currentframe(), path_out)
     _path_dir = lambda d: os.path.join(path_out, d)
     # im_dict = dictionary_generate_rnd_pattern()
-    im_dict = tl_data.dictionary_generate_atlas(path_out, im_size=atlas_size,
-                                                nb_patterns=nb_patterns)
+    im_dict = dictionary_generate_atlas(path_out, im_size=atlas_size, nb_patterns=nb_patterns)
     assert len(im_dict) > 0, 'dictionary has contain at least one pattern'
 
-    im_comb, df_weights = tl_data.dataset_binary_combine_patterns(
+    im_comb, df_weights = dataset_binary_combine_patterns(
         im_dict, _path_dir('datasetBinary_raw'), nb_samples)
     df_weights.to_csv(os.path.join(path_out, NAME_WEIGHTS))
 
-    _warp_ds_apply = partial(tl_data.dataset_apply_image_function,
-                             nb_workers=nb_workers)
+    _warp_ds_apply = partial(dataset_apply_image_function, nb_workers=nb_workers)
 
     im_deform = _warp_ds_apply(im_comb, _path_dir('datasetBinary_deform'),
-                               tl_data.image_deform_elastic)
+                               image_deform_elastic)
     _warp_ds_apply(im_comb, _path_dir('datasetBinary_noise'),
-                   tl_data.add_image_binary_noise, NOISE_BINARY)
+                   add_image_binary_noise, NOISE_BINARY)
     _warp_ds_apply(im_deform, _path_dir('datasetBinary_defNoise'),
-                   tl_data.add_image_binary_noise, NOISE_BINARY)
+                   add_image_binary_noise, NOISE_BINARY)
 
     im_comb_prob = _warp_ds_apply(im_comb, _path_dir('datasetFuzzy_raw'),
-                                  tl_data.image_transform_binary2fuzzy, 0.5)
+                                  image_transform_binary2fuzzy, 0.5)
     im_def_prob = _warp_ds_apply(im_deform, _path_dir('datasetFuzzy_deform'),
-                                 tl_data.add_image_fuzzy_pepper_noise, 0.5)
+                                 add_image_fuzzy_pepper_noise, 0.5)
     _warp_ds_apply(im_comb_prob, _path_dir('datasetFuzzy_noise'),
-                   tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
+                   add_image_fuzzy_pepper_noise, NOISE_FUZZY)
     _warp_ds_apply(im_def_prob, _path_dir('datasetFuzzy_defNoise'),
-                   tl_data.add_image_fuzzy_pepper_noise, NOISE_FUZZY)
+                   add_image_fuzzy_pepper_noise, NOISE_FUZZY)
 
 
 if __name__ == "__main__":

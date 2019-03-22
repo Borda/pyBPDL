@@ -5,11 +5,11 @@ per ech folder and add final statistic
 EXAMPLES:
 >> python run_parse_experiments_result.py \
     -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
-    --name_results results.csv --name_config config.json --func_stat mean
+    --name_results results.csv --name_config config.yaml --func_stat mean
 
 >> python run_parse_experiments_result.py \
     -i ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth \
-    --name_results results_NEW.csv --name_config config.json --func_stat none
+    --name_results results_NEW.csv --name_config config.yaml --func_stat none
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
@@ -17,18 +17,18 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import sys
 import glob
-import json
 import argparse
 import logging
 import multiprocessing as mproc
 from functools import partial
 
+import yaml
 import numpy as np
 import pandas as pd
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.utilities as utils
-import experiments.experiment_general as e_gen
+from bpdl.utilities import update_path, try_decorator, string_dict, wrap_execute_sequence
+from experiments.experiment_general import parse_config_txt
 
 NAME_INPUT_CONFIG = 'resultStat.txt'
 NAME_INPUT_RESULT = 'results.csv'
@@ -60,19 +60,16 @@ def parse_arg_params(params):
     parser.add_argument('-c', '--name_config', type=str, required=False,
                         help='config file name', default=params['name_config'])
     parser.add_argument('-r', '--name_results', type=str, required=False,
-                        nargs='*', default=params['name_results'],
-                        help='result file name')
+                        nargs='*', default=params['name_results'], help='result file name')
     parser.add_argument('--result_columns', type=str, required=False,
-                        default=None, nargs='*',
-                        help='important columns from results')
+                        default=None, nargs='*', help='important columns from results')
     parser.add_argument('-f', '--func_stat', type=str, required=False,
                         help='type od stat over results', default='none')
     parser.add_argument('--nb_workers', type=int, required=False,
-                        default=NB_THREADS,
-                        help='number of jobs running in parallel')
+                        default=NB_THREADS, help='number of jobs running in parallel')
 
     args = vars(parser.parse_args())
-    args['path'] = utils.update_path(args['path'])
+    args['path'] = update_path(args['path'])
     assert os.path.isdir(args['path']), 'missing: %s' % args['path']
     return args
 
@@ -133,7 +130,7 @@ def load_multiple_results(path_expt, func_stat, params):
     return df_results
 
 
-@utils.try_decorator
+@try_decorator
 def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
@@ -144,10 +141,10 @@ def parse_experiment_folder(path_expt, params):
     assert os.path.isdir(path_expt), 'missing %s' % path_expt
     path_config = os.path.join(path_expt, params['name_config'])
     assert os.path.exists(path_config), 'missing %s' % path_config
-    if path_config.endswith('json'):
-        dict_info = json.load(open(path_config, 'r'))
+    if any(path_config.endswith(ext) for ext in ['.yaml', '.yml']):
+        dict_info = yaml.load(open(path_config, 'r'))
     else:
-        dict_info = e_gen.parse_config_txt(path_config)
+        dict_info = parse_config_txt(path_config)
     logging.debug(' -> loaded params: %r', dict_info.keys())
 
     dict_info.update(count_folders_subdirs(path_expt))
@@ -188,7 +185,7 @@ def parse_experiments(params):
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')
-    logging.info(utils.string_dict(params, desc='ARGUMENTS:'))
+    logging.info(string_dict(params, desc='ARGUMENTS:'))
     assert os.path.isdir(params['path']), 'missing "%s"' % params['path']
     nb_workers = params.get('nb_workers', NB_THREADS)
 
@@ -198,8 +195,7 @@ def parse_experiments(params):
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
-    for df_folder in utils.wrap_execute_sequence(_wrapper_parse_folder,
-                                                 path_dirs, nb_workers):
+    for df_folder in wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_workers):
         df_all = append_df_folder(df_all, df_folder)
 
     if isinstance(params['name_results'], list):

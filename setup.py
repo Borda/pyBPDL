@@ -28,7 +28,7 @@ install_reqs = _parse_requirements(os.path.join(HERE, 'requirements.txt'))
 
 setup(
     name='BPDL',
-    version='0.2.1',
+    version='0.2.2',
     author='Jiri Borovec',
     author_email='jiri.borovec@fel.cvut.cz',
     url='https://borda.github.com/pyBPDL',

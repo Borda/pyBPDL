@@ -17,7 +17,6 @@ import time
 import argparse
 import gc
 import glob
-import json
 import logging
 import multiprocessing as mproc
 from functools import partial
@@ -27,6 +26,7 @@ if os.environ.get('DISPLAY', '') == '':
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
+import yaml
 import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -34,13 +34,13 @@ import pandas as pd
 import skimage.segmentation as sk_segm
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.utilities as utils
-import bpdl.data_utils as tl_data
-import bpdl.registration as tl_reg
+from bpdl.utilities import update_path, wrap_execute_sequence, string_dict
+from bpdl.data_utils import dataset_load_images, io_imread, export_image
+from bpdl.registration import warp2d_apply_deform_field
 
 NB_THREADS = int(mproc.cpu_count() * .9)
 FIGURE_SIZE = (20, 8)
-NAME_CONFIG = 'config.json'
+NAME_CONFIG = 'config.yml'
 FIELDS_PATH_IMAGES = ['path_in', 'dataset']
 BASE_NAME_ATLAS = 'atlas'
 BASE_NAME_ENCODE = 'encoding'
@@ -71,7 +71,7 @@ def parse_arg_params():
 
     args = vars(parser.parse_args())
     logging.debug('ARG PARAMETERS: \n %r', args)
-    args['path_expt'] = utils.update_path(args['path_expt'])
+    args['path_expt'] = update_path(args['path_expt'])
     assert os.path.exists(args['path_expt']), 'missing: %s' % args['path_expt']
     return args
 
@@ -90,7 +90,7 @@ def get_path_dataset(path, path_imgs=None):
     path_config = os.path.join(path, NAME_CONFIG)
     path_imgs = None
     if os.path.isfile(path_config):
-        config = json.load(open(path_config, 'r'))
+        config = yaml.load(open(path_config, 'r'))
         if all(k in config for k in FIELDS_PATH_IMAGES):
             path_imgs = os.path.join(config[FIELDS_PATH_IMAGES[0]],
                                      config[FIELDS_PATH_IMAGES[1]])
@@ -105,8 +105,7 @@ def load_images(path_images, names, nb_workers=NB_THREADS):
     list_img_paths = [p for p in list_img_paths
                       if _name(p) in names]
     logging.debug('found images: %i', len(list_img_paths))
-    images, im_names = tl_data.dataset_load_images(list_img_paths,
-                                                   nb_workers=nb_workers)
+    images, im_names = dataset_load_images(list_img_paths, nb_workers=nb_workers)
     assert all(names == im_names), \
         'image names from weights and loaded images does not match'
     return images
@@ -115,7 +114,7 @@ def load_images(path_images, names, nb_workers=NB_THREADS):
 def load_experiment(path_expt, name, path_dataset=None, path_images=None,
                     nb_workers=NB_THREADS):
     path_atlas = os.path.join(path_expt, BASE_NAME_ATLAS + name + '.png')
-    atlas = tl_data.io_imread(path_atlas)
+    atlas = io_imread(path_atlas)
     if (atlas.max() == 255 or atlas.max() == 1.) and len(np.unique(atlas)) < 128:
         # assume it is scratched image
         atlas = sk_segm.relabel_sequential(atlas)[0]
@@ -191,12 +190,11 @@ def draw_reconstruction(atlas, segm_reconst, segm_orig=None, img_rgb=None,
 def perform_reconstruction(set_variables, atlas, path_out, path_visu=None):
     name, w_bins, segm, image, deform = set_variables
     if deform is not None:
-        atlas = tl_reg.warp2d_apply_deform_field(atlas, deform,
-                                                 method='nearest')
+        atlas = warp2d_apply_deform_field(atlas, deform, method='nearest')
 
     w_bin_ext = np.array([0] + w_bins.tolist())
     seg_reconst = np.asarray(w_bin_ext)[atlas].astype(atlas.dtype)
-    tl_data.export_image(path_out, seg_reconst, name)
+    export_image(path_out, seg_reconst, name)
 
     if path_visu is not None and os.path.isdir(path_visu):
         fig = draw_reconstruction(atlas, seg_reconst, segm, img_rgb=image)
@@ -238,8 +236,7 @@ def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
                        path_out=path_out, path_visu=path_visu)
     iterate = zip(df_weights.index, df_weights.values, segms, images, deforms)
     list_diffs = []
-    for n, diff in utils.wrap_execute_sequence(_reconst, iterate,
-                                               nb_workers=nb_workers):
+    for n, diff in wrap_execute_sequence(_reconst, iterate, nb_workers=nb_workers):
         list_diffs.append({'image': n, 'reconstruction diff.': diff})
 
     df_diff = pd.DataFrame(list_diffs)
@@ -249,7 +246,7 @@ def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
 
 def main(params):
     """ process complete list of experiments """
-    logging.info(utils.string_dict(params, desc='PARAMETERS:'))
+    logging.info(string_dict(params, desc='PARAMETERS:'))
     list_expt = list_experiments(params['path_expt'], params['name_expt'])
     assert len(list_expt) > 0, 'No experiments found!'
     params['path_dataset'] = get_path_dataset(params['path_expt'])

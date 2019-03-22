@@ -30,7 +30,7 @@ recursive-include experiments *.py
 recursive-include figures *.png
 
 # Include the sample data
-recursive-include data_images *.json
+recursive-include data_images *.yml *.yaml
 
 prune .git
 prune venv

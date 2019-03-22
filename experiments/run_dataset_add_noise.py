@@ -19,14 +19,15 @@ import multiprocessing as mproc
 from functools import partial
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.utilities as utils
-import bpdl.data_utils as tl_data
+from bpdl.utilities import wrap_execute_sequence, update_path
+from bpdl.data_utils import (GAUSS_NOISE, DIR_MANE_SYNTH_DATASET, load_image,
+                             export_image, add_image_fuzzy_gauss_noise)
 
 NB_THREADS = int(mproc.cpu_count() * 0.7)
 IMAGE_PATTERN = '*.png'
 DIR_POSIX = '_gauss-%.3f'
-NOISE_RANGE = tl_data.GAUSS_NOISE
-LIST_DATASETS = [tl_data.DIR_MANE_SYNTH_DATASET]
+NOISE_RANGE = GAUSS_NOISE
+LIST_DATASETS = [DIR_MANE_SYNTH_DATASET]
 BASE_IMAGE_SET = 'datasetFuzzy_raw'
 
 
@@ -45,7 +46,7 @@ def args_parser():
                         default=NOISE_RANGE)
 
     args = vars(parser.parse_args())
-    args['path'] = utils.update_path(args['path'])
+    args['path'] = update_path(args['path'])
     assert os.path.isdir(args['path']), 'missing: %s' % args['path']
 
     return args
@@ -61,9 +62,9 @@ def add_noise_image(img_name, path_in, path_out, noise_level):
     """
     path_img = os.path.join(path_in, img_name)
     logging.debug('loading image: %s', path_img)
-    name, img = tl_data.load_image(path_img)
-    img_noise = tl_data.add_image_fuzzy_gauss_noise(img, noise_level)
-    tl_data.export_image(path_out, img_noise, name)
+    name, img = load_image(path_img)
+    img_noise = add_image_fuzzy_gauss_noise(img, noise_level)
+    export_image(path_out, img_noise, name)
 
 
 def dataset_add_noise(path_in, path_out, noise_level,
@@ -95,7 +96,7 @@ def dataset_add_noise(path_in, path_out, noise_level,
 
     _wrapper_noise = partial(add_noise_image, path_in=path_in,
                              path_out=path_out, noise_level=noise_level)
-    list(utils.wrap_execute_sequence(_wrapper_noise, name_imgs, nb_workers))
+    list(wrap_execute_sequence(_wrapper_noise, name_imgs, nb_workers))
 
     logging.info('DONE')
 

@@ -28,20 +28,20 @@ from skimage import filters
 from scipy import ndimage
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.utilities as utils
-import bpdl.data_utils as tl_data
-import experiments.run_cut_minimal_images as r_cut
+from bpdl.utilities import update_path, wrap_execute_sequence
+from bpdl.data_utils import io_imread, export_image
+from experiments.run_cut_minimal_images import args_parse_params
 
 NB_THREADS = int(mproc.cpu_count() * .75)
 PARAMS = {
-    'path_in': os.path.join(utils.update_path('data_images/ovary_stage-3/image'), '*.png'),
-    'path_out': utils.update_path('data_images/ovary_stage-3/gene'),
+    'path_in': os.path.join(update_path('data_images/ovary_stage-3/image'), '*.png'),
+    'path_out': update_path('data_images/ovary_stage-3/gene'),
 }
 
 
 def extract_activation(path_img, path_out):
     name = os.path.splitext(os.path.basename(path_img))[0]
-    img = tl_data.io_imread(path_img)
+    img = io_imread(path_img)
     mask = img[:, :, 0] > 5
 
     im_struc = img[:, :, 0]
@@ -71,7 +71,7 @@ def extract_activation(path_img, path_out):
     # im_gene[im_gene_gauss < (gm_mean - gm_std)] = 0
 
     # p_out = os.path.join(path_out, name)
-    tl_data.export_image(path_out, im_gene, name)
+    export_image(path_out, im_gene, name)
 
 
 def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
@@ -88,14 +88,14 @@ def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     logging.info('found images: %i', len(list_img_paths))
 
     _wrapper_extract = partial(extract_activation, path_out=path_out)
-    list(utils.wrap_execute_sequence(_wrapper_extract, list_img_paths, nb_workers))
+    list(wrap_execute_sequence(_wrapper_extract, list_img_paths, nb_workers))
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     logging.info('running...')
 
-    params = r_cut.args_parse_params(PARAMS)
+    params = args_parse_params(PARAMS)
     main(params['path_in'], params['path_out'],
          nb_workers=params['nb_workers'])
 

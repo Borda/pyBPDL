@@ -168,7 +168,7 @@ We run just our method on both synthetic/real images using `run_experiment_apd_b
 python experiments/run_experiments.py \
     --type synth --method BPDL \
     -i ./data_images/syntheticDataset_vX \
-    -o ./results -c ./data_images/sample_config.json \
+    -o ./results -c ./data_images/sample_config.yml \
     --debug
 ```
  2. **Real images - drosophila**
@@ -180,21 +180,20 @@ python experiments/run_experiments.py \
     --dataset gene_small
 ```
 
-Using configuration JSON file `-cfg` we can set several parameters without changing the code and parametrise experiments such way that we can integrate over several configuration. While a parameter is a list it is aromatically iterated and you set several iterations, than it runs as each to each option, for instance
-```json
-{
-  "nb_labels": [5, 10],
-  "init_tp": "random",
-  "connect_diag": true,
-  "overlap_major": true,
-  "gc_reinit": true,
-  "ptn_compact": false,
-  "ptn_split": false,
-  "gc_regul": 1e-09,
-  "tol": 0.001,
-  "max_iter": 25,
-  "runs": 1,
-  "deform_coef": [null, 0.0, 1.0, 0.5,]
+Using configuration YAML file `-cfg` we can set several parameters without changing the code and parametrise experiments such way that we can integrate over several configuration. While a parameter is a list it is aromatically iterated and you set several iterations, than it runs as each to each option, for instance
+```yaml
+nb_labels: [5, 10]
+init_tp: 'random'
+connect_diag: true
+overlap_major: true
+gc_reinit: true
+ptn_compact: false
+ptn_split: false
+gc_regul: 0.000000001
+tol: 0.001
+max_iter: 25
+runs: 1
+deform_coef: [null, 0.0, 1.0, 0.5]
 }
 ```
 will run 2 * 4 = 8 experiment - two numbers of patterns and four deformation coefficients.
@@ -237,7 +236,7 @@ The result from multiple experiments can be simpli aggregatid into sigle CVS fil
 ```bash
 python experiments/run_parse_experiments_results.py \
     --path ./results --name_results results.csv  \
-    --name_config config.json --func_stat none
+    --name_config config.yaml --func_stat none
 ```
 
 In case you need add of change a evaluation you do not need to retun all experiment since the alases and encoding is done, you can just rerun the elevation phase generating new results `results_NEW.csv`
@@ -249,7 +248,7 @@ python experiments/run_recompute_experiments_result.py -i ./results
 ```bash
 python experiments/run_parse_experiments_results.py \
     --path ./results --name_results results_NEW.csv  \
-    --name_config config.json --func_stat none
+    --name_config config.yaml --func_stat none
 ```
 
 ---

@@ -33,41 +33,44 @@ import logging
 import numpy as np
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.utilities as tl_utils
-import bpdl.data_utils as tl_data
-import bpdl.dictionary_learning as dl
-import bpdl.pattern_atlas as ptn_dict
-import experiments.experiment_general as expt_gen
-import experiments.experiment_methods as e_methods
+from bpdl.utilities import is_list_like, is_iterable, string_dict
+from bpdl.data_utils import (DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET,
+                             dataset_compose_atlas, find_images, dataset_load_images)
+from bpdl.dictionary_learning import bpdl_pipeline
+from bpdl.pattern_atlas import init_atlas_mosaic
+from experiments.experiment_general import (SYNTH_PARAMS, REAL_PARAMS,
+                                            SYNTH_PATH_APD, parse_params)
+from experiments.experiment_methods import (
+    ExperimentSparsePCA, ExperimentFastICA, ExperimentDictLearn, ExperimentNMF,
+    ExperimentSpectClust, ExperimentCanICA, ExperimentMSDL, ExperimentBPDL, DICT_ATLAS_INIT)
 
 # standard multiprocessing version
 METHODS = {
-    'sPCA': e_methods.ExperimentSparsePCA,
-    'fICA': e_methods.ExperimentFastICA,
-    'DL': e_methods.ExperimentDictLearn,
-    'NMF': e_methods.ExperimentNMF,
-    'SC': e_methods.ExperimentSpectClust,
-    'cICA': e_methods.ExperimentCanICA,
-    'MSDL': e_methods.ExperimentMSDL,
-    'BPDL': e_methods.ExperimentBPDL,
+    'sPCA': ExperimentSparsePCA,
+    'fICA': ExperimentFastICA,
+    'DL': ExperimentDictLearn,
+    'NMF': ExperimentNMF,
+    'SC': ExperimentSpectClust,
+    'cICA': ExperimentCanICA,
+    'MSDL': ExperimentMSDL,
+    'BPDL': ExperimentBPDL,
 }
 LIST_METHODS = sorted(list(METHODS.keys()))
 
-SYNTH_PARAMS = expt_gen.SYNTH_PARAMS
 SYNTH_PARAMS.update({
     'dataset': ['datasetFuzzy_raw'],
     'method': LIST_METHODS,
     'max_iter': 25,  # 250, 150
 })
 
-REAL_PARAMS = expt_gen.REAL_PARAMS
+REAL_PARAMS = REAL_PARAMS
 REAL_PARAMS.update({
     'method': LIST_METHODS,
     'max_iter': 25,  # 250, 150
 })
 
 # INIT_TYPES = ['OWS', 'OWSr', 'GWS']
-INIT_TYPES_ALL = sorted(e_methods.DICT_ATLAS_INIT.keys())
+INIT_TYPES_ALL = sorted(DICT_ATLAS_INIT.keys())
 INIT_TYPES_NORM = [t for t in INIT_TYPES_ALL if 'tune' not in t]
 INIT_TYPES_NORM_REAL = [t for t in INIT_TYPES_NORM if not t.startswith('GT')]
 GRAPHCUT_REGUL = [0., 1e-9, 1e-3]
@@ -80,31 +83,30 @@ def experiment_pipeline_alpe_showcase(path_out):
     :param path_out: str
     :return (ndarray, ndarray):
     """
-    path_atlas = os.path.join(expt_gen.SYNTH_PATH_APD,
-                              tl_data.DIR_NAME_DICTIONARY)
-    atlas = tl_data.dataset_compose_atlas(path_atlas)
+    path_atlas = os.path.join(SYNTH_PATH_APD, DIR_NAME_DICTIONARY)
+    atlas = dataset_compose_atlas(path_atlas)
     # plt.imshow(atlas)
 
-    path_in = os.path.join(expt_gen.SYNTH_PATH_APD, tl_data.DEFAULT_NAME_DATASET)
-    path_imgs = tl_data.find_images(path_in)
-    imgs, _ = tl_data.dataset_load_images(path_imgs)
+    path_in = os.path.join(SYNTH_PATH_APD, DEFAULT_NAME_DATASET)
+    path_imgs = find_images(path_in)
+    imgs, _ = dataset_load_images(path_imgs)
     # imgs = tl_data.dataset_load_images('datasetBinary_defNoise',
     #                                    path_base=SYNTH_PATH_APD)
 
     # init_atlas_org = ptn_atlas.init_atlas_deform_original(atlas)
     # init_atlas_rnd = ptn_atlas.init_atlas_random(atlas.shape, np.max(atlas))
-    init_atlas_msc = ptn_dict.init_atlas_mosaic(atlas.shape, np.max(atlas))
+    init_atlas_msc = init_atlas_mosaic(atlas.shape, np.max(atlas))
     # init_encode_rnd = ptn_weigth.initialise_weights_random(len(imgs),
     #                                                        np.max(atlas))
 
-    atlas, weights, deforms = dl.bpdl_pipeline(imgs, out_prefix='mosaic',
-                                               init_atlas=init_atlas_msc,
-                                               max_iter=9, out_dir=path_out)
+    atlas, weights, deforms = bpdl_pipeline(imgs, out_prefix='mosaic',
+                                            init_atlas=init_atlas_msc,
+                                            max_iter=9, out_dir=path_out)
     return atlas, weights
 
 
 def experiment_iterate(params, iter_params, user_gt):
-    if not tl_utils.is_list_like(params['dataset']):
+    if not is_list_like(params['dataset']):
         params['dataset'] = [params['dataset']]
 
     # tqdm_bar = tqdm.tqdm(total=len(l_params))
@@ -124,7 +126,7 @@ def experiment_iterate(params, iter_params, user_gt):
 def filter_iterable_params(params):
     _any_special = lambda k: any(x in k for x in SPECIAL_EXPT_PARAMS)
     d_iter = {k: params[k] for k in params
-              if tl_utils.is_iterable(params[k]) and not _any_special(k)}
+              if is_iterable(params[k]) and not _any_special(k)}
     return d_iter
 
 
@@ -133,8 +135,8 @@ def experiments_synthetic(params=SYNTH_PARAMS):
 
     :param {str: ...} params:
     """
-    params = expt_gen.parse_params(params, LIST_METHODS)
-    logging.info(tl_utils.string_dict(params, desc='PARAMETERS'))
+    params = parse_params(params, LIST_METHODS)
+    logging.info(string_dict(params, desc='PARAMETERS'))
 
     iter_params = filter_iterable_params(params)
     # iter_params = {
@@ -152,8 +154,8 @@ def experiments_real(params=REAL_PARAMS):
 
     :param {str: ...} params:
     """
-    params = expt_gen.parse_params(params, LIST_METHODS)
-    logging.info(tl_utils.string_dict(params, desc='PARAMETERS'))
+    params = parse_params(params, LIST_METHODS)
+    logging.info(string_dict(params, desc='PARAMETERS'))
 
     iter_params = filter_iterable_params(params)
     # iter_params = {
@@ -183,7 +185,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     # logging.basicConfig(level=logging.DEBUG)
 
-    arg_params = expt_gen.parse_params({}, LIST_METHODS)
+    arg_params = parse_params({}, LIST_METHODS)
     if arg_params['debug']:
         logging.getLogger().setLevel(logging.DEBUG)
 

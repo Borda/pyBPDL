@@ -9,6 +9,7 @@ scikit-image>=0.12.1
 tqdm>=4.7.4,<=4.30  # higher fails ascii for py2
 ipython==4.2.0
 gco-wrapper>=3.0.3
+pyyaml
 # numba>=0.22.1
 nibabel>=2.1.0
 nilearn>=0.3.1

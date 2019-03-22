@@ -22,16 +22,16 @@ import numpy as np
 from scipy.ndimage import filters
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.data_utils as tl_data
-import bpdl.utilities as utils
+from bpdl.data_utils import load_image, export_image
+from bpdl.utilities import update_path, estimate_rolling_ball, wrap_execute_sequence
 
 NB_THREADS = int(mproc.cpu_count() * .75)
 NAME_JSON_BBOX = 'cut_bounding_box.json'
 LOAD_SUBSET_COEF = 5
 METHODS = ['cum-info', 'line-sum', 'line-grad']
 DEFAULT_PARAMS = {
-    'path_in': os.path.join(utils.update_path('data_images'), 'imaginal_discs', 'gene', '*.png'),
-    'path_out': os.path.join(utils.update_path('data_images'), 'imaginal_discs', 'gene_cut'),
+    'path_in': os.path.join(update_path('data_images'), 'imaginal_discs', 'gene', '*.png'),
+    'path_out': os.path.join(update_path('data_images'), 'imaginal_discs', 'gene_cut'),
 }
 
 
@@ -57,7 +57,7 @@ def args_parse_params(params):
 
     args = vars(parser.parse_args())
     for k in (k for k in args if k.startswith('path_')):
-        p = utils.update_path(os.path.dirname(args[k]))
+        p = update_path(os.path.dirname(args[k]))
         assert os.path.exists(p), 'missing (%s): %s' % (k, p)
         args[k] = os.path.join(p, os.path.basename(args[k]))
     return args
@@ -66,7 +66,7 @@ def args_parse_params(params):
 def load_mean_image(paths_img):
     img_cum = None
     for p_img in paths_img:
-        _, img = tl_data.load_image(p_img, fuzzy_val=True)
+        _, img = load_image(p_img, fuzzy_val=True)
         img = img.astype(np.float64)
         if img_cum is None:
             img_cum = img
@@ -124,7 +124,7 @@ def find_min_bbox_grad(img):
         rows_cum = filters.gaussian_filter1d(rows_cum, sigma=1)
 
         pts = np.array(list(zip(range(len(rows_cum)), rows_cum)))
-        diams = utils.estimate_rolling_ball(pts, tangent_smooth=1)
+        diams = estimate_rolling_ball(pts, tangent_smooth=1)
         bbox.append(np.argmin(diams[0]))
 
         img = np.rot90(img)
@@ -141,10 +141,10 @@ def export_bbox_json(path_dir, bbox, name=NAME_JSON_BBOX):
 
 
 def export_cut_image(path_img, d_bbox, path_out):
-    name, im = tl_data.load_image(path_img)
+    name, im = load_image(path_img)
     im_cut = im[d_bbox['top']:-d_bbox['bottom'],
                 d_bbox['left']:-d_bbox['right']]
-    tl_data.export_image(path_out, im_cut, name)
+    export_image(path_out, im_cut, name)
 
 
 def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
@@ -164,13 +164,13 @@ def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     list_img_paths_partial = [list_img_paths[i::nb_workers * LOAD_SUBSET_COEF]
                               for i in range(nb_workers * LOAD_SUBSET_COEF)]
     list_img_paths_partial = [l for l in list_img_paths_partial if len(l) > 0]
-    mean_imgs = list(utils.wrap_execute_sequence(load_mean_image,
-                                                 list_img_paths_partial,
-                                                 nb_workers=nb_workers,
-                                                 desc='loading mean images'))
+    mean_imgs = list(wrap_execute_sequence(load_mean_image,
+                                           list_img_paths_partial,
+                                           nb_workers=nb_workers,
+                                           desc='loading mean images'))
     # imgs, im_names = tl_data.dataset_load_images(list_img_paths, nb_workers=1)
     img_mean = np.mean(np.asarray(mean_imgs), axis=0)
-    tl_data.export_image(path_out, img_mean, 'mean_image')
+    export_image(path_out, img_mean, 'mean_image')
 
     logging.info('original image size: %r', img_mean.shape)
     # bbox = find_min_bbox_cumul_sum(img_mean, params['threshold'])
@@ -186,9 +186,8 @@ def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     logging.info('found BBox: %r', d_bbox)
 
     _cut_export = partial(export_cut_image, d_bbox=d_bbox, path_out=path_out)
-    list(utils.wrap_execute_sequence(_cut_export, list_img_paths,
-                                     nb_workers=nb_workers,
-                                     desc='exporting cut images'))
+    list(wrap_execute_sequence(_cut_export, list_img_paths, nb_workers,
+                               desc='exporting cut images'))
 
 
 if __name__ == '__main__':

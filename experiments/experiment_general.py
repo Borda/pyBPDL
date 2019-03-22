@@ -13,7 +13,6 @@ import logging
 import argparse
 import shutil
 import random
-import json
 import copy
 import types
 import collections
@@ -24,6 +23,7 @@ if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'ag
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
+import yaml
 import numpy as np
 import pandas as pd
 from sklearn import metrics
@@ -40,7 +40,7 @@ from bpdl.pattern_atlas import reconstruct_samples
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
 
 FORMAT_DT = '%Y%m%d-%H%M%S'
-CONFIG_JSON = 'config.json'
+CONFIG_YAML = 'config.yml'
 RESULTS_TXT = 'resultStat.txt'
 RESULTS_CSV = 'results.csv'
 FILE_LOGS = 'logging.txt'
@@ -145,20 +145,15 @@ def create_args_parser(dict_params, methods):
     parser.add_argument('-d', '--dataset', type=str, required=False,
                         nargs='+', help='names of used datasets', default=None)
     parser.add_argument('-p', '--nb_patterns', type=int, required=False,
-                        nargs='+', help='numbers of estimated patterns',
-                        default=None)
-    parser.add_argument('--nb_workers', type=int, required=False,
-                        help='number of processes running in parallel',
-                        default=NB_THREADS)
+                        nargs='+', help='numbers of estimated patterns', default=None)
+    parser.add_argument('--nb_workers', type=int, required=False, default=NB_THREADS,
+                        help='number of processes running in parallel')
     parser.add_argument('--method', type=str, required=False, nargs='+',
-                        default=None, help='possible APD methods',
-                        choices=methods)
-    parser.add_argument('--list_images', type=str, required=False,
-                        help='CSV file with list of images, supress `path_in`',
-                        default=None)
+                        default=None, help='possible APD methods', choices=methods)
+    parser.add_argument('--list_images', type=str, required=False, default=None,
+                        help='CSV file with list of images, supress `path_in`')
     parser.add_argument('-c', '--path_config', type=str, required=False,
-                        help='path to JSON configuration file',
-                        default=None)
+                        help='path to YAML configuration file', default=None)
     parser.add_argument('--debug', required=False, action='store_true',
                         help='run in debug mode', default=False)
     parser.add_argument('--unique', required=False, action='store_true',
@@ -205,15 +200,15 @@ def parse_params(default_params, methods):
 
     params.update(arg_params)
 
-    # if json config exists update configuration
+    # if YAML config exists update configuration
     if arg_params.get('path_config', None) is not None \
             and os.path.isfile(arg_params['path_config']):
         logging.info('loading config: %s', arg_params['path_config'])
-        d_json = json.load(open(arg_params['path_config']))
-        logging.debug(string_dict(d_json, desc='LOADED CONFIG:'))
+        d_config = yaml.load(open(arg_params['path_config']))
+        logging.debug(string_dict(d_config, desc='LOADED CONFIG:'))
 
         # skip al keys with path or passed from arg params
-        d_update = {k: d_json[k] for k in d_json
+        d_update = {k: d_config[k] for k in d_config
                     if k not in arg_params or arg_params[k] is None}
         logging.debug(string_dict(d_update, desc='TO BE UPDATED:'))
         params.update(d_update)
@@ -271,15 +266,15 @@ def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True
     logging.info('creating experiment folder "{}"'.format(path_expt))
     if not os.path.exists(path_expt):
         os.mkdir(path_expt)
-    path_config = os.path.join(path_expt, CONFIG_JSON)
+    path_config = os.path.join(path_expt, CONFIG_YAML)
     if os.path.exists(path_config) and not skip_load:
-        logging.debug('loading saved params from file "%s"', CONFIG_JSON)
-        params = json.load(open(path_config, 'r'))
+        logging.debug('loading saved params from file "%s"', CONFIG_YAML)
+        params = yaml.load(open(path_config, 'r'))
     params.update({'computer': repr(os.uname()),
                    'path_exp': path_expt})
-    logging.debug('saving params to file "%s"', CONFIG_JSON)
-    with open(path_config, 'w') as f:
-        json.dump(params, f)
+    logging.debug('saving params to file "%s"', CONFIG_YAML)
+    with open(path_config, 'w') as fp:
+        yaml.dump(params, fp, default_flow_style=False)
     return params
 
 
