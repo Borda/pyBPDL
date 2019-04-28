@@ -81,7 +81,7 @@ def experiment_pipeline_alpe_showcase(path_out):
     """ an simple show case to prove that the particular steps are computed
 
     :param path_out: str
-    :return (ndarray, ndarray):
+    :return tuple(ndarray,ndarray):
     """
     path_atlas = os.path.join(SYNTH_PATH_APD, DIR_NAME_DICTIONARY)
     atlas = dataset_compose_atlas(path_atlas)
@@ -133,7 +133,7 @@ def filter_iterable_params(params):
 def experiments_synthetic(params=SYNTH_PARAMS):
     """ run all experiments
 
-    :param {str: ...} params:
+    :param dict params:
     """
     params = parse_params(params, LIST_METHODS)
     logging.info(string_dict(params, desc='PARAMETERS'))
@@ -152,7 +152,7 @@ def experiments_synthetic(params=SYNTH_PARAMS):
 def experiments_real(params=REAL_PARAMS):
     """ run all experiments
 
-    :param {str: ...} params:
+    :param dict params:
     """
     params = parse_params(params, LIST_METHODS)
     logging.info(string_dict(params, desc='PARAMETERS'))
@@ -171,7 +171,7 @@ def experiments_real(params=REAL_PARAMS):
 def main(params):
     """ main entry point
 
-    :param {} params:
+    :param dict params:
     """
     # swap according dataset type
     if params['type'] == 'synth':

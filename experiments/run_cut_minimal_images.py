@@ -38,7 +38,7 @@ DEFAULT_PARAMS = {
 def args_parse_params(params):
     """ create simple arg parser with default values (input, output)
 
-    :param {str: ...} dict_params:
+    :param dict dict_params:
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()

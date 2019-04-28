@@ -55,7 +55,7 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
     :param [np.array<height, width>] imgs: list of input binary images
     :param np.array<nb_imgs, nb_lbs> ptn_weights: binary ptn selection
     :param float coef: coefficient for graphcut
-    :return [int]:
+    :return list(int):
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -244,7 +244,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     :param str out_prefix:
     :param str out_dir: path to the results directory
     :param rand_seed: random initialization
-    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :return tuple(ndarray,ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -433,7 +433,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     :param bool connect_diag: used connecting diagonals, like use 8- instead 4-neighbour
     :param str out_dir: path to the results directory
     :param str out_prefix:
-    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :return tuple(ndarray,ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> import shutil
     >>> logging.getLogger().setLevel(logging.DEBUG)

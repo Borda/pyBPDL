@@ -293,9 +293,9 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
 def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     """ compute standard metrics for multi-class classification
 
-    :param [str] metric_averages:
-    :param [int] y_true:
-    :param [int] y_pred:
+    :param list(str) metric_averages:
+    :param list(int) y_true:
+    :param list(int) y_pred:
     :return {str: float}:
 
     >>> y_true = np.array([0] * 3 + [1] * 5)

@@ -194,7 +194,7 @@ class ExperimentLinearCombineBase(Experiment):
         results and patterns
 
         :param ndarray imgs_vec: np.array<nb_imgs, height*width>
-        :return (obj, ndarray, ndarray):
+        :return tuple(obj,ndarray,ndarray):
         """
         estimator, components, fit_result = None, np.array([0]), np.array([0])
         return estimator, components, fit_result
@@ -203,7 +203,7 @@ class ExperimentLinearCombineBase(Experiment):
         """ perform the linear combination and reformulate the outputs
 
         :param imgs_vec: np.array<nb_imgs, height*width>
-        :return (obj, ndarray, ndarray):
+        :return tuple(obj,ndarray, ndarray):
         """
         try:
             estimator, components, fit_result = \
@@ -376,8 +376,8 @@ class ExperimentBPDL(Experiment):
         """ set all params and run the atlas estimation in try mode
 
         :param ndarray images: np.array<w, h>
-        :param {str: ...} params:
-        :return (ndarray, ndarray, {}):
+        :param dict params:
+        :return tuple(ndarray,ndarray,dict):
         """
         logging.debug(' -> estimate atlas...')
         logging.debug(string_dict(params, desc='PARAMETERS'))
@@ -403,7 +403,7 @@ class ExperimentBPDL(Experiment):
     def _export_extras(self, extras, suffix=''):
         """ export some extra parameters
 
-        :param {} extras: dictionary with extra variables
+        :param dict extras: dictionary with extra variables
         """
         if extras is None:  # in case that there are no extras...
             return
@@ -421,8 +421,8 @@ class ExperimentBPDL(Experiment):
 
         :param ndarray atlas: np.array<height, width>
         :param [ndarray] weights: np.array<nb_samples, nb_patterns>
-        :param {} extras:
-        :return {}:
+        :param dict extras:
+        :return dict:
         """
         stat = {}
         if extras is None:  # in case that there are no extras...

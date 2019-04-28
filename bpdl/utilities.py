@@ -107,9 +107,9 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
     """ Generating a Gaussian distribution in 2D image
 
     :param float norm: normalise the maximal value
-    :param [int] mean: mean position
-    :param [[int]] std: STD
-    :param (int, int) im_size: optional image size
+    :param list(int) mean: mean position
+    :param list(list(int)) std: STD
+    :param tuple(int,int) im_size: optional image size
     :return ndarray:
 
     >>> im = generate_gauss_2d([4, 5], [[1, 0], [0, 2]], (8, 10), norm=1.)
@@ -387,7 +387,7 @@ def is_iterable(var):
 def string_dict(d, desc='DICTIONARY:', offset=30):
     """ transform dictionary to a formatted string
 
-    :param {} d: dictionary with parameters
+    :param dict d: dictionary with parameters
     :param int offset: length between name and value
     :param str desc: dictionary title
     :return str:

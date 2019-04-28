@@ -126,8 +126,8 @@ REAL_PARAMS.update({
 def create_args_parser(dict_params, methods):
     """ create simple arg parser with default values (input, output, dataset)
 
-    :param {str: ...} dict_params:
-    :param [str] methods: list of possible methods
+    :param dict dict_params:
+    :param list(str) methods: list of possible methods
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
@@ -165,7 +165,7 @@ def parse_arg_params(parser):
     """ parse basic args and return as dictionary
 
     :param obj parser: argparse
-    :return {str: ...}:
+    :return dict:
     """
     args = vars(parser.parse_args())
     # remove not filled parameters
@@ -190,9 +190,9 @@ def parse_arg_params(parser):
 def parse_params(default_params, methods):
     """ parse arguments from command line
 
-    :param {str: ...} default_params:
-    :param [str] methods: list of possible methods
-    :return {str: ...}:
+    :param dict default_params:
+    :param list(str) methods: list of possible methods
+    :return dict:
     """
     parser = create_args_parser(default_params, methods)
     params = copy.deepcopy(default_params)
@@ -221,7 +221,7 @@ def load_list_img_names(path_csv, path_in=''):
 
     :param str path_csv:
     :param str path_in:
-    :return [str]:
+    :return list(str):
     """
     assert os.path.exists(path_csv), '%s' % path_csv
     df = pd.read_csv(path_csv, index_col=False, header=None)
@@ -237,11 +237,11 @@ def load_list_img_names(path_csv, path_in=''):
 def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True):
     """ create the experiment folder and iterate while there is no available
 
-    :param {str: ...} params:
+    :param dict params:
     :param str dir_name:
     :param bool stamp_unique:
     :param bool skip_load:
-    :return {str: ...}:
+    :return dict:
 
     >>> p = {'path_out': '.'}
     >>> p = create_experiment_folder(p, 'my_test', False, skip_load=True)
@@ -299,7 +299,7 @@ def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
 def generate_conf_suffix(d_params):
     """ generating suffix strung according given params
 
-    :param {} d_params: dictionary
+    :param dict d_params: dictionary
     :return str:
 
     >>> params = {'my_Param': 15}
@@ -365,7 +365,7 @@ class Experiment(object):
     def __init__(self, dict_params, time_stamp=True):
         """ initialise class and set the experiment parameters
 
-        :param {str: ...} dict_params:
+        :param dict dict_params:
         :param bool time_stamp: mark if you want an unique folder per experiment
         """
         assert all([n in dict_params for n in self.REQUIRED_PARAMS]), \
@@ -425,7 +425,7 @@ class Experiment(object):
     def _load_data_ground_truth(self):
         """ loading all GT suh as atlas and reconstructed images from GT encoding
 
-        :param {str: ...} params: parameter settings
+        :param dict params: parameter settings
         """
         path_atlas = os.path.join(self.params.get('path_in'), DIR_NAME_DICTIONARY)
         self._gt_atlas = dataset_compose_atlas(path_atlas)
@@ -519,8 +519,8 @@ class Experiment(object):
         """ This is the method to be be over written by individual methods
 
         :param [ndarray] images:
-        :param {} params:
-        :return (ndarray, ndarray, {}):
+        :param dict params:
+        :return tuple(ndarray,ndarray,dict):
         """
         del params
         atlas = np.zeros_like(self._images[0])
@@ -530,8 +530,8 @@ class Experiment(object):
     def _perform_once(self, d_params):
         """ perform single experiment
 
-        :param {str: ...} d_params: used specific configuration
-        :return {str: ...}: output statistic
+        :param dict d_params: used specific configuration
+        :return dict: output statistic
         """
         detail = copy.deepcopy(self.params)
         detail.update(copy.deepcopy(d_params))
@@ -603,7 +603,7 @@ class Experiment(object):
     def _export_extras(self, extras, suffix=''):
         """ export some extra parameters
 
-        :param {} extras: dictionary with extra variables
+        :param dict extras: dictionary with extra variables
         """
         pass
 
@@ -626,7 +626,7 @@ class Experiment(object):
          or just input images as difference sum
 
         :param [ndarray] images_rct: reconstructed images
-        :return (str, float):
+        :return tuple(str,float):
         """
         assert images_rct is not None, 'missing any images to compare with'
         # error estimation from original reconstruction
@@ -651,7 +651,7 @@ class Experiment(object):
 
         :param ndarray atlas: np.array<height, width>
         :param [ndarray] weights: np.array<nb_samples, nb_patterns>
-        :return {str: ...}:
+        :return dict:
         """
         images_rct = reconstruct_samples(atlas, weights)
         tag, diff = self._evaluate_reconstruct(images_rct)
@@ -666,8 +666,8 @@ class Experiment(object):
 
         :param ndarray atlas: np.array<height, width>
         :param [ndarray] weights: np.array<nb_samples, nb_patterns>
-        :param {} extras:
-        :return {}:
+        :param dict extras:
+        :return dict:
         """
         return {}
 
@@ -697,10 +697,10 @@ class Experiment(object):
 def extend_list_params(list_params, name_param, list_options):
     """ extend the parameter list by all sub-datasets
 
-    :param [{str: ...}] list_params:
+    :param [dict] list_params:
     :param str name_param:
     :param [] list_options:
-    :return [{str: ...}]:
+    :return [dict]:
 
     >>> params = extend_list_params([{'a': 1}], 'a', [3, 4])
     >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
@@ -731,7 +731,7 @@ def extend_list_params(list_params, name_param, list_options):
 def simplify_params(dict_params):
     """ extract simple configuration dictionary
 
-    :return {}:
+    :return dict:
 
     >>> params = simplify_params({'t': 'abc', 'n': [1, 2]})
     >>> pd.Series(params).sort_index()  #doctest: +NORMALIZE_WHITESPACE
@@ -749,9 +749,9 @@ def simplify_params(dict_params):
 def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     """ extend parameters to a list
 
-    :param {} dict_params: input dictionary with params
-    :param {} simple_config: simple config dictionary
-    :param [str] skip_patterns: ignored configs
+    :param dict dict_params: input dictionary with params
+    :param dict simple_config: simple config dictionary
+    :param list(str) skip_patterns: ignored configs
     :return:
 
     >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),

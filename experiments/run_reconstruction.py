@@ -54,7 +54,7 @@ IMAGE_EXTENSION = '.png'
 def parse_arg_params():
     """ parse the input parameters
 
-    :return {str: ...}:
+    :return dict:
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--path_expt', type=str, required=True,

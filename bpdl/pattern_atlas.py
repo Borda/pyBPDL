@@ -26,7 +26,7 @@ UNARY_BACKGROUND = 1
 def init_atlas_random(im_size, nb_patterns, rand_seed=None):
     """ initialise atlas with random labels
 
-    :param (int, int) im_size: size of image
+    :param tuple(int,int) im_size: size of image
     :param int nb_patterns: number of labels
     :param rand_seed: random initialization
     :return ndarray: np.array<height, width>
@@ -50,7 +50,7 @@ def init_atlas_random(im_size, nb_patterns, rand_seed=None):
 def init_atlas_grid(im_size, nb_patterns, rand_seed=None):
     """ initialise atlas with a grid schema
 
-    :param (int, int) im_size: size of image
+    :param tuple(int,int) im_size: size of image
     :param int nb_patterns: number of pattern in the atlas to be set
     :param rand_seed: random initialisation
     :return ndarray: np.array<height, width>
@@ -86,7 +86,7 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
     """ generate grids texture and into each rectangle plase a label,
     each row contains all labels (permutation)
 
-    :param (int, int) im_size: size of image
+    :param tuple(int,int) im_size: size of image
     :param int nb_patterns: number of pattern in the atlas to be set
     :param float coef:
     :param rand_seed: random initialization
@@ -197,7 +197,7 @@ def detect_peaks(image, struct=(2, 2)):
     the pixel's value is the neighborhood maximum, 0 otherwise)
 
     :param ndarray image:
-    :param (int, int) struct:
+    :param tuple(int,int) struct:
 
     >>> img = [[0.46, 0.62, 0.62, 0.46, 0.2,  0.04, 0.01, 0.0,  0.0,  0.0],
     ...        [0.44, 0.59, 0.59, 0.44, 0.2,  0.06, 0.04, 0.04, 0.04, 0.04],
@@ -283,7 +283,7 @@ def convert_lin_comb_patterns_2_atlas(atlas_components, used_components,
     """ conver components rom linear decompostion into an atlass
 
     :param [ndarray] atlas_components:
-    :param [bool] used_components:
+    :param list(bool) used_components:
     :param float bg_threshold:
     :return ndarray:
     """
@@ -492,7 +492,7 @@ def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
 
     :param ndarray atlas: np.array<height, width>
     :param float coef:
-    :param (int, int) grid_size:
+    :param tuple(int,int) grid_size:
     :param rand_seed: random initialization
     :return ndarray: np.array<height, width>
 
@@ -567,7 +567,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     :param [ndarray] imgs: list of input images np.array<height, width>
     :param [ndarray] imgs_reconst: list of reconstructed images np.array<h, w>
     :param ndarray atlas: np.array<height, width>
-    :param [int] diffs: list of differences among input and reconstruct images
+    :param list(int) diffs: list of differences among input and reconstruct images
     :param bool ptn_compact: enforce compactness of patterns
     :param str ptn_method: pattern extraction method
     :param float thr_fuzzy:
@@ -699,7 +699,7 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     :param ndarray atlas: image np.array<height, width>
     :param int label_max: set max number of components
     :param bool ptn_compact: enforce compactness of patterns
-    :return (ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
+    :return tuple(ndarray, ndarray): np.array<height, width>, np.array<nb_imgs, nb_lbs>
 
     >>> atlas = np.zeros((8, 12), dtype=int)
     >>> atlas[:3, 1:5] = 1
@@ -809,7 +809,7 @@ def atlas_split_indep_ptn(atlas, label_max):
 def edges_in_image2d_plane(im_size, connect_diag=False):
     """ create list of edges for uniform image plane
 
-    :param (int, int) im_size: size of image
+    :param tuple(int,int) im_size: size of image
     :param bool connect_diag: used connecting diagonals, like use 8- instead 4-neighbour
     :return [[int, int], ]:
 

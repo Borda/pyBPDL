@@ -78,9 +78,9 @@ def parse_results_csv_summary(path_result, cols_sel, func_stat):
     """ load file with results and over specific cols aor all do an statistic
 
     :param str path_result:
-    :param [str] cols_sel:
+    :param list(str) cols_sel:
     :param func_stat:
-    :return {str: any}:
+    :return dict:
     """
     dict_result = {}
     df_res = load_results_csv(path_result, cols_sel)
@@ -97,7 +97,7 @@ def load_results_csv(path_result, cols_select=None):
     """ load file with results and over specific cols aor all do an statistic
 
     :param str path_result:
-    :param [str] cols_select:
+    :param list(str) cols_select:
     :return: pd.DataFrame
     """
     if not os.path.exists(path_result):
@@ -135,8 +135,8 @@ def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
     :param str path_expt: path to experiment folder
-    :param {str: any} params:
-    :return {str: any}:
+    :param dict params:
+    :return dict:
     """
     assert os.path.isdir(path_expt), 'missing %s' % path_expt
     path_config = os.path.join(path_expt, params['name_config'])
@@ -181,7 +181,7 @@ def append_df_folder(df_all, df_folder):
 def parse_experiments(params):
     """ with specific input parameters wal over result folder and parse it
 
-    :param {str: any} params:
+    :param dict params:
     :return: DF<nb_experiments, nb_info>
     """
     logging.info('running parse Experiments results')

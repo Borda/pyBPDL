@@ -107,7 +107,7 @@ def parse_experiment_folder(path_expt, params):
     """ parse experiment folder, get configuration and results
 
     :param str path_expt: path to experiment folder
-    :param {str: ...} params:
+    :param dict params:
     """
     assert os.path.isdir(path_expt), 'missing EXPERIMENT: %s' % path_expt
 
@@ -168,7 +168,7 @@ def parse_experiment_folder(path_expt, params):
 def parse_experiments(params):
     """ with specific input parameters wal over result folder and parse it
 
-    :param {str: ...} params:
+    :param dict params:
     """
     logging.info('running recompute Experiments results')
     logging.info(string_dict(params, desc='ARGUMENTS:'))

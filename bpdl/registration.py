@@ -44,9 +44,9 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
     :param ndarray img_sense:
     :param ndarray img_ref:
     :param float smooth_sigma:
-    :param {} params:
+    :param dict params:
     :param bool verbose: whether show debug time measurements
-    :return (ndarray, ndarray):
+    :return tuple(ndarray,ndarray):
 
     >>> np.random.seed(0)
     >>> img_ref = np.zeros((10, 10), dtype=int)
@@ -258,8 +258,8 @@ def warp2d_apply_deform_field(img, deform, method='linear'):
 def wrapper_warp2d_transform_image(idx_img_deform, method='linear', inverse=False):
     """ wrapper for registration of input images to reconstructed as demons
 
-    :param (int, ndarray, ndarray) idx_img_deform:
-    :return (int, ndarray):
+    :param tuple(int,ndarray,ndarray) idx_img_deform:
+    :return tuple(int,ndarray):
     """
     idx, img, d_deform = idx_img_deform
     img_warped = warp2d_transform_image(img, d_deform, method=method,
@@ -307,10 +307,10 @@ def wrapper_register_demons_image_weights(idx_img_weights, atlas, smooth_coef,
                                           inverse=False):
     """ wrapper for registration of input images to reconstructed as demons
 
-    :param (int, ndarray, ndarray) idx_img_weights:
+    :param tuple(int,ndarray,ndarray) idx_img_weights:
     :param ndarray atlas:
     :param float coef:
-    :param {str: ...} params:
+    :param dict params:
     :return:
     """
     idx, img, w = idx_img_weights
@@ -344,7 +344,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     :param ndarray atlas:
     :param ndarray list_weights:
     :param float coef:
-    :param {str: ...} params:
+    :param dict params:
     :param int nb_workers:
     :return: [ndarray], [ndarray]
 

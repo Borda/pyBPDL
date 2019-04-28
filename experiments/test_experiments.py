@@ -27,7 +27,7 @@ PARAMS_TEST_SYNTH_UPDATE = {
 def test_experiments_soa_synth(params=SYNTH_PARAMS):
     """ simple test of State-of-the-Art methods on Synthetic dataset
 
-    :param {str: value} dict_params:
+    :param dict dict_params:
     """
     logging.getLogger().setLevel(logging.INFO)
     params.update(PARAMS_TEST_SYNTH_UPDATE)
@@ -43,7 +43,7 @@ def test_experiments_soa_synth(params=SYNTH_PARAMS):
 def test_experiments_soa_real(params=REAL_PARAMS):
     """ simple test of State-of-the-Art methods on Real images
 
-    :param {str: value} dict_params:
+    :param dict dict_params:
     """
     logging.getLogger().setLevel(logging.INFO)
     params.update({
@@ -62,7 +62,7 @@ def test_experiments_soa_real(params=REAL_PARAMS):
 def test_experiments_bpdl_initials(dict_params=SYNTH_PARAMS):
     """  simple test of various BPDL initializations
 
-    :param {str: any} dict_params:
+    :param dict dict_params:
     """
     logging.getLogger().setLevel(logging.INFO)
     # experiment_pipeline_alpe_showcase()
@@ -80,7 +80,7 @@ def test_experiments_bpdl_initials(dict_params=SYNTH_PARAMS):
 def test_experiments_bpdl(dict_params=SYNTH_PARAMS):
     """  simple & parallel test of BPDL and w. w/o deformation
 
-    :param {str: any} dict_params:
+    :param dict dict_params:
     """
     logging.getLogger().setLevel(logging.DEBUG)
     # experiment_pipeline_alpe_showcase()

@@ -16,6 +16,8 @@ except ImportError:
     from distutils.core import setup
     from distutils.command.build_ext import build_ext
 
+import bpdl
+
 
 def _parse_requirements(file_path):
     with open(file_path) as fp:
@@ -28,20 +30,21 @@ install_reqs = _parse_requirements(os.path.join(HERE, 'requirements.txt'))
 
 setup(
     name='BPDL',
-    version='0.2.2',
-    author='Jiri Borovec',
-    author_email='jiri.borovec@fel.cvut.cz',
-    url='https://borda.github.com/pyBPDL',
-    license='BSD 3-clause',
+    version=bpdl.__version__,
+    author=bpdl.__author__,
+    author_email=bpdl.__author_email__,
+    url=bpdl.__homepage__,
+    license=bpdl.__license__,
 
     description='Binary Pattern Dictionary Learning',
     packages=["bpdl"],
     cmdclass={'build_ext': build_ext},
     install_requires=install_reqs,
 
-    long_description="""
-Image processing package for unsupervised pattern extraction and atlas estimation.
-""",
+    long_description=bpdl.__doc__,
+    long_description_content_type='text/markdown',
+    keywords='image segmentation decomposition atlas encoding benchmark',
+
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",

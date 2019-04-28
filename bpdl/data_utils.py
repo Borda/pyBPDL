@@ -114,9 +114,9 @@ def io_imsave(path_img, img):
 def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=None):
     """ create deformation
 
-    :param (int, int) im_size: image size 2D or 3D
+    :param tuple(int,int) im_size: image size 2D or 3D
     :param float coef: deformation
-    :param (int, int) grid_size: size of deformation grid
+    :param tuple(int,int) grid_size: size of deformation grid
     :param rand_seed: random initialization
     :return obj:
 
@@ -145,7 +145,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
 
     :param ndarray im: image np.array<height, width>
     :param float coef: a param describing the how much it is deformed (0 = None)
-    :param (int, int) grid_size: is size of elastic grid for deformation
+    :param tuple(int,int) grid_size: is size of elastic grid for deformation
     :param rand_seed: random initialization
     :return ndarray: np.array<height, width>
 
@@ -275,7 +275,7 @@ def generate_rand_center_radius(img, ratio, rand_seed=None):
     :param ndarray img: np.array<height, width>
     :param float ratio:
     :param rand_seed: random initialization
-    :return ((int, ), (float, )):
+    :return tuple(tuple(int),tuple(float)):
 
     >>> generate_rand_center_radius(np.zeros((50, 50)), 0.2, rand_seed=0)
     ([27, 15], [8.5, 6.5])
@@ -399,7 +399,7 @@ def atlas_filter_larges_components(atlas):
     """ atlas filter larges components
 
     :param ndarray atlas: np.array<height, width> image
-    :return (ndarray, [ndarray]): np.array<height, width>, [np.array<height, width>]
+    :return tuple(ndarray,list(ndarray)): np.array<height, width>, [np.array<height, width>]
 
     >>> atlas = np.zeros((7, 15), dtype=int)
     >>> atlas[1:4, 5:10] = 1
@@ -451,7 +451,7 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     :param str dir_name: name of the folder
     :param str temp_img_name: use template for pattern names
     :param int nb_patterns: number of patterns / labels
-    :param (int, int) im_size: image size
+    :param tuple(int,int) im_size: image size
     :return ndarray: [np.array<height, width>] independent patters in the dictionary
 
     >>> logging.getLogger().setLevel(logging.DEBUG)
@@ -504,7 +504,7 @@ def dictionary_generate_rnd_pattern(path_out=None,
     :param str dir_name: name of the folder
     :param str temp_img_name: use template for pattern names
     :param int nb_patterns: number of patterns / labels
-    :param (int, int) im_size: image size
+    :param tuple(int,int) im_size: image size
     :param rand_seed: random initialization
     :return ndarray: [np.array<height, width>] list of independent patters in the dict.
 
@@ -553,7 +553,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     :param str out_dir: name of directory
     :param float ptn_ration: number in range (0, 1)
     :param rand_seed: random initialization
-    :return (int, ndarray, str, [int]):
+    :return tuple(int,ndarray,str,list(int)):
 
     >>> img1 = np.zeros((6, 15), dtype=int)
     >>> img1[2:5, 5:10] = 1
@@ -606,7 +606,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
         an input observation / image
     :param int nb_workers: number of running jobs
     :param rand_seed: random initialization
-    :return (ndarray, DF): [np.array<height, width>], df<nb_imgs, nb_lbs>
+    :return tuple(ndarray,DF): [np.array<height, width>], df<nb_imgs, nb_lbs>
 
     >>> img1 = np.zeros((6, 15), dtype=int)
     >>> img1[2:5, 5:10] = 1
@@ -801,11 +801,11 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
 def wrapper_image_function(i_img, func, coef, out_dir):
     """ apply an image by a specific function
 
-    :param (int, np.array<height, width>) i_img:
+    :param tuple(int,ndarray) i_img: index and np.array<height, width>
     :param func:
     :param float coef:
     :param str out_dir:
-    :return (int, ndarray): int, np.array<height, width>
+    :return tuple(int,ndarray): int, np.array<height, width>
     """
     i, img = i_img
     img_def = func(img, coef)
@@ -949,8 +949,8 @@ def add_image_fuzzy_gauss_noise(im, sigma=0.1, rand_seed=None):
 def wrapper_load_images(list_path_img):
     """ wrapper for multiprocessing loading
 
-    :param [str] list_path_img:
-    :return ((str, ndarray)): np.array<height, width>
+    :param list(str) list_path_img:
+    :return tuple((str,ndarray)): np.array<height, width>
     """
     logging.debug('sequential loading %i images', len(list_path_img))
     list_names_imgs = map(load_image, list_path_img)
@@ -962,8 +962,8 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
 
     :param str path_dir:
     :param str im_pattern:
-    :param [str] img_extensions:
-    :return [str]:
+    :param list(str) img_extensions:
+    :return list(str):
 
     >>> np.random.seed(0)
     >>> img = np.random.random([5, 10])
@@ -987,10 +987,10 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
 def dataset_load_images(img_paths, nb_spls=None, nb_workers=1):
     """ load complete dataset or just a subset
 
-    :param [str] img_paths: path to the images
+    :param list(str) img_paths: path to the images
     :param int nb_spls: number of samples to be loaded, None means all
     :param int nb_workers: number of running jobs
-    :return ([ndarray], [str]):
+    :return tuple([ndarray], list(str)):
     """
     assert all(os.path.exists(p) for p in img_paths)
     img_paths = sorted(img_paths)[:nb_spls]
@@ -1028,7 +1028,7 @@ def load_image(path_img, fuzzy_val=True):
 
     :param str path_img:
     :param bool fuzzy_val: weather normalise values in range (0, 1)
-    :return (str, ndarray): np.array<height, width>
+    :return tuple(str,ndarray): np.array<height, width>
 
     PNG image
     >>> img_name = 'testing_image'
@@ -1107,7 +1107,7 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
 
     :param str path_base: path to the results directory
     :param str name_csv: name of file with weights
-    :param [str] img_names: list of image names
+    :param list(str) img_names: list of image names
     :return ndarray: np.array<nb_imgs, nb_lbs>
 
     >>> np.random.seed(0)
@@ -1174,7 +1174,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_workers=1):
 
     :param str path_out:
     :param [np.array<height, width>] imgs:
-    :param names: [str] or None (use indexes)
+    :param list(str)|None names: (use indexes)
     :param int nb_workers:
 
     >>> np.random.seed(0)

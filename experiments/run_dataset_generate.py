@@ -92,7 +92,7 @@ def generate_all(path_out=DEFAULT_PATH_APD,
     """ generate complete dataset containing dictionary od patterns and also
     input binary / fuzzy images with geometrical deformation and random noise
 
-    :param (int, int) atlas_size:
+    :param tuple(int,int) atlas_size:
     :param int nb_samples:
     :param int nb_patterns:
     :param str csv_name:

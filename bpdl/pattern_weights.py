@@ -70,7 +70,7 @@ def weights_image_atlas_overlap_major(img, atlas):
     """
     :param ndarray img: image np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
-    :return [int]: [int] * nb_lbs of values {0, 1}
+    :return list(int): list(int) * nb_lbs of values {0, 1}
 
     >>> atlas = np.zeros((8, 10), dtype=int)
     >>> atlas[:3, 0:4] = 1
@@ -98,7 +98,7 @@ def weights_image_atlas_overlap_partial(img, atlas):
     """
     :param ndarray img: image np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
-    :return [int]: [int] * nb_lbs of values {0, 1}
+    :return list(int): list(int) * nb_lbs of values {0, 1}
 
     >>> atlas = np.zeros((8, 10), dtype=int)
     >>> atlas[:3, 0:4] = 1
@@ -131,7 +131,7 @@ def weights_image_atlas_overlap_threshold(img, atlas, threshold=1.):
     :param ndarray img: image np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
     :param float threshold: represent the ration between overlapping and non pixels
-    :return [int]: [int] * nb_lbs of values {0, 1}
+    :return list(int): list(int) * nb_lbs of values {0, 1}
     """
     # logging.debug('weights input image according given atlas')
     # simple weight
