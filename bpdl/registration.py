@@ -271,7 +271,7 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear',
                                inverse=False, nb_workers=NB_THREADS):
     """ deform whole set of images to expected image domain
 
-    :param [ndarray] list_images:
+    :param list(ndarray) list_images:
     :param ndarray list_deforms:
     :param int nb_workers:
     :return: [ndarray]
@@ -340,7 +340,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     """ register whole set of images to estimated atlas and weights
     IDEA: think about parallel registration per sets as for loading images
 
-    :param [ndarray] list_images:
+    :param list(ndarray) list_images:
     :param ndarray atlas:
     :param ndarray list_weights:
     :param float coef:

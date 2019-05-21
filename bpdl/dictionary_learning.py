@@ -52,8 +52,8 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
     """ run the graphcut to estimate atlas from computed unary terms
     source: https://github.com/yujiali/pyGCO
 
-    :param [np.array<height, width>] imgs: list of input binary images
-    :param np.array<nb_imgs, nb_lbs> ptn_weights: binary ptn selection
+    :param list(ndarray) imgs: list of input binary images [np.array<height, width>]
+    :param ndarray ptn_weights: binary ptn selection np.array<nb_imgs, nb_lbs>
     :param float coef: coefficient for graphcut
     :return list(int):
 
@@ -106,7 +106,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
     """ run the graphcut on the unary costs with specific pairwise cost
     source: https://github.com/yujiali/pyGCO
 
-    :param [ndarray] imgs: list of np.array<height, width> input binary images
+    :param list(ndarray) imgs: list of np.array<height, width> input binary images
     :param ndarray ptn_weights: np.array<nb_imgs, nb_lbs> binary ptn selection
     :param float coef: coefficient for graphcut
     :param ndarray init_atlas: init labeling  np.array<nb_seg, 1>
@@ -176,13 +176,13 @@ def export_visualization_image(img, idx, out_dir, prefix='debug', name='',
                                ration=None, labels=('', '')):
     """ export visualisation as an image with some special desc.
 
-    :param np.array<height, width> img:
+    :param ndarray img: np.array<height, width>
     :param int idx: iteration to be shown in the img name
     :param str out_dir: path to the resulting folder
     :param str prefix:
     :param str name: name of this particular visual
     :param str ration: mainly for  weights to ne stretched
-    :param [str, str] labels: labels for axis
+    :param tuple(str,str) labels: labels for axis
 
     CRASH: TclError: no display name and no $DISPLAY environment variable
     >>> img = np.random.random((50, 50))
@@ -238,7 +238,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
                         rand_seed=None):
     """ more complex initialisation depending on inputs
 
-    :param [ndarray] imgs: list of np.array<height, width>
+    :param list(ndarray) imgs: list of np.array<height, width>
     :param ndarray init_atlas: np.array<height, width>
     :param ndarray init_weights: np.array<nb_imgs, nb_lbs>
     :param str out_prefix:
@@ -309,7 +309,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
 def bpdl_update_weights(imgs, atlas, overlap_major=False):
     """ single iteration of the block coordinate descent algo
 
-    :param [ndarray] imgs: list of images np.array<height, width>
+    :param list(ndarray) imgs: list of images np.array<height, width>
     :param ndarray atlas: used atlas of np.array<height, width>
     :param bool overlap_major: whether it has majority overlap the pattern
     :return ndarray: np.array<nb_imgs, nb_lbs>
@@ -354,7 +354,7 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
                       ptn_compact, connect_diag=False):
     """ single iteration of the block coordinate descent algo
 
-    :param [ndarray] imgs: list of images np.array<height, width>
+    :param list(ndarray) imgs: list of images np.array<height, width>
     :param ndarray atlas: used atlas of np.array<height, width>
     :param ndarray w_bins: weights np.array<nb_imgs, nb_lbs>
     :param int label_max: max number of used labels
@@ -419,7 +419,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     algo with graphcut...
 
     :param float deform_coef: regularise the deformation
-    :param [ndarray] images: list of images np.array<height, width>
+    :param list(ndarray) images: list of images np.array<height, width>
     :param ndarray init_atlas: used atlas of np.array<height, width>
     :param ndarray init_weights: weights np.array<nb_imgs, nb_lbs>
     :param float gc_regul: graph cut regularisation

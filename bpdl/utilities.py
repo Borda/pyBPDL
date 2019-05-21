@@ -174,7 +174,7 @@ def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
     """ wrapper for execution parallel of single thread as for...
 
     :param wrap_func: function which will be excited in the iterations
-    :param [] iterate_vals: list or iterator which will ide in iterations
+    :param list iterate_vals: list or iterator which will ide in iterations
     :param int nb_workers: number og jobs running in parallel
     :param str desc: description for the bar,
         if it is set None, bar is suppressed
@@ -289,8 +289,8 @@ def estimate_max_circle(point, direction, points, max_diam=1000, step_tol=1e-3):
     """ find maximal circe from a given pont in orthogonal direction
     which just touch the curve with points
 
-    :param [float, float] point: particular point on curve
-    :param [float, float] direction: orthogonal direction
+    :param tuple(float,float) point: particular point on curve
+    :param tuple(float,float) direction: orthogonal direction
     :param [[float, float]] points: list of point on curve
     :param float max_diam: maximal diameter
     :param float step_tol: tolerance step in dividing diameter interval

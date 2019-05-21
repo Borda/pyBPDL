@@ -216,7 +216,7 @@ def count_folders_subdirs(path_expt):
     """ count number and files in sub-folders
 
     :param str path_expt:
-    :return {str: int}:
+    :return dict: {str: int}
     """
     list_dirs = [p for p in glob.glob(os.path.join(path_expt, '*'))
                  if os.path.isdir(p)]

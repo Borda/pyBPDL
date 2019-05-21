@@ -33,6 +33,15 @@ references:
         coverage report && coverage xml -o test-reports/coverage.xml
         flake8 . --ignore=E402,E731 --max-line-length=100
 
+  make_docs: &make_docs
+    run:
+      name: Make Documentation
+      command: |
+        sudo apt-get install pandoc
+        sudo pip install -r docs/requirements.txt
+        # sphinx-apidoc -o ./docs/source ./imsegm **/tests/* --force --follow-links
+        cd docs; make html
+
 jobs:
   Py2:
     docker:
@@ -42,6 +51,7 @@ jobs:
     - *install_deps
     - *install_pips
     - *test_coverage
+    - *make_docs
 
     - run:
         name: Experiments (pre-processing)

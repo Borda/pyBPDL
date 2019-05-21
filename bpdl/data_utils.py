@@ -549,7 +549,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     """ generate the new sample from list of pattern with specific ration
 
     :param int idx: index
-    :param [ndarray] im_ptns: images with patterns
+    :param list(ndarray) im_ptns: images with patterns
     :param str out_dir: name of directory
     :param float ptn_ration: number in range (0, 1)
     :param rand_seed: random initialization
@@ -599,7 +599,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     """ generate a Binary dataset composed from N samples and given ration
     of pattern occlusion
 
-    :param [ndarray] im_ptns: [np.array<height, width>] list of ind. patters in the dictionary
+    :param list(ndarray) im_ptns: [np.array<height, width>] list of ind. patters in the dictionary
     :param str out_dir: path to the results directory
     :param int nb_samples: number of samples in dataset
     :param float ptn_ration: ration of how many patterns are used to create
@@ -712,7 +712,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     """ export an image with given path and optional pattern for image name
 
     :param str path_out: path to the results directory
-    :param np.array<height, width> img: image
+    :param ndarray img: image np.array<height, width>
     :param str/int im_name: image nea of index to be place to patterns name
     :param str name_template: str, while the name is not string generate image according
         specific pattern, like format fn
@@ -819,7 +819,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     of these images and export them to the results folder
 
     :param func:
-    :param [np.array<height, width>] imgs: raw input images
+    :param list(ndarray) imgs: raw input images [np.array<height, width>]
     :param str out_dir: path to the results directory
     :param float coef: a param describing the how much it is deformed (0 = None)
     :param int nb_workers: number of jobs running in parallel
@@ -1173,7 +1173,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_workers=1):
     """ export complete dataset
 
     :param str path_out:
-    :param [np.array<height, width>] imgs:
+    :param list(ndarray) imgs: [np.array<height, width>]
     :param list(str)|None names: (use indexes)
     :param int nb_workers:
 
@@ -1270,8 +1270,8 @@ def create_simple_atlas(scale=2):
 def create_sample_images(atlas):
     """ create 3 simple images according simple atlas with 3 patterns
 
-    :param np.array atlas:
-    :return [ndarray]:
+    :param ndarray atlas:
+    :return list(ndarray):
 
     >>> atlas = create_simple_atlas(1)
     >>> im1, im2, im3 = create_sample_images(atlas)

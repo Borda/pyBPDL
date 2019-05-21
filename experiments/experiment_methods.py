@@ -35,8 +35,8 @@ def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False,
                           max_bg_ration=0.9):
     """ take pattern index with max value and suppress some background
 
-    :param [ndarray] atlas_components:
-    :param [ndarray] fit_results:
+    :param list(ndarray) atlas_components:
+    :param list(ndarray) fit_results:
     :param float max_bg_ration: reset BG threshold if the background is larger
     :param bool force_bg: force too small components as background
     :return ndarray : np.array<height, width>
@@ -60,9 +60,9 @@ def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False,
 
 
 def estim_atlas_as_unique_sum(atlas_ptns):
-    """
+    """ estimate atlas as unique sum
 
-    :param [] atlas_ptns:
+    :param list atlas_ptns:
     :return ndarray: np.array<height, width>
     """
     atlas = np.sum(np.abs(atlas_ptns), axis=0)
@@ -85,8 +85,7 @@ def binarize_img_reconstruction(img_rct, thr=0.5):
 
 
 class ExperimentSpectClust(Experiment):
-    """
-    State-of-te-Art methods that are based on Spectral Clustering
+    """State-of-te-Art methods that are based on Spectral Clustering
     """
 
     def _estimate_atlas_weights(self, images, params):
@@ -125,8 +124,7 @@ def convert_images_nifti(images):
 
 
 class ExperimentCanICA(Experiment):
-    """
-    State-of-te-Art methods that are based on CanICA,
+    """ State-of-te-Art methods that are based on CanICA,
     CanICA is an ICA method for group-level analysis
     """
 
@@ -155,8 +153,7 @@ class ExperimentCanICA(Experiment):
 
 
 class ExperimentMSDL(Experiment):
-    """
-    State-of-te-Art methods that are based on MSDL,
+    """ State-of-te-Art methods that are based on MSDL,
     Multi Subject Dictionary Learning
     """
 
@@ -185,8 +182,7 @@ class ExperimentMSDL(Experiment):
 
 
 class ExperimentLinearCombineBase(Experiment):
-    """
-    State-of-te-Art methods that are based on Linear Combination
+    """ State-of-te-Art methods that are based on Linear Combination
     """
 
     def _estimate_linear_combination(self, imgs_vec, params):
@@ -299,6 +295,7 @@ class ExperimentNMF(ExperimentLinearCombineBase):
         return estimator, components, fit_result
 
 
+#: collection of all possible initialization methods
 DICT_ATLAS_INIT = {
     'random-grid': init_atlas_grid,
     'random-mosaic': init_atlas_mosaic,
@@ -420,7 +417,7 @@ class ExperimentBPDL(Experiment):
         """ some extra evaluation
 
         :param ndarray atlas: np.array<height, width>
-        :param [ndarray] weights: np.array<nb_samples, nb_patterns>
+        :param list(ndarray) weights: np.array<nb_samples, nb_patterns>
         :param dict extras:
         :return dict:
         """

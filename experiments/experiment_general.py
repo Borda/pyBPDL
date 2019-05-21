@@ -39,12 +39,19 @@ from bpdl.utilities import (wrap_execute_sequence, convert_numerical, update_pat
 from bpdl.pattern_atlas import reconstruct_samples
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
 
+#: default date-time format
 FORMAT_DT = '%Y%m%d-%H%M%S'
+#: default experiment configuration
 CONFIG_YAML = 'config.yml'
+#: default results statistics
 RESULTS_TXT = 'resultStat.txt'
+#: default complete results
 RESULTS_CSV = 'results.csv'
+#: default experiment logging file
 FILE_LOGS = 'logging.txt'
+#: default image name/template for atlas - collection of patterns
 NAME_ATLAS = 'atlas{}'
+#: default table name/template for activations per input image
 NAME_ENCODING = 'encoding{}.csv'
 EVAL_COLUMNS = ['atlas ARS', 'reconst. diff GT', 'reconst. diff Input', 'time']
 EVAL_COLUMNS_START = ['atlas', 'reconst', 'time']
@@ -68,11 +75,17 @@ if sys.version_info.major == 2:
 
     copy_reg.pickle(types.MethodType, _reduce_method)
 
+#: default number of avalaible threads to be used
 NB_THREADS = int(mproc.cpu_count() * .8)
+#: default path to repository data/images
 PATH_DATA_SYNTH = update_path('data_images')
+#: default path with samples with drosophila imaginal discs
 PATH_DATA_REAL_DISC = os.path.join(update_path('data_images'), 'imaginal_discs')
+#: default path with samples with drosophila ovaries
 PATH_DATA_REAL_OVARY = os.path.join(update_path('data_images'), 'ovary_stage-2')
+#: default path to results
 PATH_RESULTS = update_path('results')
+#: default experiment configuration
 DEFAULT_PARAMS = {
     'type': None,
     'computer': repr(os.uname()),
@@ -96,12 +109,16 @@ DEFAULT_PARAMS = {
 SYNTH_DATASET_NAME = DIR_MANE_SYNTH_DATASET
 SYNTH_PATH_APD = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET_NAME)
 
+#: default types of synthetic datasets - different difficulty levels
 SYNTH_SUBSETS = ['raw', 'noise', 'deform', 'defNoise']
+#: create binary synthetic dataset names
 SYNTH_SUB_DATASETS_BINARY = ['datasetBinary_' + n for n in SYNTH_SUBSETS]
+#: create fuzzy synthetic dataset names
 SYNTH_SUB_DATASETS_FUZZY = ['datasetFuzzy_' + n for n in SYNTH_SUBSETS]
 SYNTH_SUB_DATASETS_FUZZY_NOISE = ['datasetFuzzy_raw_gauss-%.3f' % d for d in GAUSS_NOISE]
 
 SYNTH_PARAMS = DEFAULT_PARAMS.copy()
+#: adjust experiment parameters for synthetic datasets
 SYNTH_PARAMS.update({
     'type': 'synth',
     'path_in': SYNTH_PATH_APD,
@@ -112,6 +129,7 @@ SYNTH_PARAMS.update({
 # SYNTH_RESULTS_NAME = 'experiments_APD'
 
 REAL_PARAMS = DEFAULT_PARAMS.copy()
+#: adjust experiment parameters for real-images datasets
 REAL_PARAMS.update({
     'type': 'real',
     'path_in': PATH_DATA_REAL_DISC,
@@ -322,7 +340,10 @@ def generate_conf_suffix(d_params):
 class Experiment(object):
     """ main_train class for APD experiments State-of-the-Art and BPDL
 
-    SINGLE experiment:
+    Examples
+    --------
+
+    >>> # SINGLE experiment
     >>> import glob
     >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
     >>> params = {'dataset': DEFAULT_NAME_DATASET,
@@ -334,7 +355,7 @@ class Experiment(object):
     1
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
 
-    SEQUENTIAL example:
+    >>> # SEQUENTIAL experiment
     >>> import glob
     >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
     >>> params = {'dataset': DEFAULT_NAME_DATASET,
@@ -346,7 +367,7 @@ class Experiment(object):
     1
     >>> shutil.rmtree(expt.params['path_exp'], ignore_errors=True)
 
-    PARALLEL example:
+    >>> # PARALLEL experiment
     >>> import glob
     >>> from bpdl.data_utils import DEFAULT_NAME_DATASET
     >>> params = {'dataset': DEFAULT_NAME_DATASET,
@@ -481,7 +502,7 @@ class Experiment(object):
         """ the main procedure that load, perform and evaluate experiment
 
         :param bool gt: search for the Ground Truth using standard names
-        :param [] iter_params: list of possible configuration
+        :param list iter_params: list of possible configuration
         """
         logging.info('perform the complete experiment')
 
@@ -518,7 +539,7 @@ class Experiment(object):
     def _estimate_atlas_weights(self, images, params):
         """ This is the method to be be over written by individual methods
 
-        :param [ndarray] images:
+        :param list(ndarray) images:
         :param dict params:
         :return tuple(ndarray,ndarray,dict):
         """
@@ -625,7 +646,7 @@ class Experiment(object):
         """ Evaluate the reconstructed images to GT if exists
          or just input images as difference sum
 
-        :param [ndarray] images_rct: reconstructed images
+        :param list(ndarray) images_rct: reconstructed images
         :return tuple(str,float):
         """
         assert images_rct is not None, 'missing any images to compare with'
@@ -650,7 +671,7 @@ class Experiment(object):
         """ Compute the statistic for GT and estimated atlas and reconst. images
 
         :param ndarray atlas: np.array<height, width>
-        :param [ndarray] weights: np.array<nb_samples, nb_patterns>
+        :param list(ndarray) weights: np.array<nb_samples, nb_patterns>
         :return dict:
         """
         images_rct = reconstruct_samples(atlas, weights)
@@ -665,7 +686,7 @@ class Experiment(object):
         """ some extra evaluation
 
         :param ndarray atlas: np.array<height, width>
-        :param [ndarray] weights: np.array<nb_samples, nb_patterns>
+        :param list(ndarray) weights: np.array<nb_samples, nb_patterns>
         :param dict extras:
         :return dict:
         """
@@ -697,10 +718,10 @@ class Experiment(object):
 def extend_list_params(list_params, name_param, list_options):
     """ extend the parameter list by all sub-datasets
 
-    :param [dict] list_params:
+    :param list(dict) list_params:
     :param str name_param:
-    :param [] list_options:
-    :return [dict]:
+    :param list list_options:
+    :return list(dict):
 
     >>> params = extend_list_params([{'a': 1}], 'a', [3, 4])
     >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
@@ -788,7 +809,7 @@ def parse_config_txt(path_config):
     """ open file with saved configuration and restore it
 
     :param str path_config:
-    :return {str: str}:
+    :return dict: {str: str}
 
     >>> p_txt = 'sample_config.txt'
     >>> with open(p_txt, 'w') as fp:

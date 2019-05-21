@@ -41,8 +41,8 @@ def initialise_weights_random(nb_imgs, nb_patterns, ratio_select=0.2, rand_seed=
 def convert_weights_binary2indexes(weights):
     """ convert binary matrix oof weights to list of indexes o activated ptns
 
-    :param np.array<nb_imgs, nb_lbs> weights:
-    :return [[int, ]]:
+    :param ndarray weights: np.array<nb_imgs, nb_lbs>
+    :return list(list(int)):
 
     >>> weights = np.array([[ 0,  0,  1,  0],
     ...                     [ 0,  0,  0,  1],
@@ -156,7 +156,7 @@ def weights_label_atlas_overlap_threshold(imgs, atlas, label, threshold=1.):
     """ estimate what patterns are activated  with given atlas and input image
     compute overlap matrix and eval nr of overlapping and non pixels and threshold
 
-    :param [ndarray] imgs: list of images np.array<height, width>
+    :param list(ndarray) imgs: list of images np.array<height, width>
     :param ndarray atlas: image np.array<height, width>
     :param int label:
     :param float threshold: represent the ration between overlapping and non pixels
