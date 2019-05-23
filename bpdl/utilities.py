@@ -10,11 +10,10 @@ import re
 import types
 import logging
 import shutil
-import multiprocessing.pool
+# import multiprocessing.pool
 import multiprocessing as mproc
-from functools import wraps
+# from functools import wraps
 
-import tqdm
 import numpy as np
 from scipy import stats
 from scipy.spatial import distance
@@ -22,33 +21,33 @@ from scipy.spatial import distance
 NB_THREADS = mproc.cpu_count()
 
 
-def update_path(path_file, lim_depth=5, absolute=True):
-    """ bubble in the folder tree up intil it found desired file
-    otherwise return original one
-
-    :param str path_file: path
-    :param int lim_depth: length of bubble attempted
-    :param bool absolute: absolute path
-    :return str:
-
-    >>> path = 'sample_file.test'
-    >>> f = open(path, 'w')
-    >>> update_path(path, absolute=False)
-    'sample_file.test'
-    >>> os.remove(path)
-    """
-    if path_file.startswith('/'):
-        return path_file
-    elif path_file.startswith('~'):
-        path_file = os.path.expanduser(path_file)
-    else:
-        for _ in range(lim_depth):
-            if os.path.exists(path_file):
-                break
-            path_file = os.path.join('..', path_file)
-    if absolute:
-        path_file = os.path.abspath(path_file)
-    return path_file
+# def update_path(path_file, lim_depth=5, absolute=True):
+#     """ bubble in the folder tree up intil it found desired file
+#     otherwise return original one
+#
+#     :param str path_file: path
+#     :param int lim_depth: length of bubble attempted
+#     :param bool absolute: absolute path
+#     :return str:
+#
+#     >>> path = 'sample_file.test'
+#     >>> f = open(path, 'w')
+#     >>> update_path(path, absolute=False)
+#     'sample_file.test'
+#     >>> os.remove(path)
+#     """
+#     if path_file.startswith('/'):
+#         return path_file
+#     elif path_file.startswith('~'):
+#         path_file = os.path.expanduser(path_file)
+#     else:
+#         for _ in range(lim_depth):
+#             if os.path.exists(path_file):
+#                 break
+#             path_file = os.path.join('..', path_file)
+#     if absolute:
+#         path_file = os.path.abspath(path_file)
+#     return path_file
 
 
 def convert_numerical(s):
@@ -144,76 +143,76 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
     return pdf
 
 
-class NonDaemonPool(multiprocessing.pool.Pool):
-    """ We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
-    because the latter is only a wrapper function, not a proper class.
+# class NonDaemonPool(multiprocessing.pool.Pool):
+#     """ We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
+#     because the latter is only a wrapper function, not a proper class.
+#
+#     See: https://github.com/nipy/nipype/pull/2754
+#
+#     >>> pool = NonDaemonPool(1)
+#     """
+#     def Process(self, *args, **kwds):
+#         proc = super(NonDaemonPool, self).Process(*args, **kwds)
+#
+#         class NonDaemonProcess(proc.__class__):
+#             """Monkey-patch process to ensure it is never daemonized"""
+#             @property
+#             def daemon(self):
+#                 return False
+#
+#             @daemon.setter
+#             def daemon(self, val):
+#                 pass
+#
+#         proc.__class__ = NonDaemonProcess
+#         return proc
 
-    See: https://github.com/nipy/nipype/pull/2754
 
-    >>> pool = NonDaemonPool(1)
-    """
-    def Process(self, *args, **kwds):
-        proc = super(NonDaemonPool, self).Process(*args, **kwds)
-
-        class NonDaemonProcess(proc.__class__):
-            """Monkey-patch process to ensure it is never daemonized"""
-            @property
-            def daemon(self):
-                return False
-
-            @daemon.setter
-            def daemon(self, val):
-                pass
-
-        proc.__class__ = NonDaemonProcess
-        return proc
-
-
-def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
-                          desc='', ordered=False):
-    """ wrapper for execution parallel of single thread as for...
-
-    :param wrap_func: function which will be excited in the iterations
-    :param list iterate_vals: list or iterator which will ide in iterations
-    :param int nb_workers: number og jobs running in parallel
-    :param str desc: description for the bar,
-        if it is set None, bar is suppressed
-    :param bool ordered: whether enforce ordering in the parallelism
-
-    >>> [o for o in wrap_execute_sequence(lambda x: x ** 2, range(5),
-    ...                                   nb_workers=1, ordered=True)]
-    [0, 1, 4, 9, 16]
-    >>> [o for o in wrap_execute_sequence(sum, [[0, 1]] * 5,
-    ...                                   nb_workers=2, desc=None)]
-    [1, 1, 1, 1, 1]
-    """
-    iterate_vals = list(iterate_vals)
-
-    tqdm_bar = None
-    if desc is not None:
-        desc = '%r @%i-threads' % (desc, nb_workers)
-        desc = str(desc.encode('utf-8').decode())
-        tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
-
-    if nb_workers > 1:
-        logging.debug('perform sequential in %i threads', nb_workers)
-        # Standard mproc.Pool created a demon processes which can be called
-        # inside its children, cascade or multiprocessing
-        # https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic
-        pool = NonDaemonPool(nb_workers)
-        pooling = pool.imap if ordered else pool.imap_unordered
-
-        for out in pooling(wrap_func, iterate_vals):
-            tqdm_bar.update() if tqdm_bar is not None else None
-            yield out
-        pool.close()
-        pool.join()
-    else:
-        for out in map(wrap_func, iterate_vals):
-            tqdm_bar.update() if tqdm_bar is not None else None
-            yield out
-
-    tqdm_bar.close() if tqdm_bar is not None else None
+# def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
+#                           desc='', ordered=False):
+#     """ wrapper for execution parallel of single thread as for...
+#
+#     :param wrap_func: function which will be excited in the iterations
+#     :param list iterate_vals: list or iterator which will ide in iterations
+#     :param int nb_workers: number og jobs running in parallel
+#     :param str desc: description for the bar,
+#         if it is set None, bar is suppressed
+#     :param bool ordered: whether enforce ordering in the parallelism
+#
+#     >>> [o for o in wrap_execute_sequence(lambda x: x ** 2, range(5),
+#     ...                                   nb_workers=1, ordered=True)]
+#     [0, 1, 4, 9, 16]
+#     >>> [o for o in wrap_execute_sequence(sum, [[0, 1]] * 5,
+#     ...                                   nb_workers=2, desc=None)]
+#     [1, 1, 1, 1, 1]
+#     """
+#     iterate_vals = list(iterate_vals)
+#
+#     tqdm_bar = None
+#     if desc is not None:
+#         desc = '%r @%i-threads' % (desc, nb_workers)
+#         desc = str(desc.encode('utf-8').decode())
+#         tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
+#
+#     if nb_workers > 1:
+#         logging.debug('perform sequential in %i threads', nb_workers)
+#         # Standard mproc.Pool created a demon processes which can be called
+#         # inside its children, cascade or multiprocessing
+#         # https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic
+#         pool = NonDaemonPool(nb_workers)
+#         pooling = pool.imap if ordered else pool.imap_unordered
+#
+#         for out in pooling(wrap_func, iterate_vals):
+#             tqdm_bar.update() if tqdm_bar is not None else None
+#             yield out
+#         pool.close()
+#         pool.join()
+#     else:
+#         for out in map(wrap_func, iterate_vals):
+#             tqdm_bar.update() if tqdm_bar is not None else None
+#             yield out
+#
+#     tqdm_bar.close() if tqdm_bar is not None else None
 
 
 def estimate_rolling_ball(points, tangent_smooth=1, max_diam=1e6, step_tol=1e-3):
@@ -324,19 +323,19 @@ def estimate_max_circle(point, direction, points, max_diam=1000, step_tol=1e-3):
     return np.mean([diam_min, diam_max])
 
 
-def try_decorator(func):
-    """ costume decorator to wrap function in try/except
-
-    :param func:
-    :return:
-    """
-    @wraps(func)
-    def wrap(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except Exception:
-            logging.exception('%r with %r and %r', func.__name__, args, kwargs)
-    return wrap
+# def try_decorator(func):
+#     """ costume decorator to wrap function in try/except
+#
+#     :param func:
+#     :return:
+#     """
+#     @wraps(func)
+#     def wrap(*args, **kwargs):
+#         try:
+#             return func(*args, **kwargs)
+#         except Exception:
+#             logging.exception('%r with %r and %r', func.__name__, args, kwargs)
+#     return wrap
 
 
 def is_list_like(var):
@@ -384,19 +383,46 @@ def is_iterable(var):
     return res
 
 
-def string_dict(d, desc='DICTIONARY:', offset=30):
-    """ transform dictionary to a formatted string
+# def string_dict(d, desc='DICTIONARY:', offset=30):
+#     """ transform dictionary to a formatted string
+#
+#     :param dict d: dictionary with parameters
+#     :param int offset: length between name and value
+#     :param str desc: dictionary title
+#     :return str:
+#
+#     >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
+#     \'DICTIONARY:\\n"abc": 123\'
+#     """
+#     s = desc + '\n'
+#     tmp_name = '{:' + str(offset) + 's} {}'
+#     rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
+#     s += '\n'.join(rows)
+#     return str(s)
 
-    :param dict d: dictionary with parameters
-    :param int offset: length between name and value
-    :param str desc: dictionary title
-    :return str:
 
-    >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
-    \'DICTIONARY:\\n"abc": 123\'
-    """
-    s = desc + '\n'
-    tmp_name = '{:' + str(offset) + 's} {}'
-    rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
-    s += '\n'.join(rows)
-    return str(s)
+# def load_config_yaml(path_config):
+#     """ loading the
+#
+#     :param str path_config:
+#     :return dict:
+#
+#     >>> p_conf = './testing-congif.yaml'
+#     >>> save_config_yaml(p_conf, {'a': 2})
+#     >>> load_config_yaml(p_conf)
+#     {'a': 2}
+#     >>> os.remove(p_conf)
+#     """
+#     with open(path_config, 'r') as fp:
+#         config = yaml.load(fp)
+#     return config
+#
+#
+# def save_config_yaml(path_config, config):
+#     """ exporting configuration as YAML file
+#
+#     :param str path_config:
+#     :param dict config:
+#     """
+#     with open(path_config, 'w') as fp:
+#         yaml.dump(config, fp, default_flow_style=False)

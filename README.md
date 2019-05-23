@@ -22,19 +22,19 @@ For the image segmentation and individual object detection, we used [Image segme
 
 We have our method BPDL and also we compare it to State-of-the-Art, see [Faces dataset decompositions](http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#example-decomposition-plot-faces-decomposition-py):
  
- * [**Fast ICA**](notebooks/method_FastICA.ipynb), derived from [sklearn.decomposition.FastICA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html)
- * [**Sparse PCA**](notebooks/method_SparsePCA.ipynb), derived from [sklearn.decomposition.SparsePCA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html)
- * [**Non-negative Matrix Factorisation**](notebooks/method_NMF.ipynb), derived from [sklearn.decomposition.NMF](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html)
- * [**Dictionary Learning**](notebooks/method_DictiLearn.ipynb) with Matching pursuit, derived from [sklearn.decomposition.DictionaryLearning](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html)
- * [**Spectral Clustering**](notebooks/method_SpectralClust.ipynb) used in [SPEX2](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2881357/), derived from [sklearn.cluster.SpectralClustering](http://scikit-learn.org/stable/modules/generated/sklearn.cluster.SpectralClustering.html)
- * [**CanIca & MSDL**](notebooks/method_MSDL-CanICA.ipynb) used for observing spatial activation in fMRI, derived from [nilearn.decomposition.CanICA](http://nilearn.github.io/modules/generated/nilearn.decomposition.CanICA.html) and  [nilearn.decomposition.DictLearning](http://nilearn.github.io/modules/generated/nilearn.decomposition.DictLearning.html)
- * our [**Binary Pattern Dictionary Learning**](notebooks/method_BPDL.ipynb)
+* [**Fast ICA**](notebooks/method_FastICA.ipynb), derived from [sklearn.decomposition.FastICA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html)
+* [**Sparse PCA**](notebooks/method_SparsePCA.ipynb), derived from [sklearn.decomposition.SparsePCA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html)
+* [**Non-negative Matrix Factorisation**](notebooks/method_NMF.ipynb), derived from [sklearn.decomposition.NMF](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html)
+* [**Dictionary Learning**](notebooks/method_DictiLearn.ipynb) with Matching pursuit, derived from [sklearn.decomposition.DictionaryLearning](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html)
+* [**Spectral Clustering**](notebooks/method_SpectralClust.ipynb) used in [SPEX2](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC2881357/), derived from [sklearn.cluster.SpectralClustering](http://scikit-learn.org/stable/modules/generated/sklearn.cluster.SpectralClustering.html)
+* [**CanIca & MSDL**](notebooks/method_MSDL-CanICA.ipynb) used for observing spatial activation in fMRI, derived from [nilearn.decomposition.CanICA](http://nilearn.github.io/modules/generated/nilearn.decomposition.CanICA.html) and  [nilearn.decomposition.DictLearning](http://nilearn.github.io/modules/generated/nilearn.decomposition.DictLearning.html)
+* our [**Binary Pattern Dictionary Learning**](notebooks/method_BPDL.ipynb)
 
 ---
 
 ## Installation and configuration
 
-**Configure local environment**
+### Configure local environment
 
 Create your local environment, for more see the [User Guide](https://pip.pypa.io/en/latest/user_guide.html), and install dependencies requirements.txt contains a list of packages and can be installed as
 ```bash
@@ -49,7 +49,7 @@ moreover, in the end, terminating...
 (env)@duda:~/pyBPDL$ deactivate
 ```
 
-**Installation**
+### Installation
 
 The package can be installed via pip 
 ```bash
@@ -70,10 +70,10 @@ We work on synthetic and also real images.
  
 We have script `run_dataset_generate.py` which generate a dataset with the given configuration. The images subsets are:
   
-  1. **pure** images meaning they are generated just from the atlas
-  2. **noise** images from (1) with added binary noise
-  3. **deform** images from (1) with applied small elastic deformation
-  4. **deform&noise** images from (3) with added binary noise
+1. **pure** images meaning they are generated just from the atlas
+2. **noise** images from (1) with added binary noise
+3. **deform** images from (1) with applied small elastic deformation
+4. **deform&noise** images from (3) with added binary noise
   
 both for binary and fuzzy images.  
 Some parameters like number of patterns and image size (2D or 3D) are parameters passed to the script
@@ -86,19 +86,15 @@ python experiments/run_dataset_generate.py \
 ```
 
 **Sample atlases**
-
 ![atlases](figures/synth_atlases.png)
 
 **Sample binary images**
-
 ![binary samples](figures/synth_samples_binary.png)
 
 **Sample fuzzy images**
-
 ![fuzzy samples](figures/synth_samples_fuzzy.png)
 
 For adding Gaussian noise with given sigmas use following script:
-  
 ```bash
 python experiments/run_dataset_add_noise.py \
     -p ~/Medical-drosophila/synthetic_data \
@@ -106,14 +102,13 @@ python experiments/run_dataset_add_noise.py \
 ```
 
 ![gauss noise](figures/synth_gauss-noise.png)
-
  
 ### Real images
 
 We can use as input images, either binary segmentation or fuzzy values.
 For the activation extraction we used [pyImSegm](https://github.com/Borda/pyImSegm) package.
 
-**Drosophila imaginal discs**
+#### Drosophila imaginal discs
 
 For extracting gene activations, we used unsupervised segmentation because the colour is appearing variate among images, so we segment the gene in each image independently.
 
@@ -131,8 +126,7 @@ python experiments/run_cut_minimal_images.py \
     -o ./data_images/imaginal_discs/gene_cut -t 0.001
 ```
 
-
-**Drosophila ovary**
+#### Drosophila ovary
 
 Here the gene activation is presented in the separate channel - green. So we just take this information and normalise it. Further, we assume that this activation is fuzzy based on intensities on the green channel.
 
@@ -152,7 +146,6 @@ Ovary in development stage 3
 ![ovary stage 3](data_images/ovary_stage-3/image/insitu11033.png)
 ![gene activation s3](data_images/ovary_stage-3/gene/insitu11033.png)
 
-
 ---
 
 ## Experiments
@@ -171,22 +164,22 @@ python run_parse_experiments_result.py \
 We run just our method on both synthetic/real images using `run_experiment_apd_bpdl.py` where each configuration have several runs in debug mode 
  (saving more log information and also exporting all partially estimated atlases)
  
- 1. **Synthetic datasets**
-```bash
-python experiments/run_experiments.py \
-    --type synth --method BPDL \
-    -i ./data_images/syntheticDataset_vX \
-    -o ./results -c ./data_images/sample_config.yml \
-    --debug
-```
- 2. **Real images - drosophila**
-```bash
-python experiments/run_experiments.py \
-    --type real --method BPDL  \
-    -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
-    -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_real \
-    --dataset gene_small
-```
+1. **Synthetic datasets**
+    ```bash
+    python experiments/run_experiments.py \
+        --type synth --method BPDL \
+        -i ./data_images/syntheticDataset_vX \
+        -o ./results -c ./data_images/sample_config.yml \
+        --debug
+    ```
+2. **Real images - drosophila**
+    ```bash
+    python experiments/run_experiments.py \
+        --type real --method BPDL  \
+        -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
+        -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_real \
+        --dataset gene_small
+    ```
 
 Using configuration YAML file `-cfg` we can set several parameters without changing the code and parametrise experiments such way that we can integrate over several configurations. While a parameter is a list it is aromatically iterated, and you set several iterations, then it runs as each to each option, for instance
 ```yaml
@@ -209,20 +202,20 @@ will run 2 * 4 = 8 experiment - two numbers of patterns and four deformation coe
 
 We can run all methods in the equal configuration mode on given synthetic/real data using `run_experiments_all.py` running in info mode, just a few printing
  
- 1. **Synthetic datasets**
-```bash
-python experiments/run_experiments.py \
-    -i ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v1 \
-    -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth1 \
-    --method PCA ICA DL NMF BPDL
-```
- 2. **Real images - drosophila**
-```bash
-python experiments/run_experiments.py --type real \
-    -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
-    -o ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
-    --dataset gene_small
-```
+1. **Synthetic datasets**
+    ```bash
+    python experiments/run_experiments.py \
+        -i ~/Medical-drosophila/synthetic_data/atomicPatternDictionary_v1 \
+        -o ~/Medical-drosophila/TEMPORARY/experiments_APDL_synth1 \
+        --method PCA ICA DL NMF BPDL
+    ```
+2. **Real images - drosophila**
+    ```bash
+    python experiments/run_experiments.py --type real \
+        -i ~/Medical-drosophila/TEMPORARY/type_1_segm_reg_binary \
+        -o ~/Medical-drosophila/TEMPORARY/experiments_APD_real \
+        --dataset gene_small
+    ```
 
 ## Visualisations
 
@@ -234,7 +227,6 @@ python experiments/run_reconstruction.py \
 ```
 
 ![reconstruction](figures/reconst_imag-disc.png)
-
 
 ### Aggregating results
 

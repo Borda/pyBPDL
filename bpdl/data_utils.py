@@ -8,10 +8,10 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 import os
 import glob
 import logging
-import warnings
+# import warnings
 import itertools
 import multiprocessing as mproc
-from functools import partial, wraps
+from functools import partial
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
@@ -26,10 +26,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import ndimage
 # from scipy.spatial import distance
-from skimage import io, draw, transform
-from PIL import Image
+from skimage import draw, transform
+# from PIL import Image
+from imsegm.utilities.experiments import WrapExecuteSequence
+from imsegm.utilities.data_io import io_imread, io_imsave
 
-from bpdl.utilities import wrap_execute_sequence, create_clean_folder
+from bpdl.utilities import create_clean_folder
 
 NB_THREADS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
@@ -37,7 +39,7 @@ IMAGE_SIZE_3D = (16, 128, 128)
 NB_BIN_PATTERNS = 9
 NB_SAMPLES = 50
 RND_PATTERN_OCCLUSION = 0.25
-IMAGE_EXTENSIONS = ['.png', '.tif', '.tiff']
+IMAGE_EXTENSIONS = ('.png', '.tif', '.tiff')
 IMAGE_PATTERN = 'pattern_{:03d}'
 SEGM_PATTERN = 'sample_{:05d}'
 BLOCK_NB_LOAD_IMAGES = 50
@@ -46,69 +48,69 @@ DIR_NAME_DICTIONARY = 'dictionary'
 CSV_NAME_WEIGHTS = 'binary_weights.csv'
 DEFAULT_NAME_DATASET = 'datasetBinary_raw'
 COLUMN_NAME = 'ptn_{:02d}'
-GAUSS_NOISE = [0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001]
+GAUSS_NOISE = (0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001)
 
 
-def io_image_decorate(func):
-    """ costume decorator to suppers debug messages from the PIL function
-    to suppress PIl debug logging
-    - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
-
-    :param func:
-    :return:
-    """
-    @wraps(func)
-    def wrap(*args, **kwargs):
-        log_level = logging.getLogger().getEffectiveLevel()
-        logging.getLogger().setLevel(logging.INFO)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            response = func(*args, **kwargs)
-        logging.getLogger().setLevel(log_level)
-        return response
-    return wrap
-
-
-@io_image_decorate
-def io_imread(path_img):
-    """ just a wrapper to suppers debug messages from the PIL function
-    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
-
-    :param str path_img:
-    :return ndarray:
-    """
-    return io.imread(path_img)
-
-
-@io_image_decorate
-def image_open(path_img):
-    """ just a wrapper to suppers debug messages from the PIL function
-    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
-
-    :param str path_img:
-    :return Image:
-    """
-    return Image.open(path_img)
-
-
-@io_image_decorate
-def io_imsave(path_img, img):
-    """ just a wrapper to suppers debug messages from the PIL function
-    to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
-
-    :param str path_img:
-    :param ndarray img:
-
-    >>> img = np.zeros((50, 75))
-    >>> p_img = 'sample_image.png'
-    >>> io_imsave(p_img, img)
-    >>> io_imread(p_img).shape
-    (50, 75)
-    >>> image_open(p_img).size
-    (75, 50)
-    >>> os.remove(p_img)
-    """
-    io.imsave(path_img, img)
+# def io_image_decorate(func):
+#     """ costume decorator to suppers debug messages from the PIL function
+#     to suppress PIl debug logging
+#     - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+#
+#     :param func:
+#     :return:
+#     """
+#     @wraps(func)
+#     def wrap(*args, **kwargs):
+#         log_level = logging.getLogger().getEffectiveLevel()
+#         logging.getLogger().setLevel(logging.INFO)
+#         with warnings.catch_warnings():
+#             warnings.simplefilter("ignore")
+#             response = func(*args, **kwargs)
+#         logging.getLogger().setLevel(log_level)
+#         return response
+#     return wrap
+#
+#
+# @io_image_decorate
+# def io_imread(path_img):
+#     """ just a wrapper to suppers debug messages from the PIL function
+#     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+#
+#     :param str path_img:
+#     :return ndarray:
+#     """
+#     return io.imread(path_img)
+#
+#
+# @io_image_decorate
+# def image_open(path_img):
+#     """ just a wrapper to suppers debug messages from the PIL function
+#     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+#
+#     :param str path_img:
+#     :return Image:
+#     """
+#     return Image.open(path_img)
+#
+#
+# @io_image_decorate
+# def io_imsave(path_img, img):
+#     """ just a wrapper to suppers debug messages from the PIL function
+#     to suppress PIl debug logging - DEBUG:PIL.PngImagePlugin:STREAM b'IHDR' 16 13
+#
+#     :param str path_img:
+#     :param ndarray img:
+#
+#     >>> img = np.zeros((50, 75))
+#     >>> p_img = 'sample_image.png'
+#     >>> io_imsave(p_img, img)
+#     >>> io_imread(p_img).shape
+#     (50, 75)
+#     >>> image_open(p_img).size
+#     (75, 50)
+#     >>> os.remove(p_img)
+#     """
+#     io.imsave(path_img, img)
 
 
 def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=None):
@@ -643,7 +645,7 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     _wrapper_generate = partial(generate_rand_patterns_occlusion,
                                 im_ptns=im_ptns, out_dir=out_dir,
                                 ptn_ration=ptn_ration, rand_seed=rand_seed)
-    for idx, im, im_name, ptn_weights in wrap_execute_sequence(
+    for idx, im, im_name, ptn_weights in WrapExecuteSequence(
             _wrapper_generate, range(nb_samples), nb_workers):
         im_spls[idx] = im
         im_names[idx] = im_name
@@ -813,8 +815,7 @@ def wrapper_image_function(i_img, func, coef, out_dir):
     return i, img_def
 
 
-def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
-                                 nb_workers=NB_THREADS):
+def dataset_apply_image_function(imgs, out_dir, func, coef=0.5, nb_workers=NB_THREADS):
     """ having list if input images create an dataset with randomly deform set
     of these images and export them to the results folder
 
@@ -851,7 +852,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5,
     imgs_new = [None] * len(imgs)
     logging.debug('running in %i threads...', nb_workers)
     _apply_fn = partial(wrapper_image_function, func=func, coef=coef, out_dir=out_dir)
-    for i, im in wrap_execute_sequence(_apply_fn, enumerate(imgs), nb_workers):
+    for i, im in WrapExecuteSequence(_apply_fn, enumerate(imgs), nb_workers):
         imgs_new[i] = im
 
     return imgs_new
@@ -1002,7 +1003,7 @@ def dataset_load_images(img_paths, nb_spls=None, nb_workers=1):
         logging.debug('estimated %i loading blocks', nb_load_blocks)
         block_paths_img = (img_paths[i::nb_load_blocks]
                            for i in range(nb_load_blocks))
-        list_names_imgs = list(wrap_execute_sequence(
+        list_names_imgs = list(WrapExecuteSequence(
             wrapper_load_images, block_paths_img, nb_workers=nb_workers,
             desc='loading images by blocks'))
 
@@ -1214,7 +1215,7 @@ def dataset_export_images(path_out, imgs, names=None, nb_workers=1):
         names = range(len(imgs))
 
     mp_set = [(path_out, im, names[i]) for i, im in enumerate(imgs)]
-    list(wrap_execute_sequence(wrapper_export_image, mp_set))
+    list(WrapExecuteSequence(wrapper_export_image, mp_set))
 
 
 def wrapper_export_image(mp_set):

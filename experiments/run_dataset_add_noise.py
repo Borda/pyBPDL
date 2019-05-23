@@ -18,8 +18,10 @@ import argparse
 import multiprocessing as mproc
 from functools import partial
 
+from imsegm.utilities.data_io import update_path
+from imsegm.utilities.experiments import WrapExecuteSequence
+
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import wrap_execute_sequence, update_path
 from bpdl.data_utils import (GAUSS_NOISE, DIR_MANE_SYNTH_DATASET, load_image,
                              export_image, add_image_fuzzy_gauss_noise)
 
@@ -96,7 +98,7 @@ def dataset_add_noise(path_in, path_out, noise_level,
 
     _wrapper_noise = partial(add_noise_image, path_in=path_in,
                              path_out=path_out, noise_level=noise_level)
-    list(wrap_execute_sequence(_wrapper_noise, name_imgs, nb_workers))
+    list(WrapExecuteSequence(_wrapper_noise, name_imgs, nb_workers))
 
     logging.info('DONE')
 

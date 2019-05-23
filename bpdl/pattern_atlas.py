@@ -958,9 +958,9 @@ def compute_positive_cost_images_weights(imgs, ptn_weights):
     for i in range(pott_sum.shape[0]):
         for j in range(pott_sum.shape[1]):
             # per all images in list
-            for k in range(len(imgs)):
+            for k, img in enumerate(imgs):
                 # if pixel is active
-                if imgs[k][i, j] == 1:
+                if img[i, j] == 1:
                     # increment all possible spots
                     for x in w_idx[k]:
                         pott_sum[i, j, x] += 1

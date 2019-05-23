@@ -12,10 +12,10 @@ import inspect
 import multiprocessing as mproc
 from functools import partial
 
-import yaml
+from imsegm.utilities.data_io import update_path
+from imsegm.utilities.experiments import save_config_yaml
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import update_path
 from bpdl.data_utils import (
     DIR_MANE_SYNTH_DATASET, CSV_NAME_WEIGHTS, dictionary_generate_atlas,
     dataset_binary_combine_patterns, dataset_apply_image_function, image_deform_elastic,
@@ -75,12 +75,11 @@ def view_func_params(frame=inspect.currentframe(), path_out=''):
     >>> view_func_params()  # doctest: +ELLIPSIS
     {...}
     """
-    args, _, _, values = inspect.getargvalues(frame)
+    _, _, _, values = inspect.getargvalues(frame)
     logging.info('PARAMETERS: \n%s',
                  '\n'.join('"{}": \t {}'.format(k, values[k]) for k in values))
     if os.path.exists(path_out):
-        with open(os.path.join(path_out, NAME_CONFIG), 'w') as fp:
-            yaml.dump(values, fp, default_flow_style=False)
+        save_config_yaml(os.path.join(path_out, NAME_CONFIG), values)
     return values
 
 

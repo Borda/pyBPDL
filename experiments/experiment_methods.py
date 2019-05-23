@@ -15,9 +15,9 @@ from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from sklearn.cluster import SpectralClustering
 from nilearn.decomposition import CanICA, DictLearning
 from skimage import segmentation
+from imsegm.utilities.experiments import string_dict
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import string_dict
 from bpdl.data_utils import relabel_boundary_background
 from bpdl.pattern_atlas import (
     init_atlas_grid, init_atlas_mosaic, init_atlas_random, init_atlas_gauss_watershed_2d,
@@ -185,6 +185,7 @@ class ExperimentLinearCombineBase(Experiment):
     """ State-of-te-Art methods that are based on Linear Combination
     """
 
+    @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
         """ perform the estimation of LinComb and set the estimator,
         results and patterns
@@ -202,8 +203,7 @@ class ExperimentLinearCombineBase(Experiment):
         :return tuple(obj,ndarray, ndarray):
         """
         try:
-            estimator, components, fit_result = \
-                self._estimate_linear_combination(imgs_vec, params)
+            _, components, fit_result = self._estimate_linear_combination(imgs_vec, params)
             atlas_ptns = components.reshape((-1, ) + self._images[0].shape)
             # rct_vec = np.dot(fit_result, components)
         except Exception:
@@ -236,6 +236,7 @@ class ExperimentFastICA(ExperimentLinearCombineBase):
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html
     """
 
+    @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
         estimator = FastICA(n_components=params.get('nb_labels'),
                             max_iter=params.get('max_iter'),
@@ -252,6 +253,7 @@ class ExperimentSparsePCA(ExperimentLinearCombineBase):
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html
     """
 
+    @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
         estimator = SparsePCA(n_components=params.get('nb_labels'),
                               max_iter=params.get('max_iter'),
@@ -267,6 +269,7 @@ class ExperimentDictLearn(ExperimentLinearCombineBase):
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html
     """
 
+    @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
         estimator = DictionaryLearning(n_components=params.get('nb_labels'),
                                        max_iter=params.get('max_iter'),
@@ -285,6 +288,7 @@ class ExperimentNMF(ExperimentLinearCombineBase):
     http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.DictionaryLearning.html
     """
 
+    @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
         estimator = NMF(n_components=params.get('nb_labels'),
                         max_iter=params.get('max_iter'),

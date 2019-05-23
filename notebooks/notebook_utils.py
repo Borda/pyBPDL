@@ -15,11 +15,11 @@ from IPython.display import display
 # from IPython.html.widgets import ToggleButtonsWidget as w_tb
 # from IPython.html.widgets import IntSliderWidget as w_is
 # from IPython.html.widgets import DropdownWidget as w_s
+from imsegm.utilities.data_io import update_path
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-import bpdl.utilities as utils
 
-PATH_DATA_SYNTH = utils.update_path('data_images')
+PATH_DATA_SYNTH = update_path('data_images')
 SYNTH_DATASET = 'syntheticDataset_vX'
 # PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
 #  = 'atomicPatternDictionary_v0'
@@ -60,7 +60,8 @@ def show_sample_data_as_imgs(imgs, im_shape, nb_rows=5, nb_cols=3, bool_clr=Fals
         # unique_px = sorted(np.unique(im), reverse=True)
         plt.subplot(nb_rows, nb_cols, i + 1)
         if bool_clr:
-            plt.imshow(im, interpolation='nearest'), plt.colorbar()
+            plt.imshow(im, interpolation='nearest')
+            plt.colorbar()
             # plt.title('; '.join(['{:.2f}'.format(float(v)) for v in unique_px[:2]]))
         else:
             plt.imshow(im, cmap=plt.cm.gray, interpolation='nearest')
@@ -76,7 +77,7 @@ def bpdl_w_update_range(w_params, uq_range):
             w_params[n].max = 0
         else:
             w_params[n].visible = True
-            if type(uq_range[n]) == int:
+            if isinstance(uq_range[n], int):
                 w_params[n].min = min(uq_range[n])
                 w_params[n].max = max(uq_range[n])
                 w_params[n].value = w_params[n].min
@@ -166,13 +167,15 @@ def bpdl_show_results(df_sel, path_imgs, idx=0, tp='gt', fig_size=(10, 5)):
         axarr[0].imshow(im_atlas_gt, interpolation='nearest')
         axarr[0].set_title('GT atlas')
         axarr[1].imshow(im_atlas)
-        axarr[1].set_title('result'), axarr[1].axis('off')
+        axarr[1].set_title('result')
+        axarr[1].axis('off')
     else:
         if tp == 'gt':
             logging.warning('no GT for tp=%s and path: "%s"', tp, path_atlas_gt)
         fig = plt.figure(figsize=fig_size)
         fig.gca().imshow(im_atlas, interpolation='nearest')
-        fig.gca().set_title('result'), fig.gca().axis('off')
+        fig.gca().set_title('result')
+        fig.gca().axis('off')
     display()
 
 
@@ -235,12 +238,13 @@ def plot_bpdl_graph_results(df_res, n_group, n_curve, iter_var='nb_labels',
                                   figsize=(figsize[0], figsize[1] * len(l_graphs)))
         fig.suptitle('{}'.format(v), fontsize=16)
         for i, col in enumerate(l_graphs):
-            for j, (idx, row) in enumerate(df_group.iterrows()):
+            for j, (_, row) in enumerate(df_group.iterrows()):
                 if row[iter_var].empty:
                     continue
                 axarr[i].plot(row[iter_var], row[col], label=row[n_curve], color=clrs[j])
                 axarr[i].set_xlim([min(row[iter_var]), max(row[iter_var])])
-            axarr[i].set_xlabel(iter_var), axarr[i].set_ylabel(col)
+            axarr[i].set_xlabel(iter_var)
+            axarr[i].set_ylabel(col)
             axarr[i].legend(bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.)
             axarr[i].grid()
 

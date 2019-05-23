@@ -20,10 +20,12 @@ from functools import partial
 
 import numpy as np
 from scipy.ndimage import filters
+from imsegm.utilities.data_io import update_path
+from imsegm.utilities.experiments import WrapExecuteSequence
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import load_image, export_image
-from bpdl.utilities import update_path, estimate_rolling_ball, wrap_execute_sequence
+from bpdl.utilities import estimate_rolling_ball
 
 NB_THREADS = int(mproc.cpu_count() * .75)
 NAME_JSON_BBOX = 'cut_bounding_box.json'
@@ -164,10 +166,10 @@ def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     list_img_paths_partial = [list_img_paths[i::nb_workers * LOAD_SUBSET_COEF]
                               for i in range(nb_workers * LOAD_SUBSET_COEF)]
     list_img_paths_partial = [l for l in list_img_paths_partial if len(l) > 0]
-    mean_imgs = list(wrap_execute_sequence(load_mean_image,
-                                           list_img_paths_partial,
-                                           nb_workers=nb_workers,
-                                           desc='loading mean images'))
+    mean_imgs = list(WrapExecuteSequence(load_mean_image,
+                                         list_img_paths_partial,
+                                         nb_workers=nb_workers,
+                                         desc='loading mean images'))
     # imgs, im_names = tl_data.dataset_load_images(list_img_paths, nb_workers=1)
     img_mean = np.mean(np.asarray(mean_imgs), axis=0)
     export_image(path_out, img_mean, 'mean_image')
@@ -186,8 +188,8 @@ def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     logging.info('found BBox: %r', d_bbox)
 
     _cut_export = partial(export_cut_image, d_bbox=d_bbox, path_out=path_out)
-    list(wrap_execute_sequence(_cut_export, list_img_paths, nb_workers,
-                               desc='exporting cut images'))
+    list(WrapExecuteSequence(_cut_export, list_img_paths, nb_workers,
+                             desc='exporting cut images'))
 
 
 if __name__ == '__main__':

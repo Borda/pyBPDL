@@ -10,7 +10,7 @@ import logging
 import numpy as np
 from sklearn import metrics
 
-METRIC_AVERAGES = ['macro', 'weighted']
+METRIC_AVERAGES = ('macro', 'weighted')
 
 
 def compare_atlas_rnd_pairs(a1, a2, rand_seed=None):

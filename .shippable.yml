@@ -28,7 +28,8 @@ cache: pip
 before_install:
   - apt-get update --fix-missing
   - apt-get install freetype*
-  - apt-get install python-dev python-tk python3-tk
+  - apt-get install python-dev python-tk
+  - apt-get install python3-dev python3-tk
   - apt-get install pkg-config
   - pip install --upgrade pip
   - gcc --version ; python --version ; pip --version ; pwd ; ls -l

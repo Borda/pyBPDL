@@ -26,16 +26,16 @@ if os.environ.get('DISPLAY', '') == '':
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import yaml
 import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import skimage.segmentation as sk_segm
+from imsegm.utilities.experiments import WrapExecuteSequence, string_dict, load_config_yaml
+from imsegm.utilities.data_io import io_imread, update_path
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import update_path, wrap_execute_sequence, string_dict
-from bpdl.data_utils import dataset_load_images, io_imread, export_image
+from bpdl.data_utils import dataset_load_images, export_image
 from bpdl.registration import warp2d_apply_deform_field
 
 NB_THREADS = int(mproc.cpu_count() * .9)
@@ -90,7 +90,7 @@ def get_path_dataset(path, path_imgs=None):
     path_config = os.path.join(path, NAME_CONFIG)
     path_imgs = None
     if os.path.isfile(path_config):
-        config = yaml.load(open(path_config, 'r'))
+        config = load_config_yaml(path_config)
         if all(k in config for k in FIELDS_PATH_IMAGES):
             path_imgs = os.path.join(config[FIELDS_PATH_IMAGES[0]],
                                      config[FIELDS_PATH_IMAGES[1]])
@@ -236,7 +236,7 @@ def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
                        path_out=path_out, path_visu=path_visu)
     iterate = zip(df_weights.index, df_weights.values, segms, images, deforms)
     list_diffs = []
-    for n, diff in wrap_execute_sequence(_reconst, iterate, nb_workers=nb_workers):
+    for n, diff in WrapExecuteSequence(_reconst, iterate, nb_workers=nb_workers):
         list_diffs.append({'image': n, 'reconstruction diff.': diff})
 
     df_diff = pd.DataFrame(list_diffs)

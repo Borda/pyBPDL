@@ -31,9 +31,10 @@ import time
 import logging
 
 import numpy as np
+from imsegm.utilities.experiments import string_dict
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import is_list_like, is_iterable, string_dict
+from bpdl.utilities import is_list_like, is_iterable
 from bpdl.data_utils import (DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET,
                              dataset_compose_atlas, find_images, dataset_load_images)
 from bpdl.dictionary_learning import bpdl_pipeline
@@ -99,9 +100,9 @@ def experiment_pipeline_alpe_showcase(path_out):
     # init_encode_rnd = ptn_weigth.initialise_weights_random(len(imgs),
     #                                                        np.max(atlas))
 
-    atlas, weights, deforms = bpdl_pipeline(imgs, out_prefix='mosaic',
-                                            init_atlas=init_atlas_msc,
-                                            max_iter=9, out_dir=path_out)
+    atlas, weights, _ = bpdl_pipeline(imgs, out_prefix='mosaic',
+                                      init_atlas=init_atlas_msc,
+                                      max_iter=9, out_dir=path_out)
     return atlas, weights
 
 
@@ -120,7 +121,8 @@ def experiment_iterate(params, iter_params, user_gt):
         expt = cls_expt(params, time_stamp=params.get('unique', True))
         expt.run(gt=user_gt, iter_params=iter_params)
         del expt
-        gc.collect(), time.sleep(1)
+        gc.collect()
+        time.sleep(1)
 
 
 def filter_iterable_params(params):

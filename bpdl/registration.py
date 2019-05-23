@@ -19,8 +19,7 @@ from scipy import ndimage, interpolate
 from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
 from dipy.align.metrics import SSDMetric
-
-from bpdl.utilities import wrap_execute_sequence
+from imsegm.utilities.experiments import WrapExecuteSequence
 
 NB_THREADS = int(mproc.cpu_count() * .8)
 
@@ -296,7 +295,7 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear',
                            method=method, inverse=inverse)
     list_imgs_wrap = [None] * len(list_images)
     list_items = zip(range(len(list_images)), list_images, list_deforms)
-    for idx, img_w in wrap_execute_sequence(_wrap_deform, list_items, nb_workers, desc=None):
+    for idx, img_w in WrapExecuteSequence(_wrap_deform, list_items, nb_workers, desc=None):
         list_imgs_wrap[idx] = img_w
 
     return list_imgs_wrap
@@ -396,8 +395,8 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
                                 atlas=atlas, smooth_coef=smooth_coef,
                                 params=params, interp_method=interp_method,
                                 inverse=inverse)
-    for idx, deform in wrap_execute_sequence(_wrapper_register, iterations,
-                                             nb_workers, desc=None):
+    for idx, deform in WrapExecuteSequence(_wrapper_register, iterations,
+                                           nb_workers, desc=None):
         list_deform[idx] = deform
 
     # remove mean transform
@@ -408,8 +407,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     _wrapper_warp = partial(wrapper_warp2d_transform_image,
                             method='linear', inverse=False)
     iterations = zip(range(len(list_images)), list_images, list_deform)
-    for idx, img_w in wrap_execute_sequence(_wrapper_warp, iterations, nb_workers,
-                                            desc=None):
+    for idx, img_w in WrapExecuteSequence(_wrapper_warp, iterations, nb_workers, desc=None):
         list_imgs_wrap[idx] = img_w
 
     return list_imgs_wrap, list_deform

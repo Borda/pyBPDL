@@ -26,10 +26,11 @@ import numpy as np
 from skimage import filters
 # from sklearn.mixture import GaussianMixture
 from scipy import ndimage
+from imsegm.utilities.experiments import WrapExecuteSequence
+from imsegm.utilities.data_io import io_imread, update_path
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import update_path, wrap_execute_sequence
-from bpdl.data_utils import io_imread, export_image
+from bpdl.data_utils import export_image
 from experiments.run_cut_minimal_images import args_parse_params
 
 NB_THREADS = int(mproc.cpu_count() * .75)
@@ -88,7 +89,7 @@ def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
     logging.info('found images: %i', len(list_img_paths))
 
     _wrapper_extract = partial(extract_activation, path_out=path_out)
-    list(wrap_execute_sequence(_wrapper_extract, list_img_paths, nb_workers))
+    list(WrapExecuteSequence(_wrapper_extract, list_img_paths, nb_workers))
 
 
 if __name__ == '__main__':

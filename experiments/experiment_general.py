@@ -12,7 +12,6 @@ import re
 import logging
 import argparse
 import shutil
-import random
 import copy
 import types
 import collections
@@ -23,19 +22,20 @@ if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'ag
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import yaml
 import numpy as np
 import pandas as pd
 from sklearn import metrics
 import matplotlib.pylab as plt
+from imsegm.utilities.data_io import update_path
+from imsegm.utilities.experiments import WrapExecuteSequence, string_dict, load_config_yaml
+from imsegm.utilities.experiments import Experiment as ExperimentBase
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import (
     NB_BIN_PATTERNS, DIR_MANE_SYNTH_DATASET, GAUSS_NOISE, DIR_NAME_DICTIONARY, export_image,
     dataset_compose_atlas, dataset_load_weights, dataset_load_images, find_images,
     format_table_weights)
-from bpdl.utilities import (wrap_execute_sequence, convert_numerical, update_path,
-                            is_list_like, string_dict)
+from bpdl.utilities import convert_numerical, is_list_like
 from bpdl.pattern_atlas import reconstruct_samples
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
 
@@ -53,8 +53,8 @@ FILE_LOGS = 'logging.txt'
 NAME_ATLAS = 'atlas{}'
 #: default table name/template for activations per input image
 NAME_ENCODING = 'encoding{}.csv'
-EVAL_COLUMNS = ['atlas ARS', 'reconst. diff GT', 'reconst. diff Input', 'time']
-EVAL_COLUMNS_START = ['atlas', 'reconst', 'time']
+EVAL_COLUMNS = ('atlas ARS', 'reconst. diff GT', 'reconst. diff Input', 'time')
+EVAL_COLUMNS_START = ('atlas', 'reconst', 'time')
 
 
 # fixing ImportError: No module named 'copy_reg' for Python3
@@ -222,7 +222,7 @@ def parse_params(default_params, methods):
     if arg_params.get('path_config', None) is not None \
             and os.path.isfile(arg_params['path_config']):
         logging.info('loading config: %s', arg_params['path_config'])
-        d_config = yaml.load(open(arg_params['path_config']))
+        d_config = load_config_yaml(arg_params['path_config'])
         logging.debug(string_dict(d_config, desc='LOADED CONFIG:'))
 
         # skip al keys with path or passed from arg params
@@ -252,66 +252,65 @@ def load_list_img_names(path_csv, path_in=''):
     return list_names
 
 
-def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True):
-    """ create the experiment folder and iterate while there is no available
+# def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True):
+#     """ create the experiment folder and iterate while there is no available
+#
+#     :param dict params:
+#     :param str dir_name:
+#     :param bool stamp_unique:
+#     :param bool skip_load:
+#     :return dict:
+#
+#     >>> p = {'path_out': '.'}
+#     >>> p = create_experiment_folder(p, 'my_test', False, skip_load=True)
+#     >>> 'computer' in p
+#     True
+#     >>> p['path_exp']
+#     './my_test_EXAMPLE'
+#     >>> shutil.rmtree(p['path_exp'], ignore_errors=True)
+#     """
+#     date = time.gmtime()
+#     name = params.get('name', 'EXAMPLE')
+#     if isinstance(name, str) and len(name) > 0:
+#         dir_name = '{}_{}'.format(dir_name, name)
+#     # if self.params.get('date_time') is None:
+#     #     self.params.set('date_time', time.gmtime())
+#     if stamp_unique:
+#         dir_name += '_' + time.strftime(FORMAT_DT, date)
+#     path_expt = os.path.join(params.get('path_out'), dir_name)
+#     while stamp_unique and os.path.exists(path_expt):
+#         logging.warning('particular out folder already exists')
+#         path_expt += ':' + str(random.randint(0, 9))
+#     logging.info('creating experiment folder "{}"'.format(path_expt))
+#     if not os.path.exists(path_expt):
+#         os.mkdir(path_expt)
+#     path_config = os.path.join(path_expt, CONFIG_YAML)
+#     if os.path.exists(path_config) and not skip_load:
+#         logging.debug('loading saved params from file "%s"', CONFIG_YAML)
+#         params = load_config_yaml(path_config)
+#     params.update({'computer': repr(os.uname()),
+#                    'path_exp': path_expt})
+#     logging.debug('saving params to file "%s"', CONFIG_YAML)
+#     save_config_yaml(path_config, params)
+#     return params
 
-    :param dict params:
-    :param str dir_name:
-    :param bool stamp_unique:
-    :param bool skip_load:
-    :return dict:
 
-    >>> p = {'path_out': '.'}
-    >>> p = create_experiment_folder(p, 'my_test', False, skip_load=True)
-    >>> 'computer' in p
-    True
-    >>> p['path_exp']
-    './my_test_EXAMPLE'
-    >>> shutil.rmtree(p['path_exp'], ignore_errors=True)
-    """
-    date = time.gmtime()
-    name = params.get('name', 'EXAMPLE')
-    if isinstance(name, str) and len(name) > 0:
-        dir_name = '{}_{}'.format(dir_name, name)
-    # if self.params.get('date_time') is None:
-    #     self.params.set('date_time', time.gmtime())
-    if stamp_unique:
-        dir_name += '_' + time.strftime(FORMAT_DT, date)
-    path_expt = os.path.join(params.get('path_out'), dir_name)
-    while stamp_unique and os.path.exists(path_expt):
-        logging.warning('particular out folder already exists')
-        path_expt += ':' + str(random.randint(0, 9))
-    logging.info('creating experiment folder "{}"'.format(path_expt))
-    if not os.path.exists(path_expt):
-        os.mkdir(path_expt)
-    path_config = os.path.join(path_expt, CONFIG_YAML)
-    if os.path.exists(path_config) and not skip_load:
-        logging.debug('loading saved params from file "%s"', CONFIG_YAML)
-        params = yaml.load(open(path_config, 'r'))
-    params.update({'computer': repr(os.uname()),
-                   'path_exp': path_expt})
-    logging.debug('saving params to file "%s"', CONFIG_YAML)
-    with open(path_config, 'w') as fp:
-        yaml.dump(params, fp, default_flow_style=False)
-    return params
-
-
-def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
-    """ set the logger to file
-
-    :param str path_out:
-    :param str file_name:
-    :param bool reset:
-    """
-    log = logging.getLogger()
-    if reset:
-        log.handlers = [h for h in log.handlers
-                        if not isinstance(h, logging.FileHandler)]
-    path_logger = os.path.join(path_out, file_name)
-    logging.info('setting logger to "%s"', path_logger)
-    fh = logging.FileHandler(path_logger)
-    fh.setLevel(logging.DEBUG)
-    log.addHandler(fh)
+# def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
+#     """ set the logger to file
+#
+#     :param str path_out:
+#     :param str file_name:
+#     :param bool reset:
+#     """
+#     log = logging.getLogger()
+#     if reset:
+#         log.handlers = [h for h in log.handlers
+#                         if not isinstance(h, logging.FileHandler)]
+#     path_logger = os.path.join(path_out, file_name)
+#     logging.info('setting logger to "%s"', path_logger)
+#     fh = logging.FileHandler(path_logger)
+#     fh.setLevel(logging.DEBUG)
+#     log.addHandler(fh)
 
 
 def generate_conf_suffix(d_params):
@@ -334,10 +333,9 @@ def generate_conf_suffix(d_params):
 
 
 # =============================================================================
-# =============================================================================
 
 
-class Experiment(object):
+class Experiment(ExperimentBase):
     """ main_train class for APD experiments State-of-the-Art and BPDL
 
     Examples
@@ -383,65 +381,38 @@ class Experiment(object):
 
     REQUIRED_PARAMS = ['dataset', 'path_in', 'path_out']
 
-    def __init__(self, dict_params, time_stamp=True):
+    def __init__(self, params, time_stamp=True):
         """ initialise class and set the experiment parameters
 
-        :param dict dict_params:
+        :param dict params:
         :param bool time_stamp: mark if you want an unique folder per experiment
         """
-        assert all([n in dict_params for n in self.REQUIRED_PARAMS]), \
+        assert all([n in params for n in self.REQUIRED_PARAMS]), \
             'missing some required parameters'
-        dict_params = simplify_params(dict_params)
+        params = simplify_params(params)
 
-        if 'name' not in dict_params:
-            dataset_name = dict_params['dataset']
+        if 'name' not in params:
+            dataset_name = params['dataset']
             if isinstance(dataset_name, list):
                 dataset_name = dataset_name[0]
-            last_dir = os.path.basename(dict_params['path_in'])
-            dict_params['name'] = '{}_{}_{}'.format(dict_params.get('type', ''),
-                                                    last_dir,
-                                                    dataset_name)
+            last_dir = os.path.basename(params['path_in'])
+            params['name'] = '{}_{}_{}'.format(params.get('type', ''),
+                                               last_dir,
+                                               dataset_name)
 
-        dict_params['method'] = repr(self.__class__.__name__)
-        if not os.path.exists(dict_params['path_out']):
-            os.mkdir(dict_params['path_out'])
+        params['method'] = repr(self.__class__.__name__)
+        if not os.path.exists(params['path_out']):
+            os.mkdir(params['path_out'])
 
-        self.params = dict_params
-        self.params['class'] = self.__class__.__name__
-        self.__check_exist_paths()
-        self.__create_folder(stamp_unique=time_stamp)
-        set_experiment_logger(self.params['path_exp'])
+        # use constructor of parent class
+        super(Experiment, self).__init__(params, time_stamp)
+
         self.df_results = pd.DataFrame()
         self._path_stat = os.path.join(self.params.get('path_exp'), RESULTS_TXT)
         self._list_img_paths = None
         # self.params.export_as(self._path_stat)
         with open(self._path_stat, 'w') as fp:
             fp.write(string_dict(self.params, desc='PARAMETERS:'))
-        logging.info(string_dict(self.params, desc='PARAMETERS:'))
-
-    def __check_exist_paths(self):
-        """ Check all required paths in parameters whether they exist """
-        for p in (self.params[n] for n in self.params
-                  if 'dir' in n.lower() or 'path' in n.lower()):
-            if not os.path.exists(p):
-                raise Exception('given folder "%s" does not exist!' % p)
-        for p in (self.params[n] for n in self.params if 'file' in n.lower()):
-            if not os.path.exists(p):
-                raise Exception('given folder "%s" does not exist!' % p)
-
-    def __create_folder(self, stamp_unique=True):
-        """ Create the experiment folder and iterate while there is no available
-
-        :param bool stamp_unique: mark if you want an unique folder per experiment
-        """
-        # create results folder for experiments
-        if not os.path.exists(self.params.get('path_out')):
-            logging.error('no results folder "%s"' % self.params.get('path_out'))
-            self.params['path_exp'] = os.path.join(self.params.get('path_out'), '')
-            exit(1)
-        self.params = create_experiment_folder(self.params,
-                                               self.__class__.__name__,
-                                               stamp_unique)
 
     def _load_data_ground_truth(self):
         """ loading all GT suh as atlas and reconstructed images from GT encoding
@@ -467,7 +438,7 @@ class Experiment(object):
         assert len(set(shapes)) == 1, 'multiple image sizes found: %r' \
                                       % collections.Counter(shapes)
 
-    def __load_data(self, gt=True):
+    def _load_data(self, gt=True):
         """ load all required data for APD and also ground-truth if required
 
         :param bool gt: search for the Ground Truth using standard names
@@ -515,9 +486,9 @@ class Experiment(object):
         else:
             self.iter_params = None
 
-        self.__load_data(gt)
+        self._load_data(gt)
         self._perform()
-        self.__summarise()
+        self._summarise()
         logging.info('FINISHED >]')
         logging.getLogger().handlers = []
 
@@ -527,8 +498,8 @@ class Experiment(object):
             logging.info('iterate over %i configurations', len(self.iter_params))
             nb_workers = self.params.get('nb_workers', 1)
 
-            for detail in wrap_execute_sequence(self._perform_once, self.iter_params,
-                                                nb_workers, desc='experiments'):
+            for detail in WrapExecuteSequence(self._perform_once, self.iter_params,
+                                              nb_workers, desc='experiments'):
                 self.df_results = self.df_results.append(detail, ignore_index=True)
                 logging.debug('partial results: %r', detail)
         else:
@@ -588,7 +559,7 @@ class Experiment(object):
         self._export_coding(weights_all, suffix=detail['name_suffix'])
         self._export_extras(extras, suffix=detail['name_suffix'])
 
-        detail.update(self.__evaluate(atlas, weights_all))
+        detail.update(self._evaluate(atlas, weights_all))
         detail.update(self._evaluate_extras(atlas, weights, extras))
 
         return detail
@@ -667,7 +638,7 @@ class Experiment(object):
             return 'Input', diff_norm
         return 'FAIL', np.nan
 
-    def __evaluate(self, atlas, weights):
+    def _evaluate(self, atlas, weights):
         """ Compute the statistic for GT and estimated atlas and reconst. images
 
         :param ndarray atlas: np.array<height, width>
@@ -682,6 +653,7 @@ class Experiment(object):
         }
         return stat
 
+    @classmethod
     def _evaluate_extras(self, atlas, weights, extras):
         """ some extra evaluation
 
@@ -692,7 +664,7 @@ class Experiment(object):
         """
         return {}
 
-    def __summarise(self):
+    def _summarise(self):
         """ summarise and export experiment results """
         logging.info('summarise the experiment')
         path_csv = os.path.join(self.params.get('path_exp'), RESULTS_CSV)
@@ -711,7 +683,6 @@ class Experiment(object):
             logging.debug('statistic: \n%r', df_stat)
 
 
-# =============================================================================
 # =============================================================================
 
 

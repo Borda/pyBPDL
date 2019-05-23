@@ -22,15 +22,15 @@ if os.environ.get('DISPLAY', '') == '':
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import yaml
 import numpy as np
 import pandas as pd
 import matplotlib.pylab as plt
 from PIL import Image
 from skimage.segmentation import relabel_sequential
+from imsegm.utilities.experiments import (
+    WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import try_decorator, string_dict, wrap_execute_sequence
 from bpdl.data_utils import DIR_NAME_DICTIONARY, dataset_compose_atlas, export_image
 from bpdl.metric_similarity import relabel_max_overlap_unique, compute_classif_metrics
 from experiments.run_dataset_generate import NAME_CONFIG
@@ -114,7 +114,7 @@ def parse_experiment_folder(path_expt, params):
     path_config = os.path.join(path_expt, params['name_config'])
     assert any(path_config.endswith(ext) for ext in ['.yaml', '.yml']), '%s' % path_config
     assert os.path.exists(path_config), 'missing config: %s' % path_config
-    dict_info = yaml.load(open(path_config, 'r'))
+    dict_info = load_config_yaml(path_config)
     logging.debug(' -> loaded params: %r', dict_info.keys())
 
     path_results = os.path.join(path_expt, params['name_results'])
@@ -162,7 +162,8 @@ def parse_experiment_folder(path_expt, params):
     path_results = os.path.join(path_expt, NAME_OUTPUT_RESULT)
     df_results_new.to_csv(path_results)
     # just to let it releases memory
-    gc.collect(), time.sleep(1)
+    gc.collect()
+    time.sleep(1)
 
 
 def parse_experiments(params):
@@ -180,7 +181,7 @@ def parse_experiments(params):
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
-    list(wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_workers))
+    list(WrapExecuteSequence(_wrapper_parse_folder, path_dirs, nb_workers))
 
 
 if __name__ == '__main__':

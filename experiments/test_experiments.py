@@ -9,8 +9,9 @@ import sys
 import logging
 import glob
 
+from imsegm.utilities.data_io import update_path
+
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import update_path
 from experiments.experiment_general import NB_THREADS, RESULTS_CSV, CONFIG_YAML, simplify_params
 from experiments.experiment_methods import DICT_ATLAS_INIT, ExperimentBPDL
 from experiments.run_experiments import SYNTH_PARAMS, REAL_PARAMS, METHODS

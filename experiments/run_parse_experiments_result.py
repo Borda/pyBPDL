@@ -22,12 +22,13 @@ import logging
 import multiprocessing as mproc
 from functools import partial
 
-import yaml
 import numpy as np
 import pandas as pd
+from imsegm.utilities.data_io import update_path
+from imsegm.utilities.experiments import (
+    WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import update_path, try_decorator, string_dict, wrap_execute_sequence
 from experiments.experiment_general import parse_config_txt
 
 NAME_INPUT_CONFIG = 'resultStat.txt'
@@ -142,7 +143,7 @@ def parse_experiment_folder(path_expt, params):
     path_config = os.path.join(path_expt, params['name_config'])
     assert os.path.exists(path_config), 'missing %s' % path_config
     if any(path_config.endswith(ext) for ext in ['.yaml', '.yml']):
-        dict_info = yaml.load(open(path_config, 'r'))
+        dict_info = load_config_yaml(path_config)
     else:
         dict_info = parse_config_txt(path_config)
     logging.debug(' -> loaded params: %r', dict_info.keys())
@@ -195,7 +196,7 @@ def parse_experiments(params):
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
-    for df_folder in wrap_execute_sequence(_wrapper_parse_folder, path_dirs, nb_workers):
+    for df_folder in WrapExecuteSequence(_wrapper_parse_folder, path_dirs, nb_workers):
         df_all = append_df_folder(df_all, df_folder)
 
     if isinstance(params['name_results'], list):
