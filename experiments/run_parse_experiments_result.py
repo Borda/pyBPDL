@@ -34,7 +34,7 @@ from experiments.experiment_general import parse_config_txt
 NAME_INPUT_CONFIG = 'resultStat.txt'
 NAME_INPUT_RESULT = 'results.csv'
 TEMPLATE_NAME_OVERALL_RESULT = '%s_OVERALL.csv'
-NB_THREADS = int(mproc.cpu_count() * 0.9)
+NB_WORKERS = int(mproc.cpu_count() * 0.9)
 
 DICT_STATISTIC_FUNC = {
     'mean': np.mean,
@@ -67,7 +67,7 @@ def parse_arg_params(params):
     parser.add_argument('-f', '--func_stat', type=str, required=False,
                         help='type od stat over results', default='none')
     parser.add_argument('--nb_workers', type=int, required=False,
-                        default=NB_THREADS, help='number of jobs running in parallel')
+                        default=NB_WORKERS, help='number of jobs running in parallel')
 
     args = vars(parser.parse_args())
     args['path'] = update_path(args['path'])
@@ -188,7 +188,7 @@ def parse_experiments(params):
     logging.info('running parse Experiments results')
     logging.info(string_dict(params, desc='ARGUMENTS:'))
     assert os.path.isdir(params['path']), 'missing "%s"' % params['path']
-    nb_workers = params.get('nb_workers', NB_THREADS)
+    nb_workers = params.get('nb_workers', NB_WORKERS)
 
     df_all = pd.DataFrame()
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))

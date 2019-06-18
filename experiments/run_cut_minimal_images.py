@@ -27,7 +27,7 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import load_image, export_image
 from bpdl.utilities import estimate_rolling_ball
 
-NB_THREADS = int(mproc.cpu_count() * .75)
+NB_WORKERS = int(mproc.cpu_count() * .75)
 NAME_JSON_BBOX = 'cut_bounding_box.json'
 LOAD_SUBSET_COEF = 5
 METHODS = ['cum-info', 'line-sum', 'line-grad']
@@ -55,7 +55,7 @@ def args_parse_params(params):
     parser.add_argument('-m', '--thr_method', type=str, required=False,
                         default='', choices=METHODS, help='used methods')
     parser.add_argument('--nb_workers', type=int, required=False,
-                        default=NB_THREADS, help='number of parallel processes')
+                        default=NB_WORKERS, help='number of parallel processes')
 
     args = vars(parser.parse_args())
     for k in (k for k in args if k.startswith('path_')):
@@ -149,7 +149,7 @@ def export_cut_image(path_img, d_bbox, path_out):
     export_image(path_out, im_cut, name)
 
 
-def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
+def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
     assert os.path.isdir(os.path.dirname(path_pattern_in)), \
         'missing: %s' % path_pattern_in
     assert os.path.isdir(os.path.dirname(path_out)), \

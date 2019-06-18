@@ -21,7 +21,7 @@ from bpdl.data_utils import (
     dataset_binary_combine_patterns, dataset_apply_image_function, image_deform_elastic,
     add_image_binary_noise, image_transform_binary2fuzzy, add_image_fuzzy_pepper_noise)
 
-NB_THREADS = int(mproc.cpu_count() * 0.7)
+NB_WORKERS = int(mproc.cpu_count() * 0.7)
 DEFAULT_PATH_DATA = update_path('data_images')
 DEFAULT_PATH_APD = os.path.join(DEFAULT_PATH_DATA, DIR_MANE_SYNTH_DATASET)
 NAME_WEIGHTS = CSV_NAME_WEIGHTS
@@ -56,7 +56,7 @@ def aparse_params():
                         default=IMAGE_SIZE[DATASET_TYPE],
                         help='dimensions of generated images in axis Z, X, Y')
     parser.add_argument('--nb_workers', type=int, required=False,
-                        default=NB_THREADS,
+                        default=NB_WORKERS,
                         help='number of processes in parallel')
     args = parser.parse_args()
     assert len(args.image_size) == 2 or len(args.image_size) == 3, \
@@ -87,7 +87,7 @@ def generate_all(path_out=DEFAULT_PATH_APD,
                  atlas_size=IMAGE_SIZE[DATASET_TYPE],
                  nb_patterns=NB_ATM_PATTERNS,
                  nb_samples=NB_SAMPLES,
-                 nb_workers=NB_THREADS):
+                 nb_workers=NB_WORKERS):
     """ generate complete dataset containing dictionary od patterns and also
     input binary / fuzzy images with geometrical deformation and random noise
 

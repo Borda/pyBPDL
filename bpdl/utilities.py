@@ -18,7 +18,7 @@ import numpy as np
 from scipy import stats
 from scipy.spatial import distance
 
-NB_THREADS = mproc.cpu_count()
+NB_WORKERS = mproc.cpu_count()
 
 
 # def update_path(path_file, lim_depth=5, absolute=True):
@@ -168,7 +168,7 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
 #         return proc
 
 
-# def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_THREADS,
+# def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_WORKERS,
 #                           desc='', ordered=False):
 #     """ wrapper for execution parallel of single thread as for...
 #

@@ -76,7 +76,7 @@ if sys.version_info.major == 2:
     copy_reg.pickle(types.MethodType, _reduce_method)
 
 #: default number of avalaible threads to be used
-NB_THREADS = int(mproc.cpu_count() * .8)
+NB_WORKERS = int(mproc.cpu_count() * .8)
 #: default path to repository data/images
 PATH_DATA_SYNTH = update_path('data_images')
 #: default path with samples with drosophila imaginal discs
@@ -95,7 +95,7 @@ DEFAULT_PARAMS = {
     'max_iter': 150,  # 250, 25
     'gc_regul': 1e-9,
     'nb_labels': NB_BIN_PATTERNS + 1,
-    'runs': range(NB_THREADS),
+    'runs': range(NB_WORKERS),
     'gc_reinit': True,
     'ptn_compact': False,
     'connect_diag': True,
@@ -164,7 +164,7 @@ def create_args_parser(dict_params, methods):
                         nargs='+', help='names of used datasets', default=None)
     parser.add_argument('-p', '--nb_patterns', type=int, required=False,
                         nargs='+', help='numbers of estimated patterns', default=None)
-    parser.add_argument('--nb_workers', type=int, required=False, default=NB_THREADS,
+    parser.add_argument('--nb_workers', type=int, required=False, default=NB_WORKERS,
                         help='number of processes running in parallel')
     parser.add_argument('--method', type=str, required=False, nargs='+',
                         default=None, help='possible APD methods', choices=methods)
@@ -559,7 +559,7 @@ class Experiment(ExperimentBase):
         self._export_coding(weights_all, suffix=detail['name_suffix'])
         self._export_extras(extras, suffix=detail['name_suffix'])
 
-        detail.update(self._evaluate(atlas, weights_all))
+        detail.update(self._evaluate_base(atlas, weights_all))
         detail.update(self._evaluate_extras(atlas, weights, extras))
 
         return detail
@@ -638,7 +638,7 @@ class Experiment(ExperimentBase):
             return 'Input', diff_norm
         return 'FAIL', np.nan
 
-    def _evaluate(self, atlas, weights):
+    def _evaluate_base(self, atlas, weights):
         """ Compute the statistic for GT and estimated atlas and reconst. images
 
         :param ndarray atlas: np.array<height, width>

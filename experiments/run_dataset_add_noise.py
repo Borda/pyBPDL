@@ -25,7 +25,7 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import (GAUSS_NOISE, DIR_MANE_SYNTH_DATASET, load_image,
                              export_image, add_image_fuzzy_gauss_noise)
 
-NB_THREADS = int(mproc.cpu_count() * 0.7)
+NB_WORKERS = int(mproc.cpu_count() * 0.7)
 IMAGE_PATTERN = '*.png'
 DIR_POSIX = '_gauss-%.3f'
 NOISE_RANGE = GAUSS_NOISE
@@ -70,7 +70,7 @@ def add_noise_image(img_name, path_in, path_out, noise_level):
 
 
 def dataset_add_noise(path_in, path_out, noise_level,
-                      img_pattern=IMAGE_PATTERN, nb_workers=NB_THREADS):
+                      img_pattern=IMAGE_PATTERN, nb_workers=NB_WORKERS):
     """
 
     :param str path_in:

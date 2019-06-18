@@ -21,7 +21,7 @@ from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicM
 from dipy.align.metrics import SSDMetric
 from imsegm.utilities.experiments import WrapExecuteSequence
 
-NB_THREADS = int(mproc.cpu_count() * .8)
+NB_WORKERS = int(mproc.cpu_count() * .8)
 
 LIST_SDR_PARAMS = ('metric', 'level_iters', 'step_length', 'ss_sigma_factor',
                    'opt_tol', 'inv_iter', 'inv_tol', 'callback')
@@ -267,7 +267,7 @@ def wrapper_warp2d_transform_image(idx_img_deform, method='linear', inverse=Fals
 
 
 def warp2d_images_deformations(list_images, list_deforms, method='linear',
-                               inverse=False, nb_workers=NB_THREADS):
+                               inverse=False, nb_workers=NB_WORKERS):
     """ deform whole set of images to expected image domain
 
     :param list(ndarray) list_images:
@@ -335,7 +335,7 @@ def wrapper_register_demons_image_weights(idx_img_weights, atlas, smooth_coef,
 def register_images_to_atlas_demons(list_images, atlas, list_weights,
                                     smooth_coef=1., params=None,
                                     interp_method='linear', inverse=False,
-                                    rm_mean=True, nb_workers=NB_THREADS):
+                                    rm_mean=True, nb_workers=NB_WORKERS):
     """ register whole set of images to estimated atlas and weights
     IDEA: think about parallel registration per sets as for loading images
 

@@ -33,7 +33,7 @@ from imsegm.utilities.data_io import io_imread, io_imsave
 
 from bpdl.utilities import create_clean_folder
 
-NB_THREADS = mproc.cpu_count()
+NB_WORKERS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
 IMAGE_SIZE_3D = (16, 128, 128)
 NB_BIN_PATTERNS = 9
@@ -597,7 +597,7 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
 
 def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES,
                                     ptn_ration=RND_PATTERN_OCCLUSION,
-                                    nb_workers=NB_THREADS, rand_seed=None):
+                                    nb_workers=NB_WORKERS, rand_seed=None):
     """ generate a Binary dataset composed from N samples and given ration
     of pattern occlusion
 
@@ -815,7 +815,7 @@ def wrapper_image_function(i_img, func, coef, out_dir):
     return i, img_def
 
 
-def dataset_apply_image_function(imgs, out_dir, func, coef=0.5, nb_workers=NB_THREADS):
+def dataset_apply_image_function(imgs, out_dir, func, coef=0.5, nb_workers=NB_WORKERS):
     """ having list if input images create an dataset with randomly deform set
     of these images and export them to the results folder
 
