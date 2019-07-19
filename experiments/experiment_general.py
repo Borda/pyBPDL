@@ -27,8 +27,9 @@ import pandas as pd
 from sklearn import metrics
 import matplotlib.pylab as plt
 from imsegm.utilities.data_io import update_path
-from imsegm.utilities.experiments import WrapExecuteSequence, string_dict, load_config_yaml
-from imsegm.utilities.experiments import Experiment as ExperimentBase
+from imsegm.utilities.experiments import (
+    WrapExecuteSequence, string_dict, extend_list_params, load_config_yaml,
+    Experiment as ExperimentBase)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import (
@@ -686,40 +687,6 @@ class Experiment(ExperimentBase):
 # =============================================================================
 
 
-def extend_list_params(list_params, name_param, list_options):
-    """ extend the parameter list by all sub-datasets
-
-    :param list(dict) list_params:
-    :param str name_param:
-    :param list list_options:
-    :return list(dict):
-
-    >>> params = extend_list_params([{'a': 1}], 'a', [3, 4])
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
-       a param_idx
-    0  3     a-2#1
-    1  4     a-2#2
-    >>> params = extend_list_params([{'a': 1}], 'b', 5)
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
-       a  b param_idx
-    0  1  5     b-1#1
-    """
-    if not is_list_like(list_options):
-        list_options = [list_options]
-    list_params_new = []
-    for p in list_params:
-        p['param_idx'] = p.get('param_idx', '')
-        for i, v in enumerate(list_options):
-            p_new = p.copy()
-            p_new.update({name_param: v})
-            if len(p_new['param_idx']) > 0:
-                p_new['param_idx'] += '_'
-            p_new['param_idx'] += \
-                '%s-%i#%i' % (name_param, len(list_options), i + 1)
-            list_params_new.append(p_new)
-    return list_params_new
-
-
 def simplify_params(dict_params):
     """ extract simple configuration dictionary
 
@@ -748,14 +715,14 @@ def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
 
     >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),
     ...                         's--opts': ('a', 'b')})
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> pd.DataFrame(params)[sorted(pd.DataFrame(params))]  # doctest: +NORMALIZE_WHITESPACE
        n    param_idx  s s--opts    t
     0  1  n-2#1_s-2#1  x       a  abc
     1  1  n-2#1_s-2#2  y       a  abc
     2  2  n-2#2_s-2#1  x       a  abc
     3  2  n-2#2_s-2#2  y       a  abc
     >>> params = expand_params({'s': ('x', 'y')}, {'old': 123.})
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> pd.DataFrame(params)[sorted(pd.DataFrame(params))]  # doctest: +NORMALIZE_WHITESPACE
          old param_idx  s
     0  123.0     s-2#1  x
     1  123.0     s-2#2  y
