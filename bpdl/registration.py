@@ -10,7 +10,7 @@ Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 
 import time
 import logging
-import multiprocessing as mproc
+# import multiprocessing as mproc
 from functools import partial
 
 import numpy as np
@@ -19,9 +19,9 @@ from scipy import ndimage, interpolate
 from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
 from dipy.align.metrics import SSDMetric
-from imsegm.utilities.experiments import WrapExecuteSequence
+from imsegm.utilities.experiments import WrapExecuteSequence, nb_workers
 
-NB_WORKERS = int(mproc.cpu_count() * .8)
+NB_WORKERS = nb_workers(0.8)
 
 LIST_SDR_PARAMS = ('metric', 'level_iters', 'step_length', 'ss_sigma_factor',
                    'opt_tol', 'inv_iter', 'inv_tol', 'callback')

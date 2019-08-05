@@ -73,10 +73,12 @@ jobs:
           python experiments/run_recompute_experiments_result.py -i ./results
           python experiments/run_parse_experiments_result.py -i ./results -r results_NEW.csv
 
+    # PASSING
     - run:
-        name: Install this package
+        name: Finalise
         command: |
-          python setup.py install --user
+          python setup.py install --user --dry-run
+          coverage report && coverage xml -o test-reports/coverage.xml
 
     - store_test_results:
         path: test-reports

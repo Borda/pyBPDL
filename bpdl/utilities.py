@@ -11,14 +11,12 @@ import types
 import logging
 import shutil
 # import multiprocessing.pool
-import multiprocessing as mproc
+# import multiprocessing as mproc
 # from functools import wraps
 
 import numpy as np
 from scipy import stats
 from scipy.spatial import distance
-
-NB_WORKERS = mproc.cpu_count()
 
 
 # def update_path(path_file, lim_depth=5, absolute=True):

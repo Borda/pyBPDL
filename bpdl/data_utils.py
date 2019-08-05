@@ -3,8 +3,8 @@ The basic module for generating synthetic images and also loading / exporting
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
+from __future__ import absolute_import
 
-# from __future__ import absolute_import
 import os
 import glob
 import logging
@@ -31,7 +31,7 @@ from skimage import draw, transform
 from imsegm.utilities.experiments import WrapExecuteSequence
 from imsegm.utilities.data_io import io_imread, io_imsave
 
-from bpdl.utilities import create_clean_folder
+from .utilities import create_clean_folder
 
 NB_WORKERS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)

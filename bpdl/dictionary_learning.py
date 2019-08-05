@@ -4,8 +4,8 @@ and computing the encoding / weights
 
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
+from __future__ import absolute_import
 
-# from __future__ import absolute_import
 import os
 import time
 import logging
@@ -25,14 +25,14 @@ from skimage import filters
 # using https://github.com/Borda/pyGCO
 from gco import cut_general_graph, cut_grid_graph_simple
 
-from bpdl.pattern_atlas import (
+from .pattern_atlas import (
     compute_positive_cost_images_weights, edges_in_image2d_plane, init_atlas_mosaic,
     atlas_split_indep_ptn, reinit_atlas_likely_patterns, compute_relative_penalty_images_weights)
-from bpdl.pattern_weights import (weights_image_atlas_overlap_major,
-                                  weights_image_atlas_overlap_partial)
-from bpdl.metric_similarity import compare_atlas_adjusted_rand
-from bpdl.data_utils import export_image
-from bpdl.registration import register_images_to_atlas_demons
+from .pattern_weights import (
+    weights_image_atlas_overlap_major, weights_image_atlas_overlap_partial)
+from .metric_similarity import compare_atlas_adjusted_rand
+from .data_utils import export_image
+from .registration import register_images_to_atlas_demons
 
 NB_GRAPH_CUT_ITER = 5
 TEMPLATE_NAME_ATLAS = 'BPDL_{}_{}_iter_{:04d}'
