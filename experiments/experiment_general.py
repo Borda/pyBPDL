@@ -28,7 +28,7 @@ from sklearn import metrics
 import matplotlib.pylab as plt
 from imsegm.utilities.data_io import update_path
 from imsegm.utilities.experiments import (
-    WrapExecuteSequence, string_dict, extend_list_params, load_config_yaml,
+    WrapExecuteSequence, string_dict, load_config_yaml, extend_list_params,
     Experiment as ExperimentBase)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
@@ -713,16 +713,18 @@ def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     :param list(str) skip_patterns: ignored configs
     :return:
 
-    >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),
-    ...                         's--opts': ('a', 'b')})
-    >>> pd.DataFrame(params)[sorted(pd.DataFrame(params))]  # doctest: +NORMALIZE_WHITESPACE
+    >>> param_range = {'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'), 's--opts': ('a', 'b')}
+    >>> params = expand_params(param_range)
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]# doctest: +NORMALIZE_WHITESPACE
        n    param_idx  s s--opts    t
     0  1  n-2#1_s-2#1  x       a  abc
     1  1  n-2#1_s-2#2  y       a  abc
     2  2  n-2#2_s-2#1  x       a  abc
     3  2  n-2#2_s-2#2  y       a  abc
     >>> params = expand_params({'s': ('x', 'y')}, {'old': 123.})
-    >>> pd.DataFrame(params)[sorted(pd.DataFrame(params))]  # doctest: +NORMALIZE_WHITESPACE
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]  # doctest: +NORMALIZE_WHITESPACE
          old param_idx  s
     0  123.0     s-2#1  x
     1  123.0     s-2#2  y
