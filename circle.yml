@@ -6,7 +6,7 @@ references:
     run:
       name: Install Packages
       command: |
-        sudo apt-get update --fix-missing
+        sudo apt-get update -qq --fix-missing
         sudo apt-get install tk-dev pkg-config python-dev python-tk
 
   install_pips: &install_pips
@@ -30,7 +30,6 @@ references:
         python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
         python experiments/run_dataset_add_noise.py -p ./data_images
         coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
-        coverage report && coverage xml -o test-reports/coverage.xml
         flake8 . --ignore=E402,E731 --max-line-length=100
 
   make_docs: &make_docs
