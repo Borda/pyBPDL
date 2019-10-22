@@ -695,12 +695,14 @@ def extend_list_params(list_params, name_param, list_options):
     :return list(dict):
 
     >>> params = extend_list_params([{'a': 1}], 'a', [3, 4])
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]  # doctest: +NORMALIZE_WHITESPACE
        a param_idx
     0  3     a-2#1
     1  4     a-2#2
     >>> params = extend_list_params([{'a': 1}], 'b', 5)
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]  # doctest: +NORMALIZE_WHITESPACE
        a  b param_idx
     0  1  5     b-1#1
     """
@@ -746,16 +748,18 @@ def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     :param list(str) skip_patterns: ignored configs
     :return:
 
-    >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),
-    ...                         's--opts': ('a', 'b')})
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> param_range = {'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'), 's--opts': ('a', 'b')}
+    >>> params = expand_params(param_range)
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]# doctest: +NORMALIZE_WHITESPACE
        n    param_idx  s s--opts    t
     0  1  n-2#1_s-2#1  x       a  abc
     1  1  n-2#1_s-2#2  y       a  abc
     2  2  n-2#2_s-2#1  x       a  abc
     3  2  n-2#2_s-2#2  y       a  abc
     >>> params = expand_params({'s': ('x', 'y')}, {'old': 123.})
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]  # doctest: +NORMALIZE_WHITESPACE
          old param_idx  s
     0  123.0     s-2#1  x
     1  123.0     s-2#2  y

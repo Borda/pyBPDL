@@ -1,3 +1,6 @@
+# git+https://github.com/Borda/pyImSegm.git@devel
+https://github.com/Borda/pyImSegm/archive/master.zip#egg=ImSegm
+https://github.com/Borda/pyGCO/archive/master.zip#egg=gco-wrapper>=3.0.3
 numpy>=1.8.2,<1.16.0  # version 1.16 breaks skimage 0.14
 scipy>=0.10.0
 pandas>=0.17.1
@@ -8,11 +11,8 @@ scikit-learn>=0.18.1
 scikit-image>=0.12.1
 tqdm>=4.7.4,<=4.30  # higher fails ascii for py2
 ipython==4.2.0
-gco-wrapper>=3.0.3
 # numba>=0.22.1
 nibabel>=2.1.0
 nilearn>=0.3.1
 dipy>=0.11.0,<0.16.0  # failing for py2 in numpy
 SimpleITK>=1.0.1
-# git+https://github.com/Borda/pyImSegm.git@devel
-https://github.com/Borda/pyImSegm/archive/master.zip#egg=ImSegm
