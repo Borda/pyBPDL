@@ -82,7 +82,7 @@ jobs:
     - checkout
     - *install_deps
     - *install_pips
-    - run: git lfs pull
+    #- run: git lfs pull
 
     - *dataset
     - *test_coverage
@@ -100,7 +100,7 @@ jobs:
       - checkout
       - *install_deps
       - *install_pips
-      - run: git lfs pull
+      #- run: git lfs pull
 
       - *dataset
       - *expt_pre
