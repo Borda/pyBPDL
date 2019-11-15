@@ -30,7 +30,7 @@ import bpdl  # noqa: E402
 
 # export the documentation
 with open('intro.rst', 'w') as fp:
-    intro = bpdl.__doc__.replace(os.linesep + ' ', '')
+    intro = bpdl.__long_doc__.replace(os.linesep + ' ', '')
     fp.write(m2r.convert(intro))
     # fp.write(bpdl.__doc__)
 
