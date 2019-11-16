@@ -24,7 +24,7 @@ TEMP_EGG = '#egg='
 def _parse_requirements(file_path):
     with open(file_path) as fp:
         reqs = [r.rstrip() for r in fp.readlines() if not r.startswith('#')]
-        # parse egg names if there are pathes
+        # parse egg names if there are paths
         reqs = [r[r.index(TEMP_EGG) + len(TEMP_EGG):] if TEMP_EGG in r else r for r in reqs]
         return reqs
 

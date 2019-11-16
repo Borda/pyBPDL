@@ -48,7 +48,7 @@ script:
   - flake8 . --ignore=E402,E731 --max-line-length=100
 
 after_success:
-  - python setup.py install
+  - python setup.py install --user
   - codecov  # public repository on Travis CI
   - coverage xml
   - python-codacy-coverage -r coverage.xml

@@ -41,7 +41,7 @@ NAME_INPUT_RESULT = 'results.csv'
 NAME_OUTPUT_RESULT = 'results_NEW.csv'
 SUB_PATH_GT_ATLAS = os.path.join('dictionary', 'atlas.png')
 NAME_PATTERN_ATLAS = 'atlas%s.png'
-NB_THREADS = int(mproc.cpu_count() * 0.9)
+NB_WORKERS = int(mproc.cpu_count() * 0.9)
 FIGURE_SIZE = 6
 
 PARAMS = {
@@ -174,7 +174,7 @@ def parse_experiments(params):
     logging.info('running recompute Experiments results')
     logging.info(string_dict(params, desc='ARGUMENTS:'))
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
-    nb_workers = params.get('nb_workers', NB_THREADS)
+    nb_workers = params.get('nb_workers', NB_WORKERS)
 
     path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
                  if os.path.isdir(p)]

@@ -38,7 +38,7 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import dataset_load_images, export_image
 from bpdl.registration import warp2d_apply_deform_field
 
-NB_THREADS = int(mproc.cpu_count() * .9)
+NB_WORKERS = int(mproc.cpu_count() * .9)
 FIGURE_SIZE = (20, 8)
 NAME_CONFIG = 'config.yml'
 FIELDS_PATH_IMAGES = ['path_in', 'dataset']
@@ -65,7 +65,7 @@ def parse_arg_params():
                         default='*', help='name of experiment')
     parser.add_argument('--nb_workers', type=int, required=False,
                         help='number of processes running in parallel',
-                        default=NB_THREADS)
+                        default=NB_WORKERS)
     parser.add_argument('--visual', required=False, action='store_true',
                         help='visualise results', default=False)
 
@@ -97,7 +97,7 @@ def get_path_dataset(path, path_imgs=None):
     return path_imgs
 
 
-def load_images(path_images, names, nb_workers=NB_THREADS):
+def load_images(path_images, names, nb_workers=NB_WORKERS):
     if path_images is None or not os.path.isdir(path_images):
         return None
     _name = lambda p: os.path.splitext(os.path.basename(p))[0]
@@ -112,7 +112,7 @@ def load_images(path_images, names, nb_workers=NB_THREADS):
 
 
 def load_experiment(path_expt, name, path_dataset=None, path_images=None,
-                    nb_workers=NB_THREADS):
+                    nb_workers=NB_WORKERS):
     path_atlas = os.path.join(path_expt, BASE_NAME_ATLAS + name + '.png')
     atlas = io_imread(path_atlas)
     if (atlas.max() == 255 or atlas.max() == 1.) and len(np.unique(atlas)) < 128:
@@ -207,7 +207,7 @@ def perform_reconstruction(set_variables, atlas, path_out, path_visu=None):
 
 
 def process_expt_reconstruction(name_expt, path_expt, path_dataset=None,
-                                path_imgs=None, nb_workers=NB_THREADS, visual=False):
+                                path_imgs=None, nb_workers=NB_WORKERS, visual=False):
     atlas, df_weights, dict_deforms, segms, images = load_experiment(
         path_expt, name_expt, path_dataset, path_imgs, nb_workers)
     df_weights.set_index('image', inplace=True)

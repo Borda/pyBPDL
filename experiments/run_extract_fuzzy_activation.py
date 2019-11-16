@@ -33,7 +33,7 @@ sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import export_image
 from experiments.run_cut_minimal_images import args_parse_params
 
-NB_THREADS = int(mproc.cpu_count() * .75)
+NB_WORKERS = int(mproc.cpu_count() * .75)
 PARAMS = {
     'path_in': os.path.join(update_path('data_images/ovary_stage-3/image'), '*.png'),
     'path_out': update_path('data_images/ovary_stage-3/gene'),
@@ -75,7 +75,7 @@ def extract_activation(path_img, path_out):
     export_image(path_out, im_gene, name)
 
 
-def main(path_pattern_in, path_out, nb_workers=NB_THREADS):
+def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
     assert os.path.isdir(os.path.dirname(path_pattern_in)), \
         'missing: %s' % path_pattern_in
     assert os.path.isdir(os.path.dirname(path_out)), \

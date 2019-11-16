@@ -27,8 +27,9 @@ import pandas as pd
 from sklearn import metrics
 import matplotlib.pylab as plt
 from imsegm.utilities.data_io import update_path
-from imsegm.utilities.experiments import WrapExecuteSequence, string_dict, load_config_yaml
-from imsegm.utilities.experiments import Experiment as ExperimentBase
+from imsegm.utilities.experiments import (
+    WrapExecuteSequence, string_dict, load_config_yaml, extend_list_params,
+    Experiment as ExperimentBase)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import (
@@ -76,7 +77,7 @@ if sys.version_info.major == 2:
     copy_reg.pickle(types.MethodType, _reduce_method)
 
 #: default number of avalaible threads to be used
-NB_THREADS = int(mproc.cpu_count() * .8)
+NB_WORKERS = int(mproc.cpu_count() * .8)
 #: default path to repository data/images
 PATH_DATA_SYNTH = update_path('data_images')
 #: default path with samples with drosophila imaginal discs
@@ -95,7 +96,7 @@ DEFAULT_PARAMS = {
     'max_iter': 150,  # 250, 25
     'gc_regul': 1e-9,
     'nb_labels': NB_BIN_PATTERNS + 1,
-    'runs': range(NB_THREADS),
+    'runs': range(NB_WORKERS),
     'gc_reinit': True,
     'ptn_compact': False,
     'connect_diag': True,
@@ -164,7 +165,7 @@ def create_args_parser(dict_params, methods):
                         nargs='+', help='names of used datasets', default=None)
     parser.add_argument('-p', '--nb_patterns', type=int, required=False,
                         nargs='+', help='numbers of estimated patterns', default=None)
-    parser.add_argument('--nb_workers', type=int, required=False, default=NB_THREADS,
+    parser.add_argument('--nb_workers', type=int, required=False, default=NB_WORKERS,
                         help='number of processes running in parallel')
     parser.add_argument('--method', type=str, required=False, nargs='+',
                         default=None, help='possible APD methods', choices=methods)
@@ -559,7 +560,7 @@ class Experiment(ExperimentBase):
         self._export_coding(weights_all, suffix=detail['name_suffix'])
         self._export_extras(extras, suffix=detail['name_suffix'])
 
-        detail.update(self._evaluate(atlas, weights_all))
+        detail.update(self._evaluate_base(atlas, weights_all))
         detail.update(self._evaluate_extras(atlas, weights, extras))
 
         return detail
@@ -638,7 +639,7 @@ class Experiment(ExperimentBase):
             return 'Input', diff_norm
         return 'FAIL', np.nan
 
-    def _evaluate(self, atlas, weights):
+    def _evaluate_base(self, atlas, weights):
         """ Compute the statistic for GT and estimated atlas and reconst. images
 
         :param ndarray atlas: np.array<height, width>
@@ -686,40 +687,6 @@ class Experiment(ExperimentBase):
 # =============================================================================
 
 
-def extend_list_params(list_params, name_param, list_options):
-    """ extend the parameter list by all sub-datasets
-
-    :param list(dict) list_params:
-    :param str name_param:
-    :param list list_options:
-    :return list(dict):
-
-    >>> params = extend_list_params([{'a': 1}], 'a', [3, 4])
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
-       a param_idx
-    0  3     a-2#1
-    1  4     a-2#2
-    >>> params = extend_list_params([{'a': 1}], 'b', 5)
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
-       a  b param_idx
-    0  1  5     b-1#1
-    """
-    if not is_list_like(list_options):
-        list_options = [list_options]
-    list_params_new = []
-    for p in list_params:
-        p['param_idx'] = p.get('param_idx', '')
-        for i, v in enumerate(list_options):
-            p_new = p.copy()
-            p_new.update({name_param: v})
-            if len(p_new['param_idx']) > 0:
-                p_new['param_idx'] += '_'
-            p_new['param_idx'] += \
-                '%s-%i#%i' % (name_param, len(list_options), i + 1)
-            list_params_new.append(p_new)
-    return list_params_new
-
-
 def simplify_params(dict_params):
     """ extract simple configuration dictionary
 
@@ -746,16 +713,18 @@ def expand_params(dict_params, simple_config=None, skip_patterns=('--', '__')):
     :param list(str) skip_patterns: ignored configs
     :return:
 
-    >>> params = expand_params({'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'),
-    ...                         's--opts': ('a', 'b')})
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> param_range = {'t': ['abc'], 'n': [1, 2], 's': ('x', 'y'), 's--opts': ('a', 'b')}
+    >>> params = expand_params(param_range)
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]# doctest: +NORMALIZE_WHITESPACE
        n    param_idx  s s--opts    t
     0  1  n-2#1_s-2#1  x       a  abc
     1  1  n-2#1_s-2#2  y       a  abc
     2  2  n-2#2_s-2#1  x       a  abc
     3  2  n-2#2_s-2#2  y       a  abc
     >>> params = expand_params({'s': ('x', 'y')}, {'old': 123.})
-    >>> pd.DataFrame(params)  # doctest: +NORMALIZE_WHITESPACE
+    >>> df = pd.DataFrame(params)
+    >>> df[sorted(df.columns)]  # doctest: +NORMALIZE_WHITESPACE
          old param_idx  s
     0  123.0     s-2#1  x
     1  123.0     s-2#2  y

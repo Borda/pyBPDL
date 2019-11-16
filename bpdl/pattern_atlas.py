@@ -12,9 +12,9 @@ from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
 
-from bpdl.data_utils import image_deform_elastic, extract_image_largest_element
-from bpdl.pattern_weights import (weights_label_atlas_overlap_threshold,
-                                  convert_weights_binary2indexes)
+from .data_utils import image_deform_elastic, extract_image_largest_element
+from .pattern_weights import (
+    weights_label_atlas_overlap_threshold, convert_weights_binary2indexes)
 
 REINIT_PATTERN_COMPACT = True
 UNARY_BACKGROUND = 1

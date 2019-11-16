@@ -24,8 +24,8 @@ try:
         np.set_printoptions(legacy='1.13')
 
     # default display size was changed in pandas v0.23
-    if 'display.max_columns' in pd.core.config._registered_options:
-        pd.set_option('display.max_columns', 20)
+    pd.set_option('display.max_columns', 20)
+
 except ImportError:
     import traceback
     traceback.print_exc()
@@ -35,8 +35,9 @@ __author__ = 'Jiri Borovec'
 __author_email__ = 'jiri.borovec@fel.cvut.cz'
 __license__ = 'BSD 3-clause'
 __homepage__ = 'https://borda.github.io/pyBPDL'
-__copyright__ = 'Copyright (c) 2014-2019, Jiri Borovec.'
-__doc__ = """# BPDL - Binary pattern Dictionary Learning
+__copyright__ = 'Copyright (c) 2014-2019, %s.' % __author__
+__doc__ = 'BPDL - Binary pattern Dictionary Learning'
+__long_doc__ = "# %s" % __doc__ + """
 
 The package contain Binary pattern Dictionary Learning (BPDL) which is image processing tool
  for unsupervised pattern extraction and atlas estimation. Moreover the project/repository

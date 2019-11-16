@@ -12,7 +12,7 @@ import glob
 from imsegm.utilities.data_io import update_path
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from experiments.experiment_general import NB_THREADS, RESULTS_CSV, CONFIG_YAML, simplify_params
+from experiments.experiment_general import NB_WORKERS, RESULTS_CSV, CONFIG_YAML, simplify_params
 from experiments.experiment_methods import DICT_ATLAS_INIT, ExperimentBPDL
 from experiments.run_experiments import SYNTH_PARAMS, REAL_PARAMS, METHODS
 import experiments.run_parse_experiments_result as r_parse
@@ -21,7 +21,7 @@ import experiments.run_recompute_experiments_result as r_recomp
 PARAMS_TEST_SYNTH_UPDATE = {
     # 'dataset': tl_data.DEFAULT_NAME_DATASET,
     'max_iter': 5,
-    'nb_workers': NB_THREADS,
+    'nb_workers': NB_WORKERS,
 }
 
 
