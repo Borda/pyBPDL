@@ -17,11 +17,6 @@ import types
 import collections
 import multiprocessing as mproc
 
-import matplotlib
-if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
-    print('No display found. Using non-interactive Agg backend.')
-    matplotlib.use('Agg')
-
 import numpy as np
 import pandas as pd
 from sklearn import metrics

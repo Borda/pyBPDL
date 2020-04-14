@@ -17,6 +17,7 @@ import sys
 import glob
 import shutil
 import inspect
+import re
 
 import m2r
 
@@ -25,6 +26,22 @@ PATH_HERE = os.path.abspath(os.path.dirname(__file__))
 sys.path.insert(0, os.path.abspath(PATH_ROOT))
 
 import bpdl  # noqa: E402
+
+# -- Project information -----------------------------------------------------
+
+project = 'BPDL'
+copyright = bpdl.__copyright__
+author = bpdl.__author__
+
+# The short X.Y version
+version = bpdl.__version__
+# The full version, including alpha/beta/rc tags
+release = bpdl.__version__
+
+# Options for the linkcode extension
+# ----------------------------------
+github_user = 'Borda'
+github_repo = 'pyBPDL'
 
 # -- Project documents -------------------------------------------------------
 
@@ -38,22 +55,18 @@ with open('intro.rst', 'w') as fp:
 with open(os.path.join(PATH_ROOT, 'README.md'), 'r') as fp:
     readme = fp.read()
 # replace all paths to relative
-for ndir in (os.path.basename(p) for p in glob.glob(os.path.join(PATH_ROOT, '*'))
-             if os.path.isdir(p)):
-    readme = readme.replace('](%s/' % ndir, '](%s/%s/' % (PATH_ROOT, ndir))
+readme = readme.replace('](docs/source/', '](')
+# Todo: this seems to replace only once per line
+readme = re.sub(r' \[(.*)\]\((?!http)(.*)\)',
+                r' [\1](https://github.com/%s/%s/blob/master/\2)' % (github_user, github_repo),
+                readme)
+# TODO: temp fix removing SVG badges and GIF, because PDF cannot show them
+readme = re.sub(r'(\[!\[.*\))', '', readme)
+for dir_name in (os.path.basename(p) for p in glob.glob(os.path.join(PATH_ROOT, '*'))
+                 if os.path.isdir(p)):
+    readme = readme.replace('](%s/' % dir_name, '](%s/%s/' % (PATH_ROOT, dir_name))
 with open('readme.md', 'w') as fp:
     fp.write(readme)
-
-# -- Project information -----------------------------------------------------
-
-project = 'BPDL'
-copyright = bpdl.__copyright__
-author = bpdl.__author__
-
-# The short X.Y version
-version = bpdl.__version__
-# The full version, including alpha/beta/rc tags
-release = bpdl.__version__
 
 
 # -- General configuration ---------------------------------------------------
@@ -109,7 +122,14 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['*.run_*', '*.show_*', '*.test_*']
+exclude_patterns = [
+    '*.run_*',
+    '*.show_*',
+    '*.test_*',
+    'modules.rst',
+    '*/overview_ovary_user-*.ipynb',
+    '*/regist-image-ptn_itk_*.ipynb',
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
@@ -131,7 +151,7 @@ html_theme = 'nature'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ['_figures']  # '_static'
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -238,7 +258,10 @@ PACKAGES = [bpdl.__name__, 'experiments']
 def run_apidoc(_):
     for pkg in PACKAGES:
         argv = ['-e', '-o', PATH_HERE, os.path.join(PATH_HERE, PATH_ROOT, pkg),
-                'run_*', 'show_*', 'test_*', '--force']
+                os.path.join(PATH_HERE, PATH_ROOT, 'experiments', 'run_*'),
+                os.path.join(PATH_HERE, PATH_ROOT, 'experiments', 'show_*'),
+                os.path.join(PATH_HERE, PATH_ROOT, 'experiments', 'test_*'),
+                '--force']
         try:
             # Sphinx 1.7+
             from sphinx.ext import apidoc
@@ -280,14 +303,7 @@ with open(os.path.join(PATH_ROOT, 'requirements.txt'), 'r') as fp:
             MOCK_MODULES.append(pkg.rstrip())
 
 # TODO: better parse from package since the import name and package name may differ
-autodoc_mock_imports = MOCK_MODULES + ['yaml', 'sklearn', 'skimage', 'gco', 'imsegm']
-
-
-# Options for the linkcode extension
-# ----------------------------------
-github_user = 'Borda'
-github_repo = 'pyBPDL'
-
+autodoc_mock_imports = MOCK_MODULES + ['yaml', 'sklearn', 'skimage', 'gco']  # , 'imsegm'
 
 # Resolve function
 # This function is used to populate the (source) links in the API
