@@ -32,6 +32,7 @@ references:
     run:
       name: Formating
       command: |
+        pip install flake8
         flake8 .
 
   dataset: &dataset
@@ -81,6 +82,13 @@ references:
           python experiments/run_parse_experiments_result.py -i ./results -r results_NEW.csv
 
 jobs:
+  Formatting:
+    docker:
+      - image: circleci/python:3.6
+    steps: &steps_test
+      - checkout
+      - *formatting
+
   Py3-Tests:
     docker:
       - image: circleci/python:3.6
@@ -92,7 +100,6 @@ jobs:
 
     - *dataset
     - *test_coverage
-    - *formatting
     # PASSING
     - run:
         name: Finalise
@@ -153,3 +160,4 @@ workflows:
       - Py2-Experiments
       - Py3-Experiments
       - Build-Docs
+      - Formatting
