@@ -20,14 +20,19 @@ references:
 
   test_coverage: &test_coverage
     run:
-      name: Testing and Formating
+      name: Testing and Coverage
       command: |
         unset DISPLAY
         python --version ; pip --version ; pwd ; ls -l
         python setup.py check -m -s
         mkdir results && mkdir test-reports
-        coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
-        flake8 . --ignore=E402,E731 --max-line-length=100
+        coverage run --source=bpdl,experiments -m pytest bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
+
+  formatting: &formatting
+    run:
+      name: Formating
+      command: |
+        flake8 .
 
   dataset: &dataset
     run:
@@ -87,6 +92,7 @@ jobs:
 
     - *dataset
     - *test_coverage
+    - *formatting
     # PASSING
     - run:
         name: Finalise
