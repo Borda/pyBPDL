@@ -5,16 +5,17 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 
-import os
 import glob
-import logging
 # import warnings
 import itertools
+import logging
 import multiprocessing as mproc
+import os
 from functools import partial
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
+
 if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
     print('No display found. Using non-interactive Agg backend.')
     # https://matplotlib.org/faq/usage_faq.html

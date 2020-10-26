@@ -4,19 +4,21 @@ The basic module for generating synthetic images and also loading / exporting
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
+import logging
 # from __future__ import absolute_import
 import os
 import re
-import types
-import logging
 import shutil
-# import multiprocessing.pool
-# import multiprocessing as mproc
-# from functools import wraps
+import types
 
 import numpy as np
 from scipy import stats
 from scipy.spatial import distance
+
+
+# import multiprocessing.pool
+# import multiprocessing as mproc
+# from functools import wraps
 
 
 # def update_path(path_file, lim_depth=5, absolute=True):

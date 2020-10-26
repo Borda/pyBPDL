@@ -6,12 +6,13 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 
+import logging
 import os
 import time
-import logging
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
+
 if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
     print('No display found. Using non-interactive Agg backend.')
     # https://matplotlib.org/faq/usage_faq.html

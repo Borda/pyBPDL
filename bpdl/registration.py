@@ -8,18 +8,18 @@ SEE:
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import time
 import logging
+import time
 # import multiprocessing as mproc
 from functools import partial
 
 import numpy as np
-from scipy import ndimage, interpolate
 # from scipy.ndimage import filters
 from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
 from dipy.align.metrics import SSDMetric
 from imsegm.utilities.experiments import WrapExecuteSequence, nb_workers
+from scipy import ndimage, interpolate
 
 NB_WORKERS = nb_workers(0.8)
 

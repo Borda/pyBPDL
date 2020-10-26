@@ -8,9 +8,9 @@ import logging
 
 # import numba
 import numpy as np
-from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
-from skimage import morphology, measure, segmentation, filters
 from scipy import ndimage as ndi
+from skimage import morphology, measure, segmentation, filters
+from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 
 from .data_utils import image_deform_elastic, extract_image_largest_element
 from .pattern_weights import (
