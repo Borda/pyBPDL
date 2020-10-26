@@ -21,8 +21,8 @@ import re
 
 import m2r
 
-PATH_ROOT = os.path.join('..', '..')
-PATH_HERE = os.path.abspath(os.path.dirname(__file__))
+PATH_HERE = os.path.realpath(os.path.dirname(__file__))
+PATH_ROOT = os.path.realpath(os.path.join(PATH_HERE, '..', '..'))
 sys.path.insert(0, os.path.abspath(PATH_ROOT))
 
 import bpdl  # noqa: E402
@@ -62,6 +62,7 @@ readme = re.sub(r' \[(.*)\]\((?!http)(.*)\)',
                 readme)
 # TODO: temp fix removing SVG badges and GIF, because PDF cannot show them
 readme = re.sub(r'(\[!\[.*\))', '', readme)
+readme = re.sub(r'(!\[.*.gif\))', '', readme)
 for dir_name in (os.path.basename(p) for p in glob.glob(os.path.join(PATH_ROOT, '*'))
                  if os.path.isdir(p)):
     readme = readme.replace('](%s/' % dir_name, '](%s/%s/' % (PATH_ROOT, dir_name))
@@ -126,7 +127,7 @@ exclude_patterns = [
     '*.run_*',
     '*.show_*',
     '*.test_*',
-    'modules.rst',
+    'api/modules.rst',
     '*/overview_ovary_user-*.ipynb',
     '*/regist-image-ptn_itk_*.ipynb',
 ]
@@ -257,10 +258,12 @@ PACKAGES = [bpdl.__name__, 'experiments']
 
 def run_apidoc(_):
     for pkg in PACKAGES:
-        argv = ['-e', '-o', PATH_HERE, os.path.join(PATH_HERE, PATH_ROOT, pkg),
-                os.path.join(PATH_HERE, PATH_ROOT, 'experiments', 'run_*'),
-                os.path.join(PATH_HERE, PATH_ROOT, 'experiments', 'show_*'),
-                os.path.join(PATH_HERE, PATH_ROOT, 'experiments', 'test_*'),
+        argv = ['-e',
+                '-o', os.path.join(PATH_HERE, 'api'),
+                os.path.join(PATH_ROOT, pkg),
+                os.path.join(PATH_ROOT, 'experiments', 'run_*'),
+                os.path.join(PATH_ROOT, 'experiments', 'show_*'),
+                os.path.join(PATH_ROOT, 'experiments', 'test_*'),
                 '--force']
         try:
             # Sphinx 1.7+
