@@ -93,7 +93,6 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
            [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
-    >>> np.round(img_warp - img_sense, 1)  # doctest: +SKIP
     >>> img_sense = np.zeros(img_ref.shape, dtype=int)
     >>> img_sense[4:9, 3:10] = 1
     >>> img_sense
