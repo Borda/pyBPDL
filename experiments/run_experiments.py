@@ -35,12 +35,12 @@ from imsegm.utilities.experiments import string_dict
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.utilities import is_list_like, is_iterable
-from bpdl.data_utils import (DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET,
-                             dataset_compose_atlas, find_images, dataset_load_images)
+from bpdl.data_utils import (
+    DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET, dataset_compose_atlas, find_images, dataset_load_images)
 from bpdl.dictionary_learning import bpdl_pipeline
 from bpdl.pattern_atlas import init_atlas_mosaic
-from experiments.experiment_general import (SYNTH_PARAMS, REAL_PARAMS,
-                                            SYNTH_PATH_APD, parse_params)
+from experiments.experiment_general import (
+    SYNTH_PARAMS, REAL_PARAMS, SYNTH_PATH_APD, parse_params)
 from experiments.experiment_methods import (
     ExperimentSparsePCA, ExperimentFastICA, ExperimentDictLearn, ExperimentNMF,
     ExperimentSpectClust, ExperimentCanICA, ExperimentMSDL, ExperimentBPDL, DICT_ATLAS_INIT)
@@ -64,7 +64,6 @@ SYNTH_PARAMS.update({
     'max_iter': 25,  # 250, 150
 })
 
-REAL_PARAMS = REAL_PARAMS
 REAL_PARAMS.update({
     'method': LIST_METHODS,
     'max_iter': 25,  # 250, 150

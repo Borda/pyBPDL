@@ -240,7 +240,7 @@ def load_list_img_names(path_csv, path_in=''):
     assert os.path.exists(path_csv), '%s' % path_csv
     df = pd.read_csv(path_csv, index_col=False, header=None)
     assert len(df.columns) == 1, 'assume just single column'
-    list_names = df.as_matrix()[:, 0].tolist()
+    list_names = df.values[:, 0].tolist()
     # if the input path was set and the list are just names, no complete paths
     if os.path.exists(path_in) and not all(os.path.exists(p) for p in list_names):
         # to each image name add the input path

@@ -1135,7 +1135,7 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
         encoding = np.array([[int(x) for x in c.split(';')] for c in coding])
     # the new encoding with pattern names
     else:
-        encoding = df.as_matrix()
+        encoding = df.values
     return np.array(encoding)
 
 
