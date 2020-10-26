@@ -36,7 +36,8 @@ from imsegm.utilities.experiments import string_dict
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.utilities import is_list_like, is_iterable
 from bpdl.data_utils import (
-    DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET, dataset_compose_atlas, find_images, dataset_load_images)
+    DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET,
+    dataset_compose_atlas, find_images, dataset_load_images)
 from bpdl.dictionary_learning import bpdl_pipeline
 from bpdl.pattern_atlas import init_atlas_mosaic
 from experiments.experiment_general import (

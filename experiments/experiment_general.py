@@ -193,7 +193,7 @@ def parse_arg_params(parser):
 
     if 'nb_patterns' in args:
         if is_list_like(args['nb_patterns']):
-            args.update({'nb_labels': [l + 1 for l in args['nb_patterns']]})
+            args.update({'nb_labels': [lb + 1 for lb in args['nb_patterns']]})
         else:
             args['nb_labels'] = args['nb_patterns'] + 1
         del args['nb_patterns']

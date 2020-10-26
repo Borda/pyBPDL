@@ -305,6 +305,7 @@ with open(os.path.join(PATH_ROOT, 'requirements.txt'), 'r') as fp:
 # TODO: better parse from package since the import name and package name may differ
 autodoc_mock_imports = MOCK_MODULES + ['yaml', 'sklearn', 'skimage', 'gco']  # , 'imsegm'
 
+
 # Resolve function
 # This function is used to populate the (source) links in the API
 def linkcode_resolve(domain, info):

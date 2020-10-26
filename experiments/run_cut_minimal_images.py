@@ -165,7 +165,7 @@ def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
     # create partial subset with image pathes
     list_img_paths_partial = [list_img_paths[i::nb_workers * LOAD_SUBSET_COEF]
                               for i in range(nb_workers * LOAD_SUBSET_COEF)]
-    list_img_paths_partial = [l for l in list_img_paths_partial if len(l) > 0]
+    list_img_paths_partial = [ls for ls in list_img_paths_partial if ls]
     mean_imgs = list(WrapExecuteSequence(load_mean_image,
                                          list_img_paths_partial,
                                          nb_workers=nb_workers,
