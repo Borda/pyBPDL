@@ -21,8 +21,9 @@ import re
 
 import m2r
 
+PATH_UP = os.path.join('..', '..')
 PATH_HERE = os.path.abspath(os.path.dirname(__file__))
-PATH_ROOT = os.path.abspath(os.path.join(PATH_HERE, '..', '..'))
+PATH_ROOT = os.path.abspath(os.path.join(PATH_HERE, PATH_UP))
 sys.path.insert(0, os.path.abspath(PATH_ROOT))
 
 import bpdl  # noqa: E402
@@ -53,8 +54,6 @@ with open('intro.rst', 'w') as fp:
 # export the READme
 with open(os.path.join(PATH_ROOT, 'README.md'), 'r') as fp:
     readme = fp.read()
-# remove all comments
-readme = re.sub(r'<!--[.\W\w\d]+-->', '', readme)
 # replace all paths to relative
 readme = readme.replace('](docs/source/', '](')
 # Todo: this seems to replace only once per line
@@ -66,7 +65,7 @@ readme = re.sub(r'(\[!\[.*\))', '', readme)
 readme = re.sub(r'(!\[.*.gif\))', '', readme)
 for dir_name in (os.path.basename(p) for p in glob.glob(os.path.join(PATH_ROOT, '*'))
                  if os.path.isdir(p)):
-    readme = readme.replace('](%s/' % dir_name, '](../../%s/' % dir_name)
+    readme = readme.replace('](%s/' % dir_name, '](%s/%s/' % (PATH_UP, dir_name))
 with open('readme.md', 'w') as fp:
     fp.write(readme)
 
