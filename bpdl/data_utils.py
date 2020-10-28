@@ -1,7 +1,7 @@
 """
 The basic module for generating synthetic images and also loading / exporting
 
-Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2020 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 
@@ -32,7 +32,7 @@ from skimage import draw, transform
 from imsegm.utilities.experiments import WrapExecuteSequence
 from imsegm.utilities.data_io import io_imread, io_imsave
 
-from .utilities import create_clean_folder
+from bpdl.utilities import create_clean_folder
 
 NB_WORKERS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
@@ -155,7 +155,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     >>> img = np.zeros((10, 15), dtype=int)
     >>> img[2:8, 3:7] = 1
     >>> img[6:, 9:] = 2
-    >>> image_deform_elastic(img, coef=0.3, grid_size=(5, 5), rand_seed=0)
+    >>> image_deform_elastic(img, coef=0.3, grid_size=(2, 2), rand_seed=0)
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -165,7 +165,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2]], dtype=uint8)
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
     >>> img = np.zeros((10, 15, 5), dtype=int)
     >>> img[2:8, 3:7, :] = 1
     >>> im = image_deform_elastic(img, coef=0.2, grid_size=(4, 5), rand_seed=0)

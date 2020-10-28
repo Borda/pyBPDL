@@ -1,7 +1,7 @@
 """
 The basic module for generating synthetic images and also loading / exporting
 
-Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2020 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import logging

@@ -1,7 +1,7 @@
 """
 Estimating the pattern dictionary module
 
-Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2020 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 # from __future__ import absolute_import
 import logging
@@ -12,8 +12,8 @@ from scipy import ndimage as ndi
 from skimage import morphology, measure, segmentation, filters
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 
-from .data_utils import image_deform_elastic, extract_image_largest_element
-from .pattern_weights import (
+from bpdl.data_utils import image_deform_elastic, extract_image_largest_element
+from bpdl.pattern_weights import (
     weights_label_atlas_overlap_threshold, convert_weights_binary2indexes)
 
 REINIT_PATTERN_COMPACT = True
@@ -403,7 +403,7 @@ def init_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     >>> atlas[3:7, 6:12] = 2
     >>> luts = np.array([[0, 1, 0]] * 99 + [[0, 0, 1]] * 99 + [[0, 1, 1]] * 99)
     >>> imgs = [lut[atlas] for lut in luts]
-    >>> init_atlas_sparse_pca(imgs, 2)
+    >>> init_atlas_sparse_pca(imgs, 2, bg_threshold=0.05)
     array([[0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
            [0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],
            [0, 2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0],

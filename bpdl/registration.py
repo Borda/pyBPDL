@@ -5,7 +5,7 @@ SEE:
 * http://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/
 * https://bic-berkeley.github.io/psych-214-fall-2016/dipy_registration.html
 
-Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2017-2020 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import logging
