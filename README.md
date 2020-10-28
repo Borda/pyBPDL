@@ -14,7 +14,7 @@
 
 We present a final step of image processing pipeline which accepts a large number of images, containing spatial expression information for thousands of genes in Drosophila imaginal discs. We assume that the gene activations are binary and can be expressed as a union of a small set of non-overlapping spatial patterns, yielding a compact representation of the spatial activation of each gene. This lends itself well to further automatic analysis, with the hope of discovering new biological relationships. Traditionally, the images were labelled manually, which was very time-consuming. The key part of our work is a binary pattern dictionary learning algorithm, that takes a set of binary images and determines a set of patterns, which can be used to represent the input images with a small error.
 
-![schema](docs/source/assets/pipeline_schema.png)
+![schema](assets/pipeline_schema.png)
 
 For the image segmentation and individual object detection, we used [Image segmentation toolbox](https://borda.github.io/pyImSegm/).
 
@@ -86,13 +86,13 @@ python experiments/run_dataset_generate.py \
 ```
 
 **Sample atlases**
-![atlases](docs/source/assets/synth_atlases.png)
+![atlases](assets/synth_atlases.png)
 
 **Sample binary images**
-![binary samples](docs/source/assets/synth_samples_binary.png)
+![binary samples](assets/synth_samples_binary.png)
 
 **Sample fuzzy images**
-![fuzzy samples](docs/source/assets/synth_samples_fuzzy.png)
+![fuzzy samples](assets/synth_samples_fuzzy.png)
 
 For adding Gaussian noise with given sigmas use following script:
 ```bash
@@ -101,7 +101,7 @@ python experiments/run_dataset_add_noise.py \
     -d apdDataset_vX --sigma 0.01 0.1 0.2
 ```
 
-![gauss noise](docs/source/assets/synth_gauss-noise.png)
+![gauss noise](assets/synth_gauss-noise.png)
  
 ### Real images
 
@@ -226,7 +226,7 @@ python experiments/run_reconstruction.py \
     --nb_workers 1 --visual
 ```
 
-![reconstruction](docs/source/assets/reconst_imag-disc.png)
+![reconstruction](assets/reconst_imag-disc.png)
 
 ### Aggregating results
 
