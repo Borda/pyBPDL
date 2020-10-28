@@ -20,14 +20,20 @@ references:
 
   test_coverage: &test_coverage
     run:
-      name: Testing and Formating
+      name: Testing and Coverage
       command: |
         unset DISPLAY
         python --version ; pip --version ; pwd ; ls -l
         python setup.py check -m -s
         mkdir results && mkdir test-reports
-        coverage run --source=bpdl,experiments -m py.test bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
-        flake8 . --ignore=E402,E731 --max-line-length=100
+        coverage run --source=bpdl,experiments -m pytest bpdl experiments -v --doctest-modules --junitxml=test-reports/pytest_junit.xml
+
+  formatting: &formatting
+    run:
+      name: Formating
+      command: |
+        pip install flake8
+        flake8 .
 
   dataset: &dataset
     run:
@@ -39,13 +45,16 @@ references:
        python experiments/run_dataset_add_noise.py -p ./data_images
 
   make_docs: &make_docs
-    run:
-      name: Make Documentation
-      command: |
-        sudo apt-get install pandoc
-        sudo pip install -r docs/requirements.txt
-        # sphinx-apidoc -o ./docs/source ./imsegm **/tests/* --force --follow-links
-        cd docs; make html
+   run:
+     name: Make Documentation
+     command: |
+       sudo apt-get install pandoc
+       sudo pip install -r docs/requirements.txt
+       # sphinx-apidoc -o ./docs/source ./imsegm **/test_* --force --follow-links
+       #python setup.py build_ext --inplace
+       cd docs
+       make html --debug --jobs 2 SPHINXOPTS="-W"
+       make latexpdf
 
   expt_pre: &expt_pre
       run:
@@ -73,6 +82,13 @@ references:
           python experiments/run_parse_experiments_result.py -i ./results -r results_NEW.csv
 
 jobs:
+  Formatting:
+    docker:
+      - image: circleci/python:3.6
+    steps: &steps_test
+      - checkout
+      - *formatting
+
   Py3-Tests:
     docker:
       - image: circleci/python:3.6
@@ -84,7 +100,6 @@ jobs:
 
     - *dataset
     - *test_coverage
-    - *make_docs
     # PASSING
     - run:
         name: Finalise
@@ -121,6 +136,21 @@ jobs:
       - image: circleci/python:2.7
     steps: *steps_expt
 
+  Build-Docs:
+    docker:
+      - image: circleci/python:3.6
+    steps:
+      - checkout
+      - run:
+          name: TexLive
+          command: |
+            sudo apt-get update -qq
+            sudo apt-get install -y imagemagick ghostscript latexmk texlive texlive-latex-recommended texlive-fonts-recommended texlive-formats-extra
+      # INSTALLATION
+      - *install_pips
+      # DOCUMENTATION
+      - *make_docs
+
 workflows:
   version: 2
   build:
@@ -129,3 +159,5 @@ workflows:
       - Py3-Tests
       - Py2-Experiments
       - Py3-Experiments
+      - Build-Docs
+      - Formatting

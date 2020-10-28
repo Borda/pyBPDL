@@ -1,20 +1,21 @@
 """
 The basic module for generating synthetic images and also loading / exporting
 
-Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2020 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 from __future__ import absolute_import
 
-import os
 import glob
-import logging
 # import warnings
 import itertools
+import logging
 import multiprocessing as mproc
+import os
 from functools import partial
 
 # to suppress all visual, has to be on the beginning
 import matplotlib
+
 if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
     print('No display found. Using non-interactive Agg backend.')
     # https://matplotlib.org/faq/usage_faq.html
@@ -31,7 +32,7 @@ from skimage import draw, transform
 from imsegm.utilities.experiments import WrapExecuteSequence
 from imsegm.utilities.data_io import io_imread, io_imsave
 
-from .utilities import create_clean_folder
+from bpdl.utilities import create_clean_folder
 
 NB_WORKERS = mproc.cpu_count()
 IMAGE_SIZE_2D = (128, 128)
@@ -154,7 +155,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     >>> img = np.zeros((10, 15), dtype=int)
     >>> img[2:8, 3:7] = 1
     >>> img[6:, 9:] = 2
-    >>> image_deform_elastic(img, coef=0.3, grid_size=(5, 5), rand_seed=0)
+    >>> image_deform_elastic(img, coef=0.3, grid_size=(2, 2), rand_seed=0)
     array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -164,7 +165,7 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 1, 1, 1, 1, 0, 0, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 0],
-           [0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2]], dtype=uint8)
+           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], dtype=uint8)
     >>> img = np.zeros((10, 15, 5), dtype=int)
     >>> img[2:8, 3:7, :] = 1
     >>> im = image_deform_elastic(img, coef=0.2, grid_size=(4, 5), rand_seed=0)
@@ -734,19 +735,19 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     (5, 10)
     >>> np.round(im.astype(float), 1).tolist()  # doctest: +NORMALIZE_WHITESPACE
     [[0.6, 0.7, 0.6, 0.6, 0.4, 0.7, 0.4, 0.9, 1.0, 0.4],
-     [0.8, 0.5, 0.6, 0.9, 0.1, 0.1, 0.0, 0.8, 0.8, 0.9],
-     [1.0, 0.8, 0.5, 0.8, 0.1, 0.7, 0.1, 1.0, 0.5, 0.4],
-     [0.3, 0.8, 0.5, 0.6, 0.0, 0.6, 0.6, 0.6, 1.0, 0.7],
-     [0.4, 0.4, 0.7, 0.1, 0.7, 0.7, 0.2, 0.1, 0.3, 0.4]]
+    [0.8, 0.5, 0.6, 0.9, 0.1, 0.1, 0.0, 0.8, 0.8, 0.9],
+    [1.0, 0.8, 0.5, 0.8, 0.1, 0.7, 0.1, 1.0, 0.5, 0.4],
+    [0.3, 0.8, 0.5, 0.6, 0.0, 0.6, 0.6, 0.6, 1.0, 0.7],
+    [0.4, 0.4, 0.7, 0.1, 0.7, 0.7, 0.2, 0.1, 0.3, 0.4]]
     >>> img = np.random.randint(0, 9, [5, 10])
     >>> path_img = export_image('.', img, 'testing-image', stretch_range=False)
     >>> name, im = load_image(path_img, fuzzy_val=False)
     >>> im.tolist()  # doctest: +NORMALIZE_WHITESPACE
     [[4, 4, 6, 4, 4, 3, 4, 4, 8, 4],
-     [3, 7, 5, 5, 0, 1, 5, 3, 0, 5],
-     [0, 1, 2, 4, 2, 0, 3, 2, 0, 7],
-     [5, 0, 2, 7, 2, 2, 3, 3, 2, 3],
-     [4, 1, 2, 1, 4, 6, 8, 2, 3, 0]]
+    [3, 7, 5, 5, 0, 1, 5, 3, 0, 5],
+    [0, 1, 2, 4, 2, 0, 3, 2, 0, 7],
+    [5, 0, 2, 7, 2, 2, 3, 3, 2, 3],
+    [4, 1, 2, 1, 4, 6, 8, 2, 3, 0]]
     >>> os.remove(path_img)
 
     Image - TIFF
@@ -1135,7 +1136,7 @@ def dataset_load_weights(path_base, name_csv=CSV_NAME_WEIGHTS, img_names=None):
         encoding = np.array([[int(x) for x in c.split(';')] for c in coding])
     # the new encoding with pattern names
     else:
-        encoding = df.as_matrix()
+        encoding = df.values
     return np.array(encoding)
 
 

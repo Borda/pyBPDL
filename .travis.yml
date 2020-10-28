@@ -18,9 +18,9 @@ sudo: false
 python:
   - 2.7
   # - 3.4  # will be deprecated for pandas
-  - 3.5
   - 3.6
   - 3.7
+  - 3.8
 
 # See http://docs.travis-ci.com/user/caching/#pip-cache
 cache: pip

@@ -17,11 +17,6 @@ import types
 import collections
 import multiprocessing as mproc
 
-import matplotlib
-if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'agg':
-    print('No display found. Using non-interactive Agg backend.')
-    matplotlib.use('Agg')
-
 import numpy as np
 import pandas as pd
 from sklearn import metrics
@@ -198,7 +193,7 @@ def parse_arg_params(parser):
 
     if 'nb_patterns' in args:
         if is_list_like(args['nb_patterns']):
-            args.update({'nb_labels': [l + 1 for l in args['nb_patterns']]})
+            args.update({'nb_labels': [lb + 1 for lb in args['nb_patterns']]})
         else:
             args['nb_labels'] = args['nb_patterns'] + 1
         del args['nb_patterns']
@@ -245,7 +240,7 @@ def load_list_img_names(path_csv, path_in=''):
     assert os.path.exists(path_csv), '%s' % path_csv
     df = pd.read_csv(path_csv, index_col=False, header=None)
     assert len(df.columns) == 1, 'assume just single column'
-    list_names = df.as_matrix()[:, 0].tolist()
+    list_names = df.values[:, 0].tolist()
     # if the input path was set and the list are just names, no complete paths
     if os.path.exists(path_in) and not all(os.path.exists(p) for p in list_names):
         # to each image name add the input path

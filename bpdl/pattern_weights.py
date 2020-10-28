@@ -1,7 +1,7 @@
 """
 Estimating pattern weight vector for each image
 
-Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2015-2020 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 # from __future__ import absolute_import

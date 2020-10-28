@@ -5,21 +5,21 @@ SEE:
 * http://insightsoftwareconsortium.github.io/SimpleITK-Notebooks/
 * https://bic-berkeley.github.io/psych-214-fall-2016/dipy_registration.html
 
-Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
+Copyright (C) 2017-2020 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import time
 import logging
+import time
 # import multiprocessing as mproc
 from functools import partial
 
 import numpy as np
-from scipy import ndimage, interpolate
 # from scipy.ndimage import filters
 from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
 from dipy.align.metrics import SSDMetric
 from imsegm.utilities.experiments import WrapExecuteSequence, nb_workers
+from scipy import ndimage, interpolate
 
 NB_WORKERS = nb_workers(0.8)
 
@@ -93,7 +93,6 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
            [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 0.,  0.,  0.,  0.,  1.,  1.,  1.,  1.,  1.,  1.],
            [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]])
-    >>> np.round(img_warp - img_sense, 1)  # doctest: +SKIP
     >>> img_sense = np.zeros(img_ref.shape, dtype=int)
     >>> img_sense[4:9, 3:10] = 1
     >>> img_sense

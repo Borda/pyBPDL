@@ -8,8 +8,8 @@ Contents
    :maxdepth: 2
 
    readme
-   bpdl
-   experiments
+   api/bpdl
+   api/experiments
    examples
 
 Indices and tables

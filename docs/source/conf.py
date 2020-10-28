@@ -17,32 +17,16 @@ import sys
 import glob
 import shutil
 import inspect
+import re
 
 import m2r
 
-PATH_ROOT = os.path.join('..', '..')
+PATH_UP = os.path.join('..', '..')
 PATH_HERE = os.path.abspath(os.path.dirname(__file__))
+PATH_ROOT = os.path.abspath(os.path.join(PATH_HERE, PATH_UP))
 sys.path.insert(0, os.path.abspath(PATH_ROOT))
 
 import bpdl  # noqa: E402
-
-# -- Project documents -------------------------------------------------------
-
-# export the documentation
-with open('intro.rst', 'w') as fp:
-    intro = bpdl.__long_doc__.replace(os.linesep + ' ', '')
-    fp.write(m2r.convert(intro))
-    # fp.write(bpdl.__doc__)
-
-# export the READme
-with open(os.path.join(PATH_ROOT, 'README.md'), 'r') as fp:
-    readme = fp.read()
-# replace all paths to relative
-for ndir in (os.path.basename(p) for p in glob.glob(os.path.join(PATH_ROOT, '*'))
-             if os.path.isdir(p)):
-    readme = readme.replace('](%s/' % ndir, '](%s/%s/' % (PATH_ROOT, ndir))
-with open('readme.md', 'w') as fp:
-    fp.write(readme)
 
 # -- Project information -----------------------------------------------------
 
@@ -55,12 +39,42 @@ version = bpdl.__version__
 # The full version, including alpha/beta/rc tags
 release = bpdl.__version__
 
+# Options for the linkcode extension
+# ----------------------------------
+github_user = 'Borda'
+github_repo = 'pyBPDL'
+
+# -- Project documents -------------------------------------------------------
+
+# export the documentation
+with open('intro.rst', 'w') as fp:
+    intro = bpdl.__long_doc__.replace(os.linesep + ' ', '')
+    fp.write(m2r.convert(intro))
+
+# export the READme
+with open(os.path.join(PATH_ROOT, 'README.md'), 'r') as fp:
+    readme = fp.read()
+# replace all paths to relative
+readme = readme.replace('](docs/source/', '](')
+# Todo: this seems to replace only once per line
+readme = re.sub(r' \[(.*)\]\((?!http)(.*)\)',
+                r' [\1](https://github.com/%s/%s/blob/master/\2)' % (github_user, github_repo),
+                readme)
+# TODO: temp fix removing SVG badges and GIF, because PDF cannot show them
+readme = re.sub(r'(\[!\[.*\))', '', readme)
+readme = re.sub(r'(!\[.*.gif\))', '', readme)
+for dir_name in (os.path.basename(p) for p in glob.glob(os.path.join(PATH_ROOT, '*'))
+                 if os.path.isdir(p)):
+    readme = readme.replace('](%s/' % dir_name, '](%s/%s/' % (PATH_UP, dir_name))
+with open('readme.md', 'w') as fp:
+    fp.write(readme)
+
 
 # -- General configuration ---------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
 
-needs_sphinx = '1.4'
+needs_sphinx = '2.4'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -75,6 +89,7 @@ extensions = [
     'sphinx.ext.linkcode',
     'sphinx.ext.napoleon',
     'sphinx.ext.autosummary',
+    # 'sphinxcontrib.rsvgconverter'
     'recommonmark',
     # 'm2r',
     'nbsphinx',
@@ -109,7 +124,14 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ['*.run_*', '*.show_*', '*.test_*']
+exclude_patterns = [
+    '*.run_*',
+    '*.show_*',
+    '*.test_*',
+    'api/modules.rst',
+    '*/overview_ovary_user-*.ipynb',
+    '*/regist-image-ptn_itk_*.ipynb',
+]
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
@@ -131,7 +153,7 @@ html_theme = 'nature'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []  # '_static'
 
 # Custom sidebar templates, must be a dictionary that maps document names
 # to template names.
@@ -237,8 +259,13 @@ PACKAGES = [bpdl.__name__, 'experiments']
 
 def run_apidoc(_):
     for pkg in PACKAGES:
-        argv = ['-e', '-o', PATH_HERE, os.path.join(PATH_HERE, PATH_ROOT, pkg),
-                'run_*', 'show_*', 'test_*', '--force']
+        argv = ['-e',
+                '-o', os.path.join(PATH_HERE, 'api'),
+                os.path.join(PATH_ROOT, pkg),
+                os.path.join(PATH_ROOT, 'experiments', 'run_*'),
+                os.path.join(PATH_ROOT, 'experiments', 'show_*'),
+                os.path.join(PATH_ROOT, 'experiments', 'test_*'),
+                '--force']
         try:
             # Sphinx 1.7+
             from sphinx.ext import apidoc
@@ -280,13 +307,7 @@ with open(os.path.join(PATH_ROOT, 'requirements.txt'), 'r') as fp:
             MOCK_MODULES.append(pkg.rstrip())
 
 # TODO: better parse from package since the import name and package name may differ
-autodoc_mock_imports = MOCK_MODULES + ['yaml', 'sklearn', 'skimage', 'gco', 'imsegm']
-
-
-# Options for the linkcode extension
-# ----------------------------------
-github_user = 'Borda'
-github_repo = 'pyBPDL'
+autodoc_mock_imports = MOCK_MODULES + ['yaml', 'sklearn', 'skimage', 'gco']  # , 'imsegm'
 
 
 # Resolve function
@@ -300,7 +321,7 @@ def linkcode_resolve(domain, info):
             obj = getattr(obj, part)
         fname = inspect.getsourcefile(obj)
         # https://github.com/rtfd/readthedocs.org/issues/5735
-        if any([s in fname for s in ('readthedocs', 'checkouts')]):
+        if any([s in fname for s in ('readthedocs', 'rtfd', 'checkouts')]):
             path_top = os.path.abspath(os.path.join('..', '..', '..'))
             fname = os.path.relpath(fname, start=path_top)
         else:
@@ -318,6 +339,10 @@ def linkcode_resolve(domain, info):
     # import subprocess
     # tag = subprocess.Popen(['git', 'rev-parse', 'HEAD'], stdout=subprocess.PIPE,
     #                        universal_newlines=True).communicate()[0][:-1]
+    branch = filename.split('/')[0]
+    # do mapping from latest tags to master
+    branch = {'latest': 'master', 'stable': 'master'}.get(branch, branch)
+    filename = '/'.join([branch] + filename.split('/')[1:])
     return "https://github.com/%s/%s/blob/%s" \
            % (github_user, github_repo, filename)
 

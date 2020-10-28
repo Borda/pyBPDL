@@ -39,7 +39,7 @@ def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False,
     :param list(ndarray) fit_results:
     :param float max_bg_ration: reset BG threshold if the background is larger
     :param bool force_bg: force too small components as background
-    :return ndarray : np.array<height, width>
+    :return ndarray: np.array<height, width>
     """
     ptn_used = np.sum(np.abs(fit_results), axis=0) > 0
     # filter just used patterns

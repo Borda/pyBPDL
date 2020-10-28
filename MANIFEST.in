@@ -32,6 +32,8 @@ recursive-include figures *.png
 # Include the sample data
 recursive-include data_images *.yml *.yaml
 
+recursive-include assets *.png
+
 prune .git
 prune venv
 prune build
