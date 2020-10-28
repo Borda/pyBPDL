@@ -1,6 +1,6 @@
 # Binary Pattern Dictionary Learning
 
-[![Build Status](https://travis-ci.org/Borda/pyBPDL.svg?branch=master)](https://travis-ci.org/Borda/pyBPDL)
+[![Build Status](https://travis-ci.com/Borda/pyBPDL.svg?branch=master)](https://travis-ci.com/Borda/pyBPDL)
 [![codecov](https://codecov.io/gh/Borda/pyBPDL/branch/master/graph/badge.svg?token=Bgklw7uaB0)](https://codecov.io/gh/Borda/pyBPDL)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/5f4c0dfac2b4444a935d587f663ac9c1)](https://www.codacy.com/app/Borda/pyBPDL?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Borda/pyBPDL&amp;utm_campaign=Badge_Grade)
 [![CircleCI](https://circleci.com/gh/Borda/pyBPDL.svg?style=svg&circle-token=0b3f34bedf54747d32becd2f13cd0da71fef7548)](https://circleci.com/gh/Borda/pyBPDL)
