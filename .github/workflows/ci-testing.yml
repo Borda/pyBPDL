@@ -35,9 +35,9 @@ jobs:
     - name: Set min. dependencies
       if: matrix.requires == 'minimal'
       run: |
-        for fpath in ('requirements.txt', 'tests/requirements.txt'):
-            req = open(fpath).read().replace('>=', '==')
-            open(fpath, 'w').write(req)
+        fpath = 'requirements.txt':
+        req = open(fpath).read().replace('>=', '==')
+        open(fpath, 'w').write(req)
       shell: python
 
     # Note: This uses an internal pip API and may not always work
@@ -70,7 +70,7 @@ jobs:
       run: |
         python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
         # run tests with coverage
-        python -m bpdl imsegm experiments --cov=bpdl --durations=25 --junitxml=junit/test-results-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.requires }}.xml
+        python -m pytest bpdl experiments --cov=bpdl --durations=25 --junitxml=junit/test-results-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.requires }}.xml
 
     - name: Upload pytest test results
       uses: actions/upload-artifact@master
