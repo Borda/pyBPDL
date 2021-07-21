@@ -35,7 +35,7 @@ jobs:
     - name: Set min. dependencies
       if: matrix.requires == 'minimal'
       run: |
-        fpath = 'requirements.txt':
+        fpath = 'requirements.txt'
         req = open(fpath).read().replace('>=', '==')
         open(fpath, 'w').write(req)
       shell: python
