@@ -155,9 +155,9 @@ workflows:
   version: 2
   build:
     jobs:
-      - Py2-Tests
-      - Py3-Tests
+      #- Py2-Tests
+      #- Py3-Tests
       - Py2-Experiments
       - Py3-Experiments
-      - Build-Docs
-      - Formatting
+      #- Build-Docs
+      #- Formatting
