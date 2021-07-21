@@ -61,6 +61,7 @@ jobs:
         pip --version
         pip install wheel "numpy<1.17" --quiet
         pip install --requirement requirements.txt --upgrade --prefer-binary
+        pip install coverage "pytest>4.0" "pytest-cov"
         pip list
       shell: bash
 
