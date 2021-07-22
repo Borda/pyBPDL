@@ -1,17 +1,17 @@
-https://github.com/Borda/pyImSegm/archive/master.zip#egg=ImSegm
-gco-wrapper >= 3.0.8
-numpy >= 1.13.3
-scipy >= 1.0
-pandas >= 0.17.1
-six >= 1.7.3
-pillow >= 4.0, != 7.*, !=8.1.*  # fail loading JPG images
-matplotlib >= 2.1.1
-scikit-learn >= 0.18.1
-scikit-image >= 0.12.1
+numpy > 1.13.3
+scipy > 1.0
+pandas > 0.17.1
+pillow > 4.0, != 7.*, !=8.1.*  # fail loading JPG images
+matplotlib > 2.1.1
+scikit-learn > 0.18.1
+scikit-image > 0.12.1
 tqdm >= 4.7.4
-ipython == 4.2.0
+# ipython == 4.2.0
 # numba >= 0.22.1
+gco-wrapper >= 3.0.8
+# FixME: use https://github.com/Borda/pyImSegm/archive/master.zip
+ImSegm @ https://github.com/Borda/pyImSegm/archive/devel.zip
 nibabel >= 2.1.0
 nilearn >= 0.3.1
-dipy >=0.11.0
+dipy >= 0.11.0
 SimpleITK >= 1.0.1

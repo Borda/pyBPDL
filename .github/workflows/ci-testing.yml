@@ -6,6 +6,9 @@ on:  # Trigger the workflow on push or pull request, but only for the master bra
     branches: [ master ]
   pull_request: {}
 
+env:
+  DISPLAY: ""
+
 jobs:
   pytest:
     runs-on: ${{ matrix.os }}
@@ -65,11 +68,12 @@ jobs:
         pip list
       shell: bash
 
-    - name: Tests pkg
-      env:
-        DISPLAY: ""
+    - name: Prepare dataset
       run: |
         python experiments/run_dataset_generate.py --nb_samples 25 --nb_patterns 2 --image_size 64 64
+
+    - name: Tests - pytest
+      run: |
         # run tests with coverage
         python -m pytest bpdl experiments --cov=bpdl --durations=25 --junitxml=junit/test-results-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.requires }}.xml
 

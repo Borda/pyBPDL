@@ -19,17 +19,16 @@ jobs:
 
       - name: Install dependenies
         run: |
-          pip install --upgrade setuptools wheel check-manifest twine==3.2
+          pip install --upgrade setuptools wheel check-manifest "twine==3.2"
 
       - name: Check package
         run: |
           check-manifest
-          python setup.py check --metadata --strict
-          python setup.py install --dry-run --user
+          python setup.py check --metadata
 
       - name: Create package
         run: |
-          python setup.py sdist
+          python setup.py sdist bdist_wheel
 
       - name: Verify package
         run: |
@@ -51,10 +50,11 @@ jobs:
 
       - name: Create package
         run: |
-          python setup.py sdist
+          pip install wheel setuptools --upgrade
+          python setup.py sdist bdist_wheel
 
       - name: Install package
         run: |
           cd dist
-          pip install *
+          pip install *.whl
           cd .. & python -c "import imsegm ; print(imsegm.__version__)"
