@@ -36,8 +36,7 @@ def compare_atlas_rnd_pairs(a1, a2, rand_seed=None):
     logging.debug('comparing two atlases of shapes %r <-> %r', a1.shape, a2.shape)
     assert a1.shape == a2.shape, 'shapes: %r and %r' % (a1.shape, a2.shape)
     np.random.seed(rand_seed)
-    logging.debug('unique labels are %r and %r',
-                  np.unique(a1).tolist(), np.unique(a2).tolist())
+    logging.debug('unique labels are %r and %r', np.unique(a1).tolist(), np.unique(a2).tolist())
     matrix_x, matrix_y = np.meshgrid(range(a1.shape[0]), range(a1.shape[1]))
     vec_x, vec_y = matrix_x.flatten(), matrix_y.flatten()
     vec_x_perm = np.random.permutation(vec_x)
@@ -101,8 +100,7 @@ def compute_labels_overlap_matrix(seg1, seg2):
            [ 2,  0,  0, 12],
            [ 9,  6,  0,  0]])
     """
-    logging.debug('computing overlap of two seg_pipe of shapes %r <-> %r',
-                  seg1.shape, seg2.shape)
+    logging.debug('computing overlap of two seg_pipe of shapes %r <-> %r', seg1.shape, seg2.shape)
     assert seg1.shape == seg2.shape, 'shapes: %r and %r' % (seg1.shape, seg2.shape)
     maxims = [np.max(seg1) + 1, np.max(seg2) + 1]
     overlap = np.zeros(maxims, dtype=int)
@@ -354,8 +352,7 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
     names = ['f1', 'precision', 'recall', 'support']
     for avg in metric_averages:
         try:
-            mtr = metrics.precision_recall_fscore_support(y_true, y_pred,
-                                                          average=avg)
+            mtr = metrics.precision_recall_fscore_support(y_true, y_pred, average=avg)
             res = dict(zip(['{}_{}'.format(n, avg) for n in names], mtr))
         except Exception:
             logging.exception('metrics.precision_recall_fscore_support')

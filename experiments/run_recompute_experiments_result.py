@@ -27,8 +27,7 @@ import pandas as pd
 import matplotlib.pylab as plt
 from PIL import Image
 from skimage.segmentation import relabel_sequential
-from imsegm.utilities.experiments import (
-    WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
+from imsegm.utilities.experiments import (WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import DIR_NAME_DICTIONARY, dataset_compose_atlas, export_image
@@ -81,21 +80,18 @@ def export_atlas_both(atlas_gt, atlas, path_out_img, fig_size=FIGURE_SIZE):
     discrete_cmap = plt.cm.get_cmap('jet', max_label + 1)
 
     axarr[0].set_title('GroundTruth atlas')
-    im = axarr[0].imshow(atlas_gt, interpolation='nearest', cmap=discrete_cmap,
-                         vmin=0, vmax=max_label)
+    im = axarr[0].imshow(atlas_gt, interpolation='nearest', cmap=discrete_cmap, vmin=0, vmax=max_label)
     fig.colorbar(im, ax=axarr[0], ticks=np.arange(max_label + 1))
 
     axarr[1].set_title('estimated atlas')
-    im = axarr[1].imshow(atlas, interpolation='nearest', cmap=discrete_cmap,
-                         vmin=0, vmax=max_label)
+    im = axarr[1].imshow(atlas, interpolation='nearest', cmap=discrete_cmap, vmin=0, vmax=max_label)
     fig.colorbar(im, ax=axarr[1], ticks=np.arange(max_label + 1))
 
     for ax in axarr:
         ax.axis('off')
         ax.axes.get_xaxis().set_ticklabels([])
         ax.axes.get_yaxis().set_ticklabels([])
-    fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01,
-                        wspace=0.02, hspace=0.02)
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.99, bottom=0.01, wspace=0.02, hspace=0.02)
 
     path_out_img = os.path.splitext(path_out_img)[0] + '-both.png'
     fig.savefig(path_out_img)
@@ -176,8 +172,7 @@ def parse_experiments(params):
     assert os.path.exists(params['path']), 'missing "%s"' % params['path']
     nb_workers = params.get('nb_workers', NB_WORKERS)
 
-    path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
-                 if os.path.isdir(p)]
+    path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*')) if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)

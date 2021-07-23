@@ -24,14 +24,14 @@ from sklearn import metrics
 import matplotlib.pylab as plt
 from imsegm.utilities.data_io import update_path
 from imsegm.utilities.experiments import (
-    WrapExecuteSequence, string_dict, load_config_yaml, extend_list_params,
-    Experiment as ExperimentBase)
+    WrapExecuteSequence, string_dict, load_config_yaml, extend_list_params, Experiment as ExperimentBase
+)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import (
-    NB_BIN_PATTERNS, DIR_MANE_SYNTH_DATASET, GAUSS_NOISE, DIR_NAME_DICTIONARY, export_image,
-    dataset_compose_atlas, dataset_load_weights, dataset_load_images, find_images,
-    format_table_weights)
+    NB_BIN_PATTERNS, DIR_MANE_SYNTH_DATASET, GAUSS_NOISE, DIR_NAME_DICTIONARY, export_image, dataset_compose_atlas,
+    dataset_load_weights, dataset_load_images, find_images, format_table_weights
+)
 from bpdl.utilities import convert_numerical, is_list_like
 from bpdl.pattern_atlas import reconstruct_samples
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
@@ -52,7 +52,6 @@ NAME_ATLAS = 'atlas{}'
 NAME_ENCODING = 'encoding{}.csv'
 EVAL_COLUMNS = ('atlas ARS', 'reconst. diff GT', 'reconst. diff Input', 'time')
 EVAL_COLUMNS_START = ('atlas', 'reconst', 'time')
-
 
 # fixing ImportError: No module named 'copy_reg' for Python3
 if sys.version_info.major == 2:
@@ -146,33 +145,56 @@ def create_args_parser(dict_params, methods):
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--path_in', type=str, required=True,
-                        help='path to the folder with input image dataset',
-                        default=dict_params.get('path_in', ''))
-    parser.add_argument('-o', '--path_out', type=str, required=True,
-                        help='path to the output with experiment results',
-                        default=dict_params.get('path_out', ''))
-    parser.add_argument('-t', '--type', type=str, required=False,
-                        help='switch between real and synth. images',
-                        default='real', choices=['real', 'synth'])
-    parser.add_argument('-n', '--name', type=str, required=False,
-                        help='specific name for this experiment', default=None)
-    parser.add_argument('-d', '--dataset', type=str, required=False,
-                        nargs='+', help='names of used datasets', default=None)
-    parser.add_argument('-p', '--nb_patterns', type=int, required=False,
-                        nargs='+', help='numbers of estimated patterns', default=None)
-    parser.add_argument('--nb_workers', type=int, required=False, default=NB_WORKERS,
-                        help='number of processes running in parallel')
-    parser.add_argument('--method', type=str, required=False, nargs='+',
-                        default=None, help='possible APD methods', choices=methods)
-    parser.add_argument('--list_images', type=str, required=False, default=None,
-                        help='CSV file with list of images, supress `path_in`')
-    parser.add_argument('-c', '--path_config', type=str, required=False,
-                        help='path to YAML configuration file', default=None)
-    parser.add_argument('--debug', required=False, action='store_true',
-                        help='run in debug mode', default=False)
-    parser.add_argument('--unique', required=False, action='store_true',
-                        help='use time stamp for each experiment', default=False)
+    parser.add_argument(
+        '-i',
+        '--path_in',
+        type=str,
+        required=True,
+        help='path to the folder with input image dataset',
+        default=dict_params.get('path_in', '')
+    )
+    parser.add_argument(
+        '-o',
+        '--path_out',
+        type=str,
+        required=True,
+        help='path to the output with experiment results',
+        default=dict_params.get('path_out', '')
+    )
+    parser.add_argument(
+        '-t',
+        '--type',
+        type=str,
+        required=False,
+        help='switch between real and synth. images',
+        default='real',
+        choices=['real', 'synth']
+    )
+    parser.add_argument(
+        '-n', '--name', type=str, required=False, help='specific name for this experiment', default=None
+    )
+    parser.add_argument(
+        '-d', '--dataset', type=str, required=False, nargs='+', help='names of used datasets', default=None
+    )
+    parser.add_argument(
+        '-p', '--nb_patterns', type=int, required=False, nargs='+', help='numbers of estimated patterns', default=None
+    )
+    parser.add_argument(
+        '--nb_workers', type=int, required=False, default=NB_WORKERS, help='number of processes running in parallel'
+    )
+    parser.add_argument(
+        '--method', type=str, required=False, nargs='+', default=None, help='possible APD methods', choices=methods
+    )
+    parser.add_argument(
+        '--list_images', type=str, required=False, default=None, help='CSV file with list of images, supress `path_in`'
+    )
+    parser.add_argument(
+        '-c', '--path_config', type=str, required=False, help='path to YAML configuration file', default=None
+    )
+    parser.add_argument('--debug', required=False, action='store_true', help='run in debug mode', default=False)
+    parser.add_argument(
+        '--unique', required=False, action='store_true', help='use time stamp for each experiment', default=False
+    )
     return parser
 
 
@@ -223,8 +245,7 @@ def parse_params(default_params, methods):
         logging.debug(string_dict(d_config, desc='LOADED CONFIG:'))
 
         # skip al keys with path or passed from arg params
-        d_update = {k: d_config[k] for k in d_config
-                    if k not in arg_params or arg_params[k] is None}
+        d_update = {k: d_config[k] for k in d_config if k not in arg_params or arg_params[k] is None}
         logging.debug(string_dict(d_update, desc='TO BE UPDATED:'))
         params.update(d_update)
 
@@ -291,7 +312,6 @@ def load_list_img_names(path_csv, path_in=''):
 #     save_config_yaml(path_config, params)
 #     return params
 
-
 # def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
 #     """ set the logger to file
 #
@@ -324,8 +344,7 @@ def generate_conf_suffix(d_params):
     '_my-Param=15_new-Param=abc'
     """
     suffix = '_'
-    suffix += '_'.join('{}={}'.format(k.replace('_', '-'), d_params[k])
-                       for k in sorted(d_params) if k != 'param_idx')
+    suffix += '_'.join('{}={}'.format(k.replace('_', '-'), d_params[k]) for k in sorted(d_params) if k != 'param_idx')
     return suffix
 
 
@@ -393,9 +412,7 @@ class Experiment(ExperimentBase):
             if isinstance(dataset_name, list):
                 dataset_name = dataset_name[0]
             last_dir = os.path.basename(params['path_in'])
-            params['name'] = '{}_{}_{}'.format(params.get('type', ''),
-                                               last_dir,
-                                               dataset_name)
+            params['name'] = '{}_{}_{}'.format(params.get('type', ''), last_dir, dataset_name)
 
         params['method'] = repr(self.__class__.__name__)
         if not os.path.exists(params['path_out']):
@@ -419,8 +436,7 @@ class Experiment(ExperimentBase):
         path_atlas = os.path.join(self.params.get('path_in'), DIR_NAME_DICTIONARY)
         self._gt_atlas = dataset_compose_atlas(path_atlas)
         if self.params.get('list_images') is not None:
-            img_names = [os.path.splitext(os.path.basename(p))[0]
-                         for p in self._list_img_paths]
+            img_names = [os.path.splitext(os.path.basename(p))[0] for p in self._list_img_paths]
             self._gt_encoding = dataset_load_weights(self.path_data, img_names=img_names)
         else:
             self._gt_encoding = dataset_load_weights(self.params.get('path_in'))
@@ -430,7 +446,8 @@ class Experiment(ExperimentBase):
     def _load_images(self):
         """ load image data """
         self._images, self._image_names = dataset_load_images(
-            self._list_img_paths, nb_workers=self.params.get('nb_workers', 1))
+            self._list_img_paths, nb_workers=self.params.get('nb_workers', 1)
+        )
         shapes = [im.shape for im in self._images]
         assert len(set(shapes)) == 1, 'multiple image sizes found: %r' \
                                       % collections.Counter(shapes)
@@ -441,16 +458,14 @@ class Experiment(ExperimentBase):
         :param bool gt: search for the Ground Truth using standard names
         """
         logging.info('loading required data')
-        self.path_data = os.path.join(self.params.get('path_in'),
-                                      self.params.get('dataset'))
+        self.path_data = os.path.join(self.params.get('path_in'), self.params.get('dataset'))
         # load according a csv list
         if self.params.get('list_images') is not None:
             # copy the list of selected images
             path_csv = os.path.expanduser(self.params.get('list_images'))
             if not os.path.exists(path_csv):
                 path_csv = os.path.abspath(os.path.join(self.path_data, path_csv))
-                shutil.copy(path_csv, os.path.join(self.params['path_exp'],
-                                                   os.path.basename(path_csv)))
+                shutil.copy(path_csv, os.path.join(self.params['path_exp'], os.path.basename(path_csv)))
             self._list_img_paths = load_list_img_names(path_csv)
         else:
             self._list_img_paths = find_images(self.path_data)
@@ -495,8 +510,7 @@ class Experiment(ExperimentBase):
             logging.info('iterate over %i configurations', len(self.iter_params))
             nb_workers = self.params.get('nb_workers', 1)
 
-            for detail in WrapExecuteSequence(self._perform_once, self.iter_params,
-                                              nb_workers, desc='experiments'):
+            for detail in WrapExecuteSequence(self._perform_once, self.iter_params, nb_workers, desc='experiments'):
                 self.df_results = self.df_results.append(detail, ignore_index=True)
                 logging.debug('partial results: %r', detail)
         else:
@@ -543,14 +557,12 @@ class Experiment(ExperimentBase):
             extras = None
             detail['time'] = -0.
 
-        logging.debug('estimated atlas of size %r and labels %r', atlas.shape,
-                      np.unique(atlas).tolist())
+        logging.debug('estimated atlas of size %r and labels %r', atlas.shape, np.unique(atlas).tolist())
 
         weights_all = [weights_image_atlas_overlap_major(img, atlas) for img in self._images]
         weights_all = np.array(weights_all)
 
-        logging.debug('estimated weights of size %r and summing %r',
-                      weights_all.shape, np.sum(weights_all, axis=0))
+        logging.debug('estimated weights of size %r and summing %r', weights_all.shape, np.sum(weights_all, axis=0))
 
         self._export_atlas(atlas, suffix=detail['name_suffix'])
         self._export_coding(weights_all, suffix=detail['name_suffix'])
@@ -569,8 +581,7 @@ class Experiment(ExperimentBase):
         """
         n_img = NAME_ATLAS.format(suffix)
         export_image(self.params.get('path_exp'), atlas, n_img, stretch_range=False)
-        path_atlas_rgb = os.path.join(self.params.get('path_exp'),
-                                      n_img + '_rgb.png')
+        path_atlas_rgb = os.path.join(self.params.get('path_exp'), n_img + '_rgb.png')
         logging.debug('exporting RGB atlas: %s', path_atlas_rgb)
         plt.imsave(path_atlas_rgb, atlas, cmap=plt.cm.jet)
 
@@ -584,8 +595,7 @@ class Experiment(ExperimentBase):
             self._image_names = [str(i) for i in range(weights.shape[0])]
         df = format_table_weights(self._image_names, weights)
 
-        path_csv = os.path.join(self.params.get('path_exp'),
-                                NAME_ENCODING.format(suffix))
+        path_csv = os.path.join(self.params.get('path_exp'), NAME_ENCODING.format(suffix))
         logging.debug('exporting encoding: %s', path_csv)
         df.to_csv(path_csv)
 
@@ -644,10 +654,7 @@ class Experiment(ExperimentBase):
         """
         images_rct = reconstruct_samples(atlas, weights)
         tag, diff = self._evaluate_reconstruct(images_rct)
-        stat = {
-            'atlas ARS': self.__evaluate_atlas(atlas),
-            'reconst. diff %s' % tag: diff
-        }
+        stat = {'atlas ARS': self.__evaluate_atlas(atlas), 'reconst. diff %s' % tag: diff}
         return stat
 
     @classmethod
@@ -671,8 +678,7 @@ class Experiment(ExperimentBase):
         if hasattr(self, 'df_results') and not self.df_results.empty:
             df_stat = self.df_results.describe()
             # df_stat = df_stat[[c for c in EVAL_COLUMNS if c in df_stat.columns]]
-            cols = [c for c in df_stat.columns
-                    if any([c.startswith(cc) for cc in EVAL_COLUMNS_START])]
+            cols = [c for c in df_stat.columns if any([c.startswith(cc) for cc in EVAL_COLUMNS_START])]
             df_stat = df_stat[cols]
             with open(self._path_stat, 'a') as fp:
                 fp.write('\n' * 3 + 'RESULTS: \n' + '=' * 9)
@@ -764,8 +770,7 @@ def parse_config_txt(path_config):
     with open(path_config, 'r') as fp:
         text = ''.join(fp.readlines())
     rec = re.compile(r'"(\S+)":\s+(.*)')
-    dict_config = {n: convert_numerical(v)
-                   for n, v in rec.findall(text) if len(v) > 0}
+    dict_config = {n: convert_numerical(v) for n, v in rec.findall(text) if len(v) > 0}
     return dict_config
 
 
@@ -784,7 +789,7 @@ def activate_sigm(x, shift=0.12, slope=35.):
     >>> activate_sigm(1)
     1.0
     """
-    sigm = lambda x, a, b: 1. / (1 + np.exp(b * (- x + a)))
+    sigm = lambda x, a, b: 1. / (1 + np.exp(b * (-x + a)))
     sigm_0, sigm_inf = sigm(0, shift, slope), sigm(1, shift, slope)
     val = (sigm(x, shift, slope) - sigm_0) / (sigm_inf - sigm_0)
     return val

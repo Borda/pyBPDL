@@ -15,11 +15,9 @@ import numpy as np
 from scipy import stats
 from scipy.spatial import distance
 
-
 # import multiprocessing.pool
 # import multiprocessing as mproc
 # from functools import wraps
-
 
 # def update_path(path_file, lim_depth=5, absolute=True):
 #     """ bubble in the folder tree up intil it found desired file
@@ -129,7 +127,7 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
            [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
            [ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ]])
     """
-    covar = np.array(std) ** 2
+    covar = np.array(std)**2
     if im_size is None:
         im_size = np.array(mean) + covar.diagonal() * 3
 
@@ -166,7 +164,6 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
 #
 #         proc.__class__ = NonDaemonProcess
 #         return proc
-
 
 # def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_WORKERS,
 #                           desc='', ordered=False):
@@ -236,15 +233,14 @@ def estimate_rolling_ball(points, tangent_smooth=1, max_diam=1e6, step_tol=1e-3)
     # points = np.array(sorted(points, key=lambda p: p[0]))
     dir_diams = []
     for d in [1., -1]:
-        diams = [estimate_point_max_circle(i, points, tangent_smooth, d,
-                                           max_diam, step_tol)
-                 for i in range(len(points))]
+        diams = [
+            estimate_point_max_circle(i, points, tangent_smooth, d, max_diam, step_tol) for i in range(len(points))
+        ]
         dir_diams.append(diams)
     return dir_diams
 
 
-def estimate_point_max_circle(idx, points, tangent_smooth=1, orient=1.,
-                              max_diam=1e6, step_tol=1e-3):
+def estimate_point_max_circle(idx, points, tangent_smooth=1, orient=1., max_diam=1e6, step_tol=1e-3):
     """ estimate maximal circle from a particular point on curve
 
     :param int idx: index or point on curve
@@ -278,7 +274,7 @@ def estimate_point_max_circle(idx, points, tangent_smooth=1, orient=1.,
     # set positive or negative direction
     direction = direction * orient
     # normalisation
-    direction = direction / np.sqrt(np.sum(direction ** 2))
+    direction = direction / np.sqrt(np.sum(direction**2))
 
     diam = estimate_max_circle(points[idx], direction, points, max_diam, step_tol)
     return diam
@@ -356,11 +352,9 @@ def is_list_like(var):
     True
     """
     try:  # for python 3
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, range, np.ndarray, types.GeneratorType)]
+        is_iter = [isinstance(var, tp) for tp in (list, tuple, range, np.ndarray, types.GeneratorType)]
     except Exception:  # for python 2
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, np.ndarray, types.GeneratorType)]
+        is_iter = [isinstance(var, tp) for tp in (list, tuple, np.ndarray, types.GeneratorType)]
     return any(is_iter)
 
 
@@ -399,7 +393,6 @@ def is_iterable(var):
 #     rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
 #     s += '\n'.join(rows)
 #     return str(s)
-
 
 # def load_config_yaml(path_config):
 #     """ loading the

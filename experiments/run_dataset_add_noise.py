@@ -9,7 +9,6 @@ Simple script for adding Gaussian noise to already generated images
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-
 import os
 import sys
 import glob
@@ -22,8 +21,7 @@ from imsegm.utilities.data_io import update_path
 from imsegm.utilities.experiments import WrapExecuteSequence
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.data_utils import (GAUSS_NOISE, DIR_MANE_SYNTH_DATASET, load_image,
-                             export_image, add_image_fuzzy_gauss_noise)
+from bpdl.data_utils import (GAUSS_NOISE, DIR_MANE_SYNTH_DATASET, load_image, export_image, add_image_fuzzy_gauss_noise)
 
 NB_WORKERS = int(mproc.cpu_count() * 0.7)
 IMAGE_PATTERN = '*.png'
@@ -39,13 +37,19 @@ def args_parser():
     :return obj: argparse
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--path', type=str, required=True,
-                        help='path to set of experiments')
-    parser.add_argument('-d', '--datasets', type=str, required=False, nargs='+',
-                        help='result file name', default=LIST_DATASETS)
-    parser.add_argument('-s', '--sigma', type=str, required=False, nargs='+',
-                        help='Gaussian sigma of additive noise',
-                        default=NOISE_RANGE)
+    parser.add_argument('-p', '--path', type=str, required=True, help='path to set of experiments')
+    parser.add_argument(
+        '-d', '--datasets', type=str, required=False, nargs='+', help='result file name', default=LIST_DATASETS
+    )
+    parser.add_argument(
+        '-s',
+        '--sigma',
+        type=str,
+        required=False,
+        nargs='+',
+        help='Gaussian sigma of additive noise',
+        default=NOISE_RANGE
+    )
 
     args = vars(parser.parse_args())
     args['path'] = update_path(args['path'])
@@ -69,8 +73,7 @@ def add_noise_image(img_name, path_in, path_out, noise_level):
     export_image(path_out, img_noise, name)
 
 
-def dataset_add_noise(path_in, path_out, noise_level,
-                      img_pattern=IMAGE_PATTERN, nb_workers=NB_WORKERS):
+def dataset_add_noise(path_in, path_out, noise_level, img_pattern=IMAGE_PATTERN, nb_workers=NB_WORKERS):
     """
 
     :param str path_in:
@@ -96,8 +99,7 @@ def dataset_add_noise(path_in, path_out, noise_level,
     else:
         logging.warning('the output dir already exists')
 
-    _wrapper_noise = partial(add_noise_image, path_in=path_in,
-                             path_out=path_out, noise_level=noise_level)
+    _wrapper_noise = partial(add_noise_image, path_in=path_in, path_out=path_out, noise_level=noise_level)
     list(WrapExecuteSequence(_wrapper_noise, name_imgs, nb_workers))
 
     logging.info('DONE')

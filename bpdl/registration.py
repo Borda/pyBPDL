@@ -23,8 +23,9 @@ from scipy import ndimage, interpolate
 
 NB_WORKERS = get_nb_workers(0.8)
 
-LIST_SDR_PARAMS = ('metric', 'level_iters', 'step_length', 'ss_sigma_factor',
-                   'opt_tol', 'inv_iter', 'inv_tol', 'callback')
+LIST_SDR_PARAMS = (
+    'metric', 'level_iters', 'step_length', 'ss_sigma_factor', 'opt_tol', 'inv_iter', 'inv_tol', 'callback'
+)
 DIPY_DEAMONS_PARAMS = dict(
     step_length=0.1,
     level_iters=[30, 50],
@@ -34,9 +35,9 @@ DIPY_DEAMONS_PARAMS = dict(
 )
 
 
-def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
-                                params=DIPY_DEAMONS_PARAMS, inverse=False,
-                                verbose=False):
+def register_demons_sym_diffeom(
+    img_sense, img_ref, smooth_sigma=1., params=DIPY_DEAMONS_PARAMS, inverse=False, verbose=False
+):
     """ Register the image and reconstruction from atlas
     on the end we smooth the final deformation by a gaussian filter
 
@@ -122,14 +123,16 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
     >>> np.round(img_warp - img_sense, 1)  # doctest: +SKIP
     """
     if img_ref.max() == 0 or img_sense.max() == 0:
-        logging.debug('skip image registration (demons): max values for '
-                      'RECONST=%d and SENSE=%d', img_ref.max(), img_sense.max())
+        logging.debug(
+            'skip image registration (demons): max values for '
+            'RECONST=%d and SENSE=%d', img_ref.max(), img_sense.max()
+        )
         return {'mapping': None, 'mapping-inv': None, 'package': 'dipy'}
 
     sdr_params = {k: params[k] for k in params if k in LIST_SDR_PARAMS}
-    sdr = SmoothSymmetricDiffeomorphicRegistration(metric=SSDMetric(img_ref.ndim),
-                                                   smooth_sigma=smooth_sigma,
-                                                   **sdr_params)
+    sdr = SmoothSymmetricDiffeomorphicRegistration(
+        metric=SSDMetric(img_ref.ndim), smooth_sigma=smooth_sigma, **sdr_params
+    )
     sdr.verbosity = VerbosityLevels.NONE
 
     t = time.time()
@@ -144,26 +147,18 @@ def register_demons_sym_diffeom(img_sense, img_ref, smooth_sigma=1.,
 
     # mapping_inv = sdr.moving_to_ref
     if inverse:
-        mapping_inv = DiffeomorphicMap(img_ref.ndim,
-                                       img_ref.shape, None,
-                                       img_ref.shape, None,
-                                       img_ref.shape, None,
-                                       None)
-        mapping_inv.forward = smooth_deform_field(sdr.moving_to_ref.forward,
-                                                  sigma=smooth_sigma)
-        mapping_inv.backward = smooth_deform_field(sdr.moving_to_ref.backward,
-                                                   sigma=smooth_sigma)
+        mapping_inv = DiffeomorphicMap(
+            img_ref.ndim, img_ref.shape, None, img_ref.shape, None, img_ref.shape, None, None
+        )
+        mapping_inv.forward = smooth_deform_field(sdr.moving_to_ref.forward, sigma=smooth_sigma)
+        mapping_inv.backward = smooth_deform_field(sdr.moving_to_ref.backward, sigma=smooth_sigma)
     else:
         mapping_inv = None
 
     if verbose:
         logging.debug('smoothing and warping took: %d s', time.time() - t)
 
-    dict_deform = {
-        'mapping': mapping,
-        'mapping-inv': mapping_inv,
-        'package': 'dipy'
-    }
+    dict_deform = {'mapping': mapping, 'mapping-inv': mapping_inv, 'package': 'dipy'}
 
     return dict_deform
 
@@ -190,9 +185,7 @@ def smooth_deform_field(field, sigma):
     # TODO: use different smoothing which would be fast also for large regul.
 
     for i in range(field.shape[-1]):
-        field_smooth[..., i] = ndimage.gaussian_filter(field[..., i],
-                                                       sigma=sigma,
-                                                       order=0, mode='constant')
+        field_smooth[..., i] = ndimage.gaussian_filter(field[..., i], sigma=sigma, order=0, mode='constant')
     return field_smooth
 
 
@@ -247,8 +240,7 @@ def warp2d_apply_deform_field(img, deform, method='linear'):
     grid_new = (grid_x + deform_x, grid_y + deform_y)
     points_new = np.array([grid_new[0].ravel(), grid_new[1].ravel()]).T
 
-    img_warped = interpolate.griddata(points_new, img.ravel(), grid_old,
-                                      method=method, fill_value=0)
+    img_warped = interpolate.griddata(points_new, img.ravel(), grid_old, method=method, fill_value=0)
     img_warped.astype(img.dtype)
     return img_warped
 
@@ -260,13 +252,11 @@ def wrapper_warp2d_transform_image(idx_img_deform, method='linear', inverse=Fals
     :return tuple(int,ndarray):
     """
     idx, img, d_deform = idx_img_deform
-    img_warped = warp2d_transform_image(img, d_deform, method=method,
-                                        inverse=inverse)
+    img_warped = warp2d_transform_image(img, d_deform, method=method, inverse=inverse)
     return idx, img_warped
 
 
-def warp2d_images_deformations(list_images, list_deforms, method='linear',
-                               inverse=False, nb_workers=NB_WORKERS):
+def warp2d_images_deformations(list_images, list_deforms, method='linear', inverse=False, nb_workers=NB_WORKERS):
     """ deform whole set of images to expected image domain
 
     :param list(ndarray) list_images:
@@ -290,8 +280,7 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear',
         % (len(list_images), len(list_deforms))
     list_deforms = list(list_deforms)
 
-    _wrap_deform = partial(wrapper_warp2d_transform_image,
-                           method=method, inverse=inverse)
+    _wrap_deform = partial(wrapper_warp2d_transform_image, method=method, inverse=inverse)
     list_imgs_wrap = [None] * len(list_images)
     list_items = zip(range(len(list_images)), list_images, list_deforms)
     for idx, img_w in WrapExecuteSequence(_wrap_deform, list_items, nb_workers, desc=None):
@@ -300,9 +289,9 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear',
     return list_imgs_wrap
 
 
-def wrapper_register_demons_image_weights(idx_img_weights, atlas, smooth_coef,
-                                          params=None, interp_method='linear',
-                                          inverse=False):
+def wrapper_register_demons_image_weights(
+    idx_img_weights, atlas, smooth_coef, params=None, interp_method='linear', inverse=False
+):
     """ wrapper for registration of input images to reconstructed as demons
 
     :param tuple(int,ndarray,ndarray) idx_img_weights:
@@ -324,17 +313,24 @@ def wrapper_register_demons_image_weights(idx_img_weights, atlas, smooth_coef,
     # params['inv_iter'] = max(img.shape)
 
     # using multiply by 0.5 to set it as the threshold level for fuzzy inputs
-    dict_deform = register_demons_sym_diffeom(img, img_reconst, params=params,
-                                              smooth_sigma=smooth_coef,
-                                              inverse=inverse, verbose=False)
+    dict_deform = register_demons_sym_diffeom(
+        img, img_reconst, params=params, smooth_sigma=smooth_coef, inverse=inverse, verbose=False
+    )
 
     return idx, dict_deform
 
 
-def register_images_to_atlas_demons(list_images, atlas, list_weights,
-                                    smooth_coef=1., params=None,
-                                    interp_method='linear', inverse=False,
-                                    rm_mean=True, nb_workers=NB_WORKERS):
+def register_images_to_atlas_demons(
+    list_images,
+    atlas,
+    list_weights,
+    smooth_coef=1.,
+    params=None,
+    interp_method='linear',
+    inverse=False,
+    rm_mean=True,
+    nb_workers=NB_WORKERS
+):
     """ register whole set of images to estimated atlas and weights
     IDEA: think about parallel registration per sets as for loading images
 
@@ -390,12 +386,15 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
     list_imgs_wrap = [None] * len(list_images)
     list_deform = [None] * len(list_weights)
     iterations = zip(range(len(list_images)), list_images, list_weights)
-    _wrapper_register = partial(wrapper_register_demons_image_weights,
-                                atlas=atlas, smooth_coef=smooth_coef,
-                                params=params, interp_method=interp_method,
-                                inverse=inverse)
-    for idx, deform in WrapExecuteSequence(_wrapper_register, iterations,
-                                           nb_workers, desc=None):
+    _wrapper_register = partial(
+        wrapper_register_demons_image_weights,
+        atlas=atlas,
+        smooth_coef=smooth_coef,
+        params=params,
+        interp_method=interp_method,
+        inverse=inverse
+    )
+    for idx, deform in WrapExecuteSequence(_wrapper_register, iterations, nb_workers, desc=None):
         list_deform[idx] = deform
 
     # remove mean transform
@@ -403,8 +402,7 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
         for name in ['mapping', 'mapping-inv']:
             list_deform = subtract_mean_deform(list_deform, name)
 
-    _wrapper_warp = partial(wrapper_warp2d_transform_image,
-                            method='linear', inverse=False)
+    _wrapper_warp = partial(wrapper_warp2d_transform_image, method='linear', inverse=False)
     iterations = zip(range(len(list_images)), list_images, list_deform)
     for idx, img_w in WrapExecuteSequence(_wrapper_warp, iterations, nb_workers, desc=None):
         list_imgs_wrap[idx] = img_w
@@ -413,12 +411,8 @@ def register_images_to_atlas_demons(list_images, atlas, list_weights,
 
 
 def subtract_mean_deform(list_deform, name):
-    mean_field_bw = np.mean([d[name].backward
-                             for d in list_deform
-                             if d is not None and d[name] is not None], axis=0)
-    mean_field_fw = np.mean([d[name].forward
-                             for d in list_deform
-                             if d is not None and d[name] is not None], axis=0)
+    mean_field_bw = np.mean([d[name].backward for d in list_deform if d is not None and d[name] is not None], axis=0)
+    mean_field_fw = np.mean([d[name].forward for d in list_deform if d is not None and d[name] is not None], axis=0)
     for i, deform in enumerate(list_deform):
         if deform is None or deform[name] is None:
             continue
@@ -433,8 +427,7 @@ class SmoothSymmetricDiffeomorphicRegistration(SymmetricDiffeomorphicRegistratio
         super(SmoothSymmetricDiffeomorphicRegistration, self).__init__(metric, **kwargs)
         self.smooth_sigma = smooth_sigma
 
-    def update(self, current_displacement, new_displacement,
-               disp_world2grid, time_scaling):
+    def update(self, current_displacement, new_displacement, disp_world2grid, time_scaling):
         """Composition of the current displacement field with the given field
 
         Interpolates new displacement at the locations defined by
@@ -465,19 +458,17 @@ class SmoothSymmetricDiffeomorphicRegistration(SymmetricDiffeomorphicRegistratio
             the warped displacement field
         mean_norm : the mean norm of all vectors in current_displacement
         """
-        sq_field = np.sum((np.array(current_displacement) ** 2), -1)
+        sq_field = np.sum((np.array(current_displacement)**2), -1)
         mean_norm = np.sqrt(sq_field).mean()
 
         # smoothing the forward/backward step
-        new_displacement = smooth_deform_field(new_displacement,
-                                               sigma=self.smooth_sigma)
+        new_displacement = smooth_deform_field(new_displacement, sigma=self.smooth_sigma)
 
         # We assume that both displacement fields have the same
         # grid2world transform, which implies premult_index=Identity
         # and premult_disp is the world2grid transform associated with
         # the displacements' grid
-        self.compose(current_displacement, new_displacement, None,
-                     disp_world2grid, time_scaling, current_displacement)
+        self.compose(current_displacement, new_displacement, None, disp_world2grid, time_scaling, current_displacement)
 
         return np.array(current_displacement), np.array(mean_norm)
 
@@ -495,7 +486,7 @@ class SmoothSymmetricDiffeomorphicRegistration(SymmetricDiffeomorphicRegistratio
         y = self.energy_list[(n_iter - self.energy_window):n_iter]
         ss = sum(y)
         if not ss == 0:  # avoid division by zero
-            ss = - ss if ss > 0 else ss
+            ss = -ss if ss > 0 else ss
             y = [v / ss for v in y]
         der = self._approximate_derivative_direct(x, y)
         return der

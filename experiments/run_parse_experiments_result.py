@@ -25,8 +25,7 @@ from functools import partial
 import numpy as np
 import pandas as pd
 from imsegm.utilities.data_io import update_path
-from imsegm.utilities.experiments import (
-    WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
+from imsegm.utilities.experiments import (WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from experiments.experiment_general import parse_config_txt
@@ -36,13 +35,7 @@ NAME_INPUT_RESULT = 'results.csv'
 TEMPLATE_NAME_OVERALL_RESULT = '%s_OVERALL.csv'
 NB_WORKERS = int(mproc.cpu_count() * 0.9)
 
-DICT_STATISTIC_FUNC = {
-    'mean': np.mean,
-    'median': np.median,
-    'min': np.min,
-    'max': np.max,
-    'std': np.std
-}
+DICT_STATISTIC_FUNC = {'mean': np.mean, 'median': np.median, 'min': np.min, 'max': np.max, 'std': np.std}
 
 PARAMS = {
     'name_config': NAME_INPUT_CONFIG,
@@ -56,18 +49,26 @@ def parse_arg_params(params):
     :return: argparse
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--path', type=str, required=True,
-                        help='path to set of experiments')
-    parser.add_argument('-c', '--name_config', type=str, required=False,
-                        help='config file name', default=params['name_config'])
-    parser.add_argument('-r', '--name_results', type=str, required=False,
-                        nargs='*', default=params['name_results'], help='result file name')
-    parser.add_argument('--result_columns', type=str, required=False,
-                        default=None, nargs='*', help='important columns from results')
-    parser.add_argument('-f', '--func_stat', type=str, required=False,
-                        help='type od stat over results', default='none')
-    parser.add_argument('--nb_workers', type=int, required=False,
-                        default=NB_WORKERS, help='number of jobs running in parallel')
+    parser.add_argument('-i', '--path', type=str, required=True, help='path to set of experiments')
+    parser.add_argument(
+        '-c', '--name_config', type=str, required=False, help='config file name', default=params['name_config']
+    )
+    parser.add_argument(
+        '-r',
+        '--name_results',
+        type=str,
+        required=False,
+        nargs='*',
+        default=params['name_results'],
+        help='result file name'
+    )
+    parser.add_argument(
+        '--result_columns', type=str, required=False, default=None, nargs='*', help='important columns from results'
+    )
+    parser.add_argument('-f', '--func_stat', type=str, required=False, help='type od stat over results', default='none')
+    parser.add_argument(
+        '--nb_workers', type=int, required=False, default=NB_WORKERS, help='number of jobs running in parallel'
+    )
 
     args = vars(parser.parse_args())
     args['path'] = update_path(args['path'])
@@ -106,8 +107,7 @@ def load_results_csv(path_result, cols_select=None):
         return None
     assert path_result.endswith('.csv'), '%s' % path_result
     df_res = pd.read_csv(path_result, index_col=None)
-    df_res.drop([c for c in df_res.columns if c.startswith('Unnamed:')],
-                axis=1, inplace=True)
+    df_res.drop([c for c in df_res.columns if c.startswith('Unnamed:')], axis=1, inplace=True)
     if cols_select is not None:
         cols_select = [c for c in df_res.columns]
         df_res = df_res[cols_select]
@@ -120,9 +120,7 @@ def load_multiple_results(path_expt, func_stat, params):
     for name_results in params['name_results']:
         path_results = os.path.join(path_expt, name_results)
         if func_stat is not None:
-            dict_res = parse_results_csv_summary(path_results,
-                                                 result_cols,
-                                                 func_stat)
+            dict_res = parse_results_csv_summary(path_results, result_cols, func_stat)
             df_res = pd.DataFrame().from_dict(dict_res, orient='index').T
             df_results = df_results.join(df_res, how='outer')
         else:
@@ -161,10 +159,8 @@ def parse_experiment_folder(path_expt, params):
         return df_results
 
     logging.debug('  -> results params: %r', df_results.columns.tolist())
-    list_cols = [c for c in df_info.columns
-                 if c not in df_results.columns]
-    df_infos = pd.concat([df_info[list_cols]] * len(df_results),
-                         ignore_index=True)
+    list_cols = [c for c in df_info.columns if c not in df_results.columns]
+    df_infos = pd.concat([df_info[list_cols]] * len(df_results), ignore_index=True)
     df_results = pd.concat([df_results, df_infos], axis=1)
     # df_results.fillna(method='pad', inplace=True)
     return df_results
@@ -191,8 +187,7 @@ def parse_experiments(params):
     nb_workers = params.get('nb_workers', NB_WORKERS)
 
     df_all = pd.DataFrame()
-    path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*'))
-                 if os.path.isdir(p)]
+    path_dirs = [p for p in glob.glob(os.path.join(params['path'], '*')) if os.path.isdir(p)]
     logging.info('found experiments: %i', len(path_dirs))
 
     _wrapper_parse_folder = partial(parse_experiment_folder, params=params)
@@ -200,14 +195,12 @@ def parse_experiments(params):
         df_all = append_df_folder(df_all, df_folder)
 
     if isinstance(params['name_results'], list):
-        name_results = '_'.join(os.path.splitext(n)[0]
-                                for n in params['name_results'])
+        name_results = '_'.join(os.path.splitext(n)[0] for n in params['name_results'])
     else:
         name_results = os.path.splitext(params['name_results'])[0]
 
     df_all.reset_index(inplace=True)
-    path_csv = os.path.join(params['path'],
-                            TEMPLATE_NAME_OVERALL_RESULT % name_results)
+    path_csv = os.path.join(params['path'], TEMPLATE_NAME_OVERALL_RESULT % name_results)
     logging.info('export results as %s', path_csv)
     df_all.to_csv(path_csv, index=False)
     return df_all
@@ -219,13 +212,9 @@ def count_folders_subdirs(path_expt):
     :param str path_expt:
     :return dict: {str: int}
     """
-    list_dirs = [p for p in glob.glob(os.path.join(path_expt, '*'))
-                 if os.path.isdir(p)]
+    list_dirs = [p for p in glob.glob(os.path.join(path_expt, '*')) if os.path.isdir(p)]
     list_sub_dirs = [len(glob.glob(os.path.join(p, '*'))) for p in list_dirs]
-    dict_counts = {
-        'folders': len(list_dirs),
-        'files @dir': np.mean(list_sub_dirs) if len(list_sub_dirs) > 0 else 0
-    }
+    dict_counts = {'folders': len(list_dirs), 'files @dir': np.mean(list_sub_dirs) if len(list_sub_dirs) > 0 else 0}
     return dict_counts
 
 
