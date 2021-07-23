@@ -24,7 +24,7 @@ from scipy import ndimage, interpolate
 NB_WORKERS = get_nb_workers(0.8)
 
 LIST_SDR_PARAMS = (
-    'metric', 'level_iters', 'step_length', 'ss_sigma_factor', 'opt_tol', 'inv_iter', 'inv_tol', 'callback'
+    'metric', 'level_iters', 'step_length', 'ss_sigma_factor', 'opt_tol', 'inv_iter', 'inv_tol', 'callback',
 )
 DIPY_DEAMONS_PARAMS = dict(
     step_length=0.1,
@@ -124,8 +124,7 @@ def register_demons_sym_diffeom(
     """
     if img_ref.max() == 0 or img_sense.max() == 0:
         logging.debug(
-            'skip image registration (demons): max values for '
-            'RECONST=%d and SENSE=%d', img_ref.max(), img_sense.max()
+            'skip image registration (demons): max values for RECONST=%d and SENSE=%d', img_ref.max(), img_sense.max()
         )
         return {'mapping': None, 'mapping-inv': None, 'package': 'dipy'}
 
@@ -164,7 +163,7 @@ def register_demons_sym_diffeom(
 
 
 def smooth_deform_field(field, sigma):
-    """
+    """smooth deformation field
 
     :param field:
     :param sigma:
@@ -229,8 +228,7 @@ def warp2d_apply_deform_field(img, deform, method='linear'):
     """
     assert img.ndim == 2, 'expected only 2D image'
     assert deform.ndim == 3, 'expected only 2D deformation'
-    assert img.shape == deform.shape[:-1], \
-        'image %r and deform %r size should match' % (img.shape, deform.shape)
+    assert img.shape == deform.shape[:-1], 'image %r and deform %r size should match' % (img.shape, deform.shape)
     grid_x, grid_y = np.mgrid[0:img.shape[0], 0:img.shape[1]]
     deform_x = deform[..., 0]
     deform_y = deform[..., 1]
@@ -275,9 +273,7 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear', inver
             [0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0]]...)]
     """
-    assert len(list_images) == len(list_deforms), \
-        'number of images (%i) and deformations (%i) have to match' \
-        % (len(list_images), len(list_deforms))
+    assert len(list_images) == len(list_deforms), 'number of images (%i) and deformations (%i) have to match' % (len(list_images), len(list_deforms))
     list_deforms = list(list_deforms)
 
     _wrap_deform = partial(wrapper_warp2d_transform_image, method=method, inverse=inverse)
@@ -377,9 +373,7 @@ def register_images_to_atlas_demons(
     >>> sorted(deforms[1].keys())
     ['mapping', 'mapping-inv', 'package']
     """
-    assert len(list_images) == len(list_weights), \
-        'number of images (%i) and weights (%i) have to match' \
-        % (len(list_images), len(list_weights))
+    assert len(list_images) == len(list_weights), 'number of images (%i) and weights (%i) have to match' % (len(list_images), len(list_weights))
     atlas = np.asarray(atlas, dtype=int)
     list_weights = list(list_weights)
 

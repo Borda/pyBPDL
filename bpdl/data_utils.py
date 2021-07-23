@@ -227,8 +227,7 @@ def frequent_boundary_label(image):
     else:
         labels = np.array([0])
         logging.warning('wrong image dimension - %r', image.shape)
-    bg = np.argmax(np.bincount(labels)) \
-        if np.issubdtype(image.dtype, np.integer) else np.median(labels)
+    bg = np.argmax(np.bincount(labels)) if np.issubdtype(image.dtype, np.integer) else np.median(labels)
     return bg
 
 
@@ -477,8 +476,7 @@ def dictionary_generate_atlas(
     # in case run in DEBUG show atlas and wait till close
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         logging.debug('labels: %r', np.unique(atlas_def))
-        atlas_show = atlas_def if atlas_def.ndim == 2 \
-            else atlas_def[int(atlas_def.shape[0] / 2)]
+        atlas_show = atlas_def if atlas_def.ndim == 2 else atlas_def[int(atlas_def.shape[0] / 2)]
         plt.imshow(atlas_show)
         plt.show()
     atlas_new, imgs_patterns = atlas_filter_larges_components(atlas_def)
@@ -634,8 +632,7 @@ def dataset_binary_combine_patterns(
     sample_00004       0       1
     """
     logging.info(
-        'generate a Binary dataset composed from %i samples  '
-        'and ration pattern occlusion %f', nb_samples, ptn_ration
+        'generate a Binary dataset composed from %i samples and ration pattern occlusion %f', nb_samples, ptn_ration
     )
     if out_dir is not None:
         create_clean_folder(out_dir)

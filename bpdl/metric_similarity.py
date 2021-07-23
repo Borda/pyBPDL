@@ -192,8 +192,7 @@ def relabel_max_overlap_unique(seg_ref, seg_relabel, keep_bg=True):
            [0, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 0],
            [0, 3, 3, 3, 3, 3, 3, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
-    assert seg_ref.shape == seg_relabel.shape, \
-        'shapes: %r and %r' % (seg_ref.shape, seg_relabel.shape)
+    assert seg_ref.shape == seg_relabel.shape, 'shapes: %r and %r' % (seg_ref.shape, seg_relabel.shape)
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
 
     lut = [-1] * (np.max(seg_relabel) + 1)
@@ -267,12 +266,10 @@ def relabel_max_overlap_merge(seg_ref, seg_relabel, keep_bg=True):
            [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0],
            [0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0]])
     """
-    assert seg_ref.shape == seg_relabel.shape, \
-        'shapes: %r and %r' % (seg_ref.shape, seg_relabel.shape)
+    assert seg_ref.shape == seg_relabel.shape, 'shapes: %r and %r' % (seg_ref.shape, seg_relabel.shape)
     overlap = compute_labels_overlap_matrix(seg_ref, seg_relabel)
     # ref_ptn_size = np.bincount(seg_ref.ravel())
-    # overlap = overlap.astype(float) \
-    #                   / np.tile(ref_ptn_size, (overlap.shape[1], 1)).T
+    # overlap = overlap.astype(float)  np.tile(ref_ptn_size, (overlap.shape[1], 1)).T
     # overlap = np.nan_to_num(overlap)
     max_axis = 1 if overlap.shape[0] > overlap.shape[1] else 0
     if keep_bg:
@@ -322,16 +319,14 @@ def compute_classif_metrics(y_true, y_pred, metric_averages=METRIC_AVERAGES):
      ('support_macro', None), ('support_weighted', None)]
     """
     y_pred = np.array(y_pred)
-    assert y_true.shape == y_pred.shape, \
-        'shapes: %r and %r' % (y_true.shape, y_pred.shape)
+    assert y_true.shape == y_pred.shape, 'shapes: %r and %r' % (y_true.shape, y_pred.shape)
     uq_y_true = np.unique(y_true)
     logging.debug('unique lbs true: %r, predict %r', uq_y_true, np.unique(y_pred))
 
     # in case the are just two classes relabel them as [0, 1] only
     # solving sklearn error:
     #  "ValueError: pos_label=1 is not a valid label: array([  0, 255])"
-    if np.array_equal(sorted(uq_y_true), sorted(np.unique(y_pred))) \
-            and len(uq_y_true) <= 2:
+    if np.array_equal(sorted(uq_y_true), sorted(np.unique(y_pred))) and len(uq_y_true) <= 2:
         logging.debug('relabeling original %r to [0, 1]', uq_y_true)
         lut = np.zeros(uq_y_true.max() + 1)
         if len(uq_y_true) == 2:

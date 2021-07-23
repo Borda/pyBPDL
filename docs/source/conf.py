@@ -204,7 +204,7 @@ man_pages = [(master_doc, project, project + ' Documentation', [author], 1)]
 texinfo_documents = [
     (
         master_doc, project, project + ' Documentation', author, project, 'One line description of project.',
-        'Miscellaneous'
+        'Miscellaneous',
     ),
 ]
 
@@ -334,8 +334,7 @@ def linkcode_resolve(domain, info):
     # do mapping from latest tags to master
     branch = {'latest': 'master', 'stable': 'master'}.get(branch, branch)
     filename = '/'.join([branch] + filename.split('/')[1:])
-    return "https://github.com/%s/%s/blob/%s" \
-           % (github_user, github_repo, filename)
+    return "https://github.com/%s/%s/blob/%s" % (github_user, github_repo, filename)
 
 
 autodoc_member_order = 'groupwise'

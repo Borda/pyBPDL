@@ -99,8 +99,7 @@ def load_images(path_images, names, nb_workers=NB_WORKERS):
     list_img_paths = [p for p in list_img_paths if _name(p) in names]
     logging.debug('found images: %i', len(list_img_paths))
     images, im_names = dataset_load_images(list_img_paths, nb_workers=nb_workers)
-    assert all(names == im_names), \
-        'image names from weights and loaded images does not match'
+    assert all(names == im_names), 'image names from weights and loaded images does not match'
     return images
 
 
@@ -117,9 +116,7 @@ def load_experiment(path_expt, name, path_dataset=None, path_images=None, nb_wor
     path_npz = os.path.join(path_expt, BASE_NAME_DEFORM + name + '.npz')
     if os.path.isfile(path_npz):
         dict_deforms = dict(np.load(open(path_npz, 'rb')))
-        assert len(df_weights) == len(dict_deforms), \
-            'unresistant weights (%i) and (%i)' \
-            % (len(df_weights), len(dict_deforms))
+        assert len(df_weights) == len(dict_deforms), 'unresistant weights (%i) and (%i)' % (len(df_weights), len(dict_deforms))
     else:
         dict_deforms = None
 

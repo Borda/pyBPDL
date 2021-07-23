@@ -69,8 +69,7 @@ def aparse_params():
         '--nb_workers', type=int, required=False, default=NB_WORKERS, help='number of processes in parallel'
     )
     args = parser.parse_args()
-    assert len(args.image_size) == 2 or len(args.image_size) == 3, \
-        'unsupported image dimension of %r' % args.image_size
+    assert len(args.image_size) == 2 or len(args.image_size) == 3, 'unsupported image dimension of %r' % args.image_size
     args.path_out = os.path.abspath(os.path.expanduser(args.path_out))
     return args
 
@@ -109,8 +108,7 @@ def generate_all(
     :param str path_out: path to the results directory
     """
     assert nb_patterns > 0, 'number of patterns has to be larger then 0'
-    assert os.path.exists(os.path.dirname(path_out)), \
-        'missing: %s' % os.path.dirname(path_out)
+    assert os.path.exists(os.path.dirname(path_out)), 'missing: %s' % os.path.dirname(path_out)
     if not os.path.exists(path_out):
         os.mkdir(path_out)
     view_func_params(inspect.currentframe(), path_out)

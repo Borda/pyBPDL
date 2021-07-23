@@ -167,8 +167,7 @@ def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5, bg_ty
            [1, 1, 2, 3, 5, 3, 1, 4, 3, 3, 1, 2]])
     """
     logging.debug(
-        'initialise atlas for %i labels from %i images of shape %r'
-        ' with Otsu-Watershed', nb_patterns, len(imgs), imgs[0].shape
+        'initialise atlas for %i labels from %i images of shape %r with Otsu-Watershed', nb_patterns, len(imgs), imgs[0].shape
     )
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
     img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
@@ -263,8 +262,7 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None, bg_threshhold=0.5):
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
     logging.debug(
-        'initialise atlas for %i labels from %i images of shape %r'
-        ' with Gauss-Watershed', nb_patterns, len(imgs), imgs[0].shape
+        'initialise atlas for %i labels from %i images of shape %r with Gauss-Watershed', nb_patterns, len(imgs), imgs[0].shape
     )
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
     img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
@@ -864,9 +862,7 @@ def compute_relative_penalty_images_weights(imgs, weights):
     logging.debug('compute unary cost from images and related weights')
     # weightsIdx = ptn_weight.convert_weights_binary2indexes(weights)
     nb_lbs = weights.shape[1] + 1
-    assert len(imgs) == weights.shape[0], \
-        'not matching nb images (%i) and nb weights (%i)' \
-        % (len(imgs), weights.shape[0])
+    assert len(imgs) == weights.shape[0], 'not matching nb images (%i) and nb weights (%i)' % (len(imgs), weights.shape[0])
     pott_sum = np.zeros(imgs[0].shape + (nb_lbs, ))
     # extenf the weights by background value 0
     weights_ext = np.append(np.zeros((weights.shape[0], 1)), weights, axis=1)
@@ -929,8 +925,7 @@ def compute_positive_cost_images_weights(imgs, ptn_weights):
     logging.debug('compute unary cost from images and related ptn_weights')
     w_idx = convert_weights_binary2indexes(ptn_weights)
     nb_lbs = ptn_weights.shape[1] + 1
-    assert len(imgs) == len(w_idx), 'nb of images (%i) and weights (%i) ' \
-                                    'do not match' % (len(imgs), len(w_idx))
+    assert len(imgs) == len(w_idx), 'nb of images (%i) and weights (%i) do not match' % (len(imgs), len(w_idx))
     pott_sum = np.zeros(imgs[0].shape + (nb_lbs, ))
     # walk over all pixels in image
     logging.debug('... walk over all pixels in each image')

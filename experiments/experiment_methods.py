@@ -52,9 +52,7 @@ def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False, max_bg_
     if force_bg:
         atlas = reset_atlas_background(atlas, atlas_mean, max_bg_ration)
 
-    assert atlas.shape == atlas_components[0].shape, \
-        'dimension mix - atlas: %s atlas_patterns: %s' \
-        % (atlas.shape, atlas_components.shape)
+    assert atlas.shape == atlas_components[0].shape, 'dimension mix - atlas: %s atlas_patterns: %s' % (atlas.shape, atlas_components.shape)
 
     return atlas
 
@@ -363,14 +361,11 @@ class ExperimentBPDL(Experiment):
             logging.error('not supported atlas init "%s"', init_type)
             raise NotImplementedError()
 
-        assert np.max(init_atlas) <= nb_patterns, \
-            'init. atlas max=%i and nb labels=%i' % \
-            (int(np.max(init_atlas)), nb_patterns)
-        assert init_atlas.shape == im_size, \
-            'init atlas: %r & img size: %r' % (init_atlas.shape, im_size)
+        assert np.max(init_atlas) <= nb_patterns, 'init. atlas max=%i and nb labels=%i' % (int(np.max(init_atlas)), nb_patterns)
+        assert init_atlas.shape == im_size, 'init atlas: %r & img size: %r' % (init_atlas.shape, im_size)
         assert init_atlas.dtype == np.int, 'type: %s' % init_atlas.dtype
         if len(np.unique(init_atlas)) == 1:
-            logging.warning('atlas init type "%s" failed ' 'to estimate an atlas', init_type)
+            logging.warning('atlas init type "%s" failed to estimate an atlas', init_type)
         # just to secure the maximal number of patters
         init_atlas[0, 0, ...] = nb_patterns
         return init_atlas
@@ -392,8 +387,7 @@ class ExperimentBPDL(Experiment):
         bpdl_params['deform_coef'] = params.get('deform_coef', None)
         atlas, weights, deforms = bpdl_pipeline(images, init_atlas=init_atlas, out_dir=path_out, **bpdl_params)
 
-        assert atlas.max() == weights.shape[1], \
-            'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
+        assert atlas.max() == weights.shape[1], 'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
         extras = {'deforms': deforms}
 
         return atlas, weights, extras
@@ -427,9 +421,7 @@ class ExperimentBPDL(Experiment):
             deforms = extras['deforms']
             images_rct = reconstruct_samples(atlas, weights)
             # images = self._images[:len(weights)]
-            assert len(images_rct) == len(deforms), \
-                'nb reconst. images (%i) and deformations (%i) should match' \
-                % (len(images_rct), len(deforms))
+            assert len(images_rct) == len(deforms), 'nb reconst. images (%i) and deformations (%i) should match' % (len(images_rct), len(deforms))
             # apply the estimated deformation
             images_rct = warp2d_images_deformations(images_rct, deforms, method='nearest', inverse=True)
             tag, diff = self._evaluate_reconstruct(images_rct, im_type='input')

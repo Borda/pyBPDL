@@ -238,8 +238,7 @@ def parse_params(default_params, methods):
     params.update(arg_params)
 
     # if YAML config exists update configuration
-    if arg_params.get('path_config', None) is not None \
-            and os.path.isfile(arg_params['path_config']):
+    if arg_params.get('path_config', None) is not None and os.path.isfile(arg_params['path_config']):
         logging.info('loading config: %s', arg_params['path_config'])
         d_config = load_config_yaml(arg_params['path_config'])
         logging.debug(string_dict(d_config, desc='LOADED CONFIG:'))
@@ -268,66 +267,6 @@ def load_list_img_names(path_csv, path_in=''):
         # to each image name add the input path
         list_names = [os.path.join(path_in, p) for p in list_names]
     return list_names
-
-
-# def create_experiment_folder(params, dir_name, stamp_unique=True, skip_load=True):
-#     """ create the experiment folder and iterate while there is no available
-#
-#     :param dict params:
-#     :param str dir_name:
-#     :param bool stamp_unique:
-#     :param bool skip_load:
-#     :return dict:
-#
-#     >>> p = {'path_out': '.'}
-#     >>> p = create_experiment_folder(p, 'my_test', False, skip_load=True)
-#     >>> 'computer' in p
-#     True
-#     >>> p['path_exp']
-#     './my_test_EXAMPLE'
-#     >>> shutil.rmtree(p['path_exp'], ignore_errors=True)
-#     """
-#     date = time.gmtime()
-#     name = params.get('name', 'EXAMPLE')
-#     if isinstance(name, str) and len(name) > 0:
-#         dir_name = '{}_{}'.format(dir_name, name)
-#     # if self.params.get('date_time') is None:
-#     #     self.params.set('date_time', time.gmtime())
-#     if stamp_unique:
-#         dir_name += '_' + time.strftime(FORMAT_DT, date)
-#     path_expt = os.path.join(params.get('path_out'), dir_name)
-#     while stamp_unique and os.path.exists(path_expt):
-#         logging.warning('particular out folder already exists')
-#         path_expt += ':' + str(random.randint(0, 9))
-#     logging.info('creating experiment folder "{}"'.format(path_expt))
-#     if not os.path.exists(path_expt):
-#         os.mkdir(path_expt)
-#     path_config = os.path.join(path_expt, CONFIG_YAML)
-#     if os.path.exists(path_config) and not skip_load:
-#         logging.debug('loading saved params from file "%s"', CONFIG_YAML)
-#         params = load_config_yaml(path_config)
-#     params.update({'computer': repr(os.uname()),
-#                    'path_exp': path_expt})
-#     logging.debug('saving params to file "%s"', CONFIG_YAML)
-#     save_config_yaml(path_config, params)
-#     return params
-
-# def set_experiment_logger(path_out, file_name=FILE_LOGS, reset=True):
-#     """ set the logger to file
-#
-#     :param str path_out:
-#     :param str file_name:
-#     :param bool reset:
-#     """
-#     log = logging.getLogger()
-#     if reset:
-#         log.handlers = [h for h in log.handlers
-#                         if not isinstance(h, logging.FileHandler)]
-#     path_logger = os.path.join(path_out, file_name)
-#     logging.info('setting logger to "%s"', path_logger)
-#     fh = logging.FileHandler(path_logger)
-#     fh.setLevel(logging.DEBUG)
-#     log.addHandler(fh)
 
 
 def generate_conf_suffix(d_params):
@@ -403,8 +342,7 @@ class Experiment(ExperimentBase):
         :param dict params:
         :param bool time_stamp: mark if you want an unique folder per experiment
         """
-        assert all([n in params for n in self.REQUIRED_PARAMS]), \
-            'missing some required parameters'
+        assert all([n in params for n in self.REQUIRED_PARAMS]), 'missing some required parameters'
         params = simplify_params(params)
 
         if 'name' not in params:
@@ -449,8 +387,7 @@ class Experiment(ExperimentBase):
             self._list_img_paths, nb_workers=self.params.get('nb_workers', 1)
         )
         shapes = [im.shape for im in self._images]
-        assert len(set(shapes)) == 1, 'multiple image sizes found: %r' \
-                                      % collections.Counter(shapes)
+        assert len(set(shapes)) == 1, 'multiple image sizes found: %r' % collections.Counter(shapes)
 
     def _load_data(self, gt=True):
         """ load all required data for APD and also ground-truth if required
@@ -476,9 +413,7 @@ class Experiment(ExperimentBase):
         # loading  if it is set
         if gt:
             self._load_data_ground_truth()
-            assert len(self._images) == len(self._gt_images), \
-                'nb of input (%i) and reconst. (%i) images do not match' \
-                % (len(self._images), len(self._gt_images))
+            assert len(self._images) == len(self._gt_images), 'nb of input (%i) and reconst. (%i) images do not match' % (len(self._images), len(self._gt_images))
         logging.debug('loaded %i images', len(self._images))
 
     def run(self, gt=False, iter_params=None):
@@ -702,8 +637,7 @@ def simplify_params(dict_params):
     """
     d_params = {}
     for k in dict_params:
-        d_params[k] = dict_params[k][0] if is_list_like(dict_params[k]) \
-            else dict_params[k]
+        d_params[k] = dict_params[k][0] if is_list_like(dict_params[k]) else dict_params[k]
     return d_params
 
 

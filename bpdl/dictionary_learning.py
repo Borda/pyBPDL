@@ -37,7 +37,7 @@ from bpdl.registration import register_images_to_atlas_demons
 
 NB_GRAPH_CUT_ITER = 5
 TEMPLATE_NAME_ATLAS = 'BPDL_{}_{}_iter_{:04d}'
-LIST_BPDL_STEPS = ['weights update', 'reinit. atlas', 'atlas update', 'deform images']
+LIST_BPDL_STEPS = ['weights update', 'reinit. atlas', 'atlas update', 'deform images',]
 
 # TRY: init: spatial clustering
 # TRY: init: use ICA
@@ -336,8 +336,7 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
     """
     # update w_bins
     logging.debug('... perform pattern weights')
-    fn_weights_ = weights_image_atlas_overlap_major if overlap_major \
-        else weights_image_atlas_overlap_partial
+    fn_weights_ = weights_image_atlas_overlap_major if overlap_major else weights_image_atlas_overlap_partial
     w_bins = [fn_weights_(img, atlas) for img in imgs]
     # add once for patterns that are not used at all
     # w_bins = ptn_weight.fill_empty_patterns(np.array(w_bins))

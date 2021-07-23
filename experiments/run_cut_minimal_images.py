@@ -161,10 +161,8 @@ def export_cut_image(path_img, d_bbox, path_out):
 
 
 def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
-    assert os.path.isdir(os.path.dirname(path_pattern_in)), \
-        'missing: %s' % path_pattern_in
-    assert os.path.isdir(os.path.dirname(path_out)), \
-        'missing: %s' % os.path.dirname(path_out)
+    assert os.path.isdir(os.path.dirname(path_pattern_in)), 'missing: %s' % path_pattern_in
+    assert os.path.isdir(os.path.dirname(path_out)), 'missing: %s' % os.path.dirname(path_out)
 
     if not os.path.isdir(path_out):
         logging.info('create dir: %s', path_out)
