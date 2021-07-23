@@ -3,16 +3,13 @@
 [![CI testing](https://github.com/Borda/pyBPDL/actions/workflows/ci-testing.yml/badge.svg?event=push)](https://github.com/Borda/pyBPDL/actions/workflows/ci-testing.yml)
 [![codecov](https://codecov.io/gh/Borda/pyBPDL/branch/master/graph/badge.svg?token=Bgklw7uaB0)](https://codecov.io/gh/Borda/pyBPDL)
 [![CI experiments](https://github.com/Borda/pyBPDL/actions/workflows/ci-experiment.yml/badge.svg?event=push)](https://github.com/Borda/pyBPDL/actions/workflows/ci-experiment.yml)
-
 [![Code formatting](https://github.com/Borda/pyBPDL/actions/workflows/code-format.yml/badge.svg?event=push)](https://github.com/Borda/pyBPDL/actions/workflows/code-format.yml)
+
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/5f4c0dfac2b4444a935d587f663ac9c1)](https://www.codacy.com/app/Borda/pyBPDL?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Borda/pyBPDL&amp;utm_campaign=Badge_Grade)
 [![CodeFactor](https://www.codefactor.io/repository/github/borda/pybpdl/badge)](https://www.codefactor.io/repository/github/borda/pybpdl)
 [![Documentation Status](https://readthedocs.org/projects/pybpdl/badge/?version=latest)](https://pybpdl.readthedocs.io/en/latest/?badge=latest)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/Borda/pyBPDL/master.svg)](https://results.pre-commit.ci/latest/github/Borda/pyBPDL/master)
 [![Gitter](https://badges.gitter.im/pyBPDL/community.svg)](https://gitter.im/pyBPDL/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-<!--
-[![Run Status](https://api.shippable.com/projects/5937c15c3e246207003bc61b/badge?branch=master)](https://app.shippable.com/github/Borda/pyBPDL)
-[![Coverage Badge](https://api.shippable.com/projects/5937c15c3e246207003bc61b/coverageBadge?branch=master)](https://app.shippable.com/github/Borda/pyBPDL)
--->
 
 We present a final step of image processing pipeline which accepts a large number of images, containing spatial expression information for thousands of genes in Drosophila imaginal discs. We assume that the gene activations are binary and can be expressed as a union of a small set of non-overlapping spatial patterns, yielding a compact representation of the spatial activation of each gene. This lends itself well to further automatic analysis, with the hope of discovering new biological relationships. Traditionally, the images were labelled manually, which was very time-consuming. The key part of our work is a binary pattern dictionary learning algorithm, that takes a set of binary images and determines a set of patterns, which can be used to represent the input images with a small error.
 
@@ -23,7 +20,7 @@ For the image segmentation and individual object detection, we used [Image segme
 ## Comparable (SoA) methods
 
 We have our method BPDL and also we compare it to State-of-the-Art, see [Faces dataset decompositions](http://scikit-learn.org/stable/auto_examples/decomposition/plot_faces_decomposition.html#example-decomposition-plot-faces-decomposition-py):
- 
+
 * [**Fast ICA**](notebooks/method_FastICA.ipynb), derived from [sklearn.decomposition.FastICA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.FastICA.html)
 * [**Sparse PCA**](notebooks/method_SparsePCA.ipynb), derived from [sklearn.decomposition.SparsePCA](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.SparsePCA.html)
 * [**Non-negative Matrix Factorisation**](notebooks/method_NMF.ipynb), derived from [sklearn.decomposition.NMF](http://scikit-learn.org/stable/modules/generated/sklearn.decomposition.NMF.html)
@@ -40,10 +37,10 @@ We have our method BPDL and also we compare it to State-of-the-Art, see [Faces d
 
 Create your local environment, for more see the [User Guide](https://pip.pypa.io/en/latest/user_guide.html), and install dependencies requirements.txt contains a list of packages and can be installed as
 ```bash
-@duda:~$ cd pyBPDL  
+@duda:~$ cd pyBPDL
 @duda:~/pyBPDL$ virtualenv env
-@duda:~/pyBPDL$ source env/bin/activate  
-(env)@duda:~/pyBPDL$ pip install -r requirements.txt  
+@duda:~/pyBPDL$ source env/bin/activate
+(env)@duda:~/pyBPDL$ pip install -r requirements.txt
 (env)@duda:~/pyBPDL$ python ...
 ```
 moreover, in the end, terminating...
@@ -53,11 +50,11 @@ moreover, in the end, terminating...
 
 ### Installation
 
-The package can be installed via pip 
+The package can be installed via pip
 ```bash
 pip install git+https://github.com/Borda/pyBPDL.git
 ```
-alternatively, using `setuptools` from a local folder 
+alternatively, using `setuptools` from a local folder
 ```bash
 python setup.py install
 ```
@@ -69,18 +66,18 @@ python setup.py install
 We work on synthetic and also real images.
 
 ### Synthetic datasets
- 
+
 We have script `run_dataset_generate.py` which generate a dataset with the given configuration. The images subsets are:
-  
+
 1. **pure** images meaning they are generated just from the atlas
 2. **noise** images from (1) with added binary noise
 3. **deform** images from (1) with applied small elastic deformation
 4. **deform&noise** images from (3) with added binary noise
-  
-both for binary and fuzzy images.  
+
+both for binary and fuzzy images.
 Some parameters like number of patterns and image size (2D or 3D) are parameters passed to the script
 Other parameters like noise and deformation ratio, are specified in the script.
-  
+
 ```bash
 python experiments/run_dataset_generate.py \
     -p ~/DATA/apdDataset_vX \
@@ -104,7 +101,7 @@ python experiments/run_dataset_add_noise.py \
 ```
 
 ![gauss noise](assets/synth_gauss-noise.png)
- 
+
 ### Real images
 
 We can use as input images, either binary segmentation or fuzzy values.
@@ -114,10 +111,10 @@ For the activation extraction we used [pyImSegm](https://github.com/Borda/pyImSe
 
 For extracting gene activations, we used unsupervised segmentation because the colour is appearing variate among images, so we segment the gene in each image independently.
 
-<!-- 
+<!--
 ![imaginal disk](data_images/imaginal_discs/image/insitu109365.png)
-![segmentation](data_images/imaginal_discs/segm_rgb/insitu109365.png) 
-![gene activation](data_images/imaginal_discs/gene/insitu109365.png) 
+![segmentation](data_images/imaginal_discs/segm_rgb/insitu109365.png)
+![gene activation](data_images/imaginal_discs/gene/insitu109365.png)
 -->
 
 To cut the set of images to the minimal size with reasonable information (basically removing background starting from image boundaries) you can use the following script
@@ -163,9 +160,9 @@ python run_parse_experiments_result.py \
 
 ### Binary Pattern Dictionary Learning
 
-We run just our method on both synthetic/real images using `run_experiment_apd_bpdl.py` where each configuration have several runs in debug mode 
+We run just our method on both synthetic/real images using `run_experiment_apd_bpdl.py` where each configuration have several runs in debug mode
  (saving more log information and also exporting all partially estimated atlases)
- 
+
 1. **Synthetic datasets**
     ```bash
     python experiments/run_experiments.py \
@@ -203,7 +200,7 @@ will run 2 * 4 = 8 experiment - two numbers of patterns and four deformation coe
 ### All methods
 
 We can run all methods in the equal configuration mode on given synthetic/real data using `run_experiments_all.py` running in info mode, just a few printing
- 
+
 1. **Synthetic datasets**
     ```bash
     python experiments/run_experiments.py \

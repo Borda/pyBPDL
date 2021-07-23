@@ -19,7 +19,7 @@ recursive-include bpdl *.py
 include setup.*
 
 # Exclude build configs
-exclude *.yml
+exclude *.yml *.yaml
 # Exclude testing
 exclude pytest.*
 
