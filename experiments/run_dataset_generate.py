@@ -4,12 +4,12 @@ The main script for generating synthetic datasets
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import os
-import sys
-import logging
 import argparse
 import inspect
+import logging
 import multiprocessing as mproc
+import os
+import sys
 from functools import partial
 
 from imsegm.utilities.data_io import update_path
@@ -17,9 +17,15 @@ from imsegm.utilities.experiments import save_config_yaml
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import (
-    DIR_MANE_SYNTH_DATASET, CSV_NAME_WEIGHTS, dictionary_generate_atlas, dataset_binary_combine_patterns,
-    dataset_apply_image_function, image_deform_elastic, add_image_binary_noise, image_transform_binary2fuzzy,
-    add_image_fuzzy_pepper_noise
+    add_image_binary_noise,
+    add_image_fuzzy_pepper_noise,
+    CSV_NAME_WEIGHTS,
+    dataset_apply_image_function,
+    dataset_binary_combine_patterns,
+    dictionary_generate_atlas,
+    DIR_MANE_SYNTH_DATASET,
+    image_deform_elastic,
+    image_transform_binary2fuzzy,
 )
 
 NB_WORKERS = int(mproc.cpu_count() * 0.7)

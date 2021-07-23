@@ -9,19 +9,19 @@ Simple script for adding Gaussian noise to already generated images
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import os
-import sys
+import argparse
 import glob
 import logging
-import argparse
 import multiprocessing as mproc
+import os
+import sys
 from functools import partial
 
 from imsegm.utilities.data_io import update_path
 from imsegm.utilities.experiments import WrapExecuteSequence
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.data_utils import (GAUSS_NOISE, DIR_MANE_SYNTH_DATASET, load_image, export_image, add_image_fuzzy_gauss_noise)
+from bpdl.data_utils import add_image_fuzzy_gauss_noise, DIR_MANE_SYNTH_DATASET, export_image, GAUSS_NOISE, load_image
 
 NB_WORKERS = int(mproc.cpu_count() * 0.7)
 IMAGE_PATTERN = '*.png'

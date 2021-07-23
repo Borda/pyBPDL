@@ -24,26 +24,37 @@ Example run:
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
+import gc
+import logging
 import os
 import sys
-import gc
 import time
-import logging
 
 import numpy as np
 from imsegm.utilities.experiments import string_dict
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.utilities import is_list_like, is_iterable
 from bpdl.data_utils import (
-    DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET, dataset_compose_atlas, find_images, dataset_load_images
+    dataset_compose_atlas,
+    dataset_load_images,
+    DEFAULT_NAME_DATASET,
+    DIR_NAME_DICTIONARY,
+    find_images,
 )
 from bpdl.dictionary_learning import bpdl_pipeline
 from bpdl.pattern_atlas import init_atlas_mosaic
-from experiments.experiment_general import (SYNTH_PARAMS, REAL_PARAMS, SYNTH_PATH_APD, parse_params)
+from bpdl.utilities import is_iterable, is_list_like
+from experiments.experiment_general import parse_params, REAL_PARAMS, SYNTH_PARAMS, SYNTH_PATH_APD
 from experiments.experiment_methods import (
-    ExperimentSparsePCA, ExperimentFastICA, ExperimentDictLearn, ExperimentNMF, ExperimentSpectClust, ExperimentCanICA,
-    ExperimentMSDL, ExperimentBPDL, DICT_ATLAS_INIT
+    DICT_ATLAS_INIT,
+    ExperimentBPDL,
+    ExperimentCanICA,
+    ExperimentDictLearn,
+    ExperimentFastICA,
+    ExperimentMSDL,
+    ExperimentNMF,
+    ExperimentSparsePCA,
+    ExperimentSpectClust,
 )
 
 # standard multiprocessing version

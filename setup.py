@@ -9,6 +9,7 @@ Copyright (C) 2014-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
+
 try:
     from setuptools import setup
     from setuptools.command.build_ext import build_ext

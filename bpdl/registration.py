@@ -16,10 +16,10 @@ from functools import partial
 import numpy as np
 # from scipy.ndimage import filters
 from dipy.align import VerbosityLevels
-from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
+from dipy.align.imwarp import DiffeomorphicMap, SymmetricDiffeomorphicRegistration
 from dipy.align.metrics import SSDMetric
-from imsegm.utilities.experiments import WrapExecuteSequence, get_nb_workers
-from scipy import ndimage, interpolate
+from imsegm.utilities.experiments import get_nb_workers, WrapExecuteSequence
+from scipy import interpolate, ndimage
 
 NB_WORKERS = get_nb_workers(0.8)
 

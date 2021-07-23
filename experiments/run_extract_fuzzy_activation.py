@@ -9,24 +9,25 @@ Extracting the gene activation in case it is separate image channel
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import os
-import sys
 import glob
 import logging
 import multiprocessing as mproc
+import os
+import sys
 from functools import partial
 
 import matplotlib
+
 if os.environ.get('DISPLAY', '') == '':
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
 import numpy as np
-from skimage import filters
+from imsegm.utilities.data_io import io_imread, update_path
+from imsegm.utilities.experiments import WrapExecuteSequence
 # from sklearn.mixture import GaussianMixture
 from scipy import ndimage
-from imsegm.utilities.experiments import WrapExecuteSequence
-from imsegm.utilities.data_io import io_imread, update_path
+from skimage import filters
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import export_image

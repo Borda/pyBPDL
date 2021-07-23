@@ -9,11 +9,11 @@ import logging
 # import numba
 import numpy as np
 from scipy import ndimage as ndi
-from skimage import morphology, measure, segmentation, filters
-from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
+from skimage import filters, measure, morphology, segmentation
+from sklearn.decomposition import DictionaryLearning, FastICA, NMF, SparsePCA
 
-from bpdl.data_utils import image_deform_elastic, extract_image_largest_element
-from bpdl.pattern_weights import (weights_label_atlas_overlap_threshold, convert_weights_binary2indexes)
+from bpdl.data_utils import extract_image_largest_element, image_deform_elastic
+from bpdl.pattern_weights import convert_weights_binary2indexes, weights_label_atlas_overlap_threshold
 
 REINIT_PATTERN_COMPACT = True
 UNARY_BACKGROUND = 1

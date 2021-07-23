@@ -1,21 +1,21 @@
-import os
-import sys
 import glob
 # import time
 import logging
+import os
+import sys
 
+import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
-from skimage import io, draw
-import matplotlib.pylab as plt
-# import SimpleITK as sitk
-# from collections import Counter
-from IPython.html import widgets
-from IPython.display import display
 # from IPython.html.widgets import ToggleButtonsWidget as w_tb
 # from IPython.html.widgets import IntSliderWidget as w_is
 # from IPython.html.widgets import DropdownWidget as w_s
 from imsegm.utilities.data_io import update_path
+from IPython.display import display
+# import SimpleITK as sitk
+# from collections import Counter
+from IPython.html import widgets
+from skimage import draw, io
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 
@@ -108,9 +108,9 @@ def round_range_val(df_data, params, name):
 
 
 def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
-    from IPython.html.widgets import ToggleButtonsWidget as w_tb
-    from IPython.html.widgets import IntSliderWidget as w_is
     from IPython.html.widgets import DropdownWidget as w_s
+    from IPython.html.widgets import IntSliderWidget as w_is
+    from IPython.html.widgets import ToggleButtonsWidget as w_tb
 
     w_source = {n: w_s(options=dist_vars[n], description=n) for n in ['dataset', 'sub_dataset']}
     w_param = {n: w_tb(options=dist_vars[n], description=n) for n in ['gc_reinit', 'init_tp', 'gc_regul']}
