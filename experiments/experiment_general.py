@@ -413,7 +413,8 @@ class Experiment(ExperimentBase):
         # loading  if it is set
         if gt:
             self._load_data_ground_truth()
-            assert len(self._images) == len(self._gt_images), 'nb of input (%i) and reconst. (%i) images do not match' % (len(self._images), len(self._gt_images))
+            assert len(self._images) == len(self._gt_images), \
+                'nb of input (%i) and reconst. (%i) images do not match' % (len(self._images), len(self._gt_images))
         logging.debug('loaded %i images', len(self._images))
 
     def run(self, gt=False, iter_params=None):

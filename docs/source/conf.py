@@ -203,7 +203,12 @@ man_pages = [(master_doc, project, project + ' Documentation', [author], 1)]
 #  dir menu entry, description, category)
 texinfo_documents = [
     (
-        master_doc, project, project + ' Documentation', author, project, 'One line description of project.',
+        master_doc,
+        project,
+        project + ' Documentation',
+        author,
+        project,
+        'One line description of project.',
         'Miscellaneous',
     ),
 ]

@@ -24,7 +24,14 @@ from scipy import ndimage, interpolate
 NB_WORKERS = get_nb_workers(0.8)
 
 LIST_SDR_PARAMS = (
-    'metric', 'level_iters', 'step_length', 'ss_sigma_factor', 'opt_tol', 'inv_iter', 'inv_tol', 'callback',
+    'metric',
+    'level_iters',
+    'step_length',
+    'ss_sigma_factor',
+    'opt_tol',
+    'inv_iter',
+    'inv_tol',
+    'callback',
 )
 DIPY_DEAMONS_PARAMS = dict(
     step_length=0.1,
@@ -273,7 +280,8 @@ def warp2d_images_deformations(list_images, list_deforms, method='linear', inver
             [0, 0, 0, 0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0, 0, 0, 0]]...)]
     """
-    assert len(list_images) == len(list_deforms), 'number of images (%i) and deformations (%i) have to match' % (len(list_images), len(list_deforms))
+    assert len(list_images) == len(list_deforms), \
+        'number of images (%i) and deformations (%i) have to match' % (len(list_images), len(list_deforms))
     list_deforms = list(list_deforms)
 
     _wrap_deform = partial(wrapper_warp2d_transform_image, method=method, inverse=inverse)
@@ -373,7 +381,8 @@ def register_images_to_atlas_demons(
     >>> sorted(deforms[1].keys())
     ['mapping', 'mapping-inv', 'package']
     """
-    assert len(list_images) == len(list_weights), 'number of images (%i) and weights (%i) have to match' % (len(list_images), len(list_weights))
+    assert len(list_images) == len(list_weights), \
+        'number of images (%i) and weights (%i) have to match' % (len(list_images), len(list_weights))
     atlas = np.asarray(atlas, dtype=int)
     list_weights = list(list_weights)
 

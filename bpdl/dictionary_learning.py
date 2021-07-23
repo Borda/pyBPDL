@@ -37,7 +37,12 @@ from bpdl.registration import register_images_to_atlas_demons
 
 NB_GRAPH_CUT_ITER = 5
 TEMPLATE_NAME_ATLAS = 'BPDL_{}_{}_iter_{:04d}'
-LIST_BPDL_STEPS = ['weights update', 'reinit. atlas', 'atlas update', 'deform images',]
+LIST_BPDL_STEPS = [
+    'weights update',
+    'reinit. atlas',
+    'atlas update',
+    'deform images',
+]
 
 # TRY: init: spatial clustering
 # TRY: init: use ICA

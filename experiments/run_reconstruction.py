@@ -116,7 +116,8 @@ def load_experiment(path_expt, name, path_dataset=None, path_images=None, nb_wor
     path_npz = os.path.join(path_expt, BASE_NAME_DEFORM + name + '.npz')
     if os.path.isfile(path_npz):
         dict_deforms = dict(np.load(open(path_npz, 'rb')))
-        assert len(df_weights) == len(dict_deforms), 'unresistant weights (%i) and (%i)' % (len(df_weights), len(dict_deforms))
+        assert len(df_weights) == len(dict_deforms), \
+            'unresistant weights (%i) and (%i)' % (len(df_weights), len(dict_deforms))
     else:
         dict_deforms = None
 
