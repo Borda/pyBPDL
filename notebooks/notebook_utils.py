@@ -112,11 +112,7 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
     from IPython.html.widgets import IntSliderWidget as w_is
     from IPython.html.widgets import DropdownWidget as w_s
 
-    w_source = {n: w_s(
-        options=dist_vars[n],
-        description=n,
-    )
-                for n in ['dataset', 'sub_dataset']}
+    w_source = {n: w_s(options=dist_vars[n], description=n) for n in ['dataset', 'sub_dataset']}
     w_param = {n: w_tb(options=dist_vars[n], description=n) for n in ['gc_reinit', 'init_tp', 'gc_regul']}
     w_range = {n: w_is(min=0, max=0, description=n) for n in ['nb_lbs', 'samples']}
 
