@@ -6,6 +6,7 @@ Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
 import os
+import platform
 import sys
 import time
 import re
@@ -84,7 +85,7 @@ PATH_RESULTS = update_path('results')
 #: default experiment configuration
 DEFAULT_PARAMS = {
     'type': None,
-    'computer': repr(os.uname()),
+    'computer': repr(platform.uname()),
     'nb_samples': None,
     'tol': 1e-5,
     'init_tp': 'random-mosaic-2',  # random, greedy, , GT-deform

@@ -1,0 +1,22 @@
+name: Code formatting
+
+# see: https://help.github.com/en/actions/reference/events-that-trigger-workflows
+on:  # Trigger the workflow on push or pull request, but only for the master branch
+  push: {}
+  pull_request: {}
+
+jobs:
+  pep8-check-flake8:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@master
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.7
+      - name: Install dependencies
+        run: |
+          pip install flake8
+          pip --version
+        shell: bash
+      - name: PEP8
+        run: flake8 .

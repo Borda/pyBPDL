@@ -18,10 +18,10 @@ import numpy as np
 from dipy.align import VerbosityLevels
 from dipy.align.imwarp import SymmetricDiffeomorphicRegistration, DiffeomorphicMap
 from dipy.align.metrics import SSDMetric
-from imsegm.utilities.experiments import WrapExecuteSequence, nb_workers
+from imsegm.utilities.experiments import WrapExecuteSequence, get_nb_workers
 from scipy import ndimage, interpolate
 
-NB_WORKERS = nb_workers(0.8)
+NB_WORKERS = get_nb_workers(0.8)
 
 LIST_SDR_PARAMS = ('metric', 'level_iters', 'step_length', 'ss_sigma_factor',
                    'opt_tol', 'inv_iter', 'inv_tol', 'callback')

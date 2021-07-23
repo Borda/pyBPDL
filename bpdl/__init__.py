@@ -5,8 +5,10 @@ before satisfying install requirements
 """
 
 import os
+import sys
 
 try:
+    import joblib
     import matplotlib
     import numpy as np
     import pandas as pd
@@ -25,6 +27,9 @@ try:
 
     # default display size was changed in pandas v0.23
     pd.set_option('display.max_columns', 20)
+
+    # ModuleNotFoundError: No module named 'sklearn.externals.joblib'
+    sys.modules['sklearn.externals.joblib'] = joblib
 
 except ImportError:
     import traceback
