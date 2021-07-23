@@ -57,4 +57,4 @@ jobs:
         run: |
           cd dist
           pip install *.whl
-          cd .. & python -c "import imsegm ; print(imsegm.__version__)"
+          cd .. & python -c "import bpdl ; print(bpdl.__version__)"
