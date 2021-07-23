@@ -5,36 +5,43 @@ such as the stat of the art and our newly developed
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
+import argparse
+import collections
+import copy
+import logging
+import multiprocessing as mproc
 import os
 import platform
+import re
+import shutil
 import sys
 import time
-import re
-import logging
-import argparse
-import shutil
-import copy
 import types
-import collections
-import multiprocessing as mproc
 
+import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
-from sklearn import metrics
-import matplotlib.pylab as plt
 from imsegm.utilities.data_io import update_path
-from imsegm.utilities.experiments import (
-    WrapExecuteSequence, string_dict, load_config_yaml, extend_list_params, Experiment as ExperimentBase
-)
+from imsegm.utilities.experiments import Experiment as ExperimentBase
+from imsegm.utilities.experiments import extend_list_params, load_config_yaml, string_dict, WrapExecuteSequence
+from sklearn import metrics
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import (
-    NB_BIN_PATTERNS, DIR_MANE_SYNTH_DATASET, GAUSS_NOISE, DIR_NAME_DICTIONARY, export_image, dataset_compose_atlas,
-    dataset_load_weights, dataset_load_images, find_images, format_table_weights
+    dataset_compose_atlas,
+    dataset_load_images,
+    dataset_load_weights,
+    DIR_MANE_SYNTH_DATASET,
+    DIR_NAME_DICTIONARY,
+    export_image,
+    find_images,
+    format_table_weights,
+    GAUSS_NOISE,
+    NB_BIN_PATTERNS,
 )
-from bpdl.utilities import convert_numerical, is_list_like
 from bpdl.pattern_atlas import reconstruct_samples
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
+from bpdl.utilities import convert_numerical, is_list_like
 
 #: default date-time format
 FORMAT_DT = '%Y%m%d-%H%M%S'

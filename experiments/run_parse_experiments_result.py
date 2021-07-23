@@ -14,18 +14,18 @@ EXAMPLES:
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import os
-import sys
-import glob
 import argparse
+import glob
 import logging
 import multiprocessing as mproc
+import os
+import sys
 from functools import partial
 
 import numpy as np
 import pandas as pd
 from imsegm.utilities.data_io import update_path
-from imsegm.utilities.experiments import (WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
+from imsegm.utilities.experiments import load_config_yaml, string_dict, try_decorator, WrapExecuteSequence
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from experiments.experiment_general import parse_config_txt

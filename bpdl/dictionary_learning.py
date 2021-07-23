@@ -18,21 +18,25 @@ if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'ag
     # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import skimage.segmentation as sk_image
-from skimage import filters
 # using https://github.com/Borda/pyGCO
 from gco import cut_general_graph, cut_grid_graph_simple
+from skimage import filters
 
-from bpdl.pattern_atlas import (
-    compute_positive_cost_images_weights, edges_in_image2d_plane, init_atlas_mosaic, atlas_split_indep_ptn,
-    reinit_atlas_likely_patterns, compute_relative_penalty_images_weights
-)
-from bpdl.pattern_weights import (weights_image_atlas_overlap_major, weights_image_atlas_overlap_partial)
-from bpdl.metric_similarity import compare_atlas_adjusted_rand
 from bpdl.data_utils import export_image
+from bpdl.metric_similarity import compare_atlas_adjusted_rand
+from bpdl.pattern_atlas import (
+    atlas_split_indep_ptn,
+    compute_positive_cost_images_weights,
+    compute_relative_penalty_images_weights,
+    edges_in_image2d_plane,
+    init_atlas_mosaic,
+    reinit_atlas_likely_patterns,
+)
+from bpdl.pattern_weights import weights_image_atlas_overlap_major, weights_image_atlas_overlap_partial
 from bpdl.registration import register_images_to_atlas_demons
 
 NB_GRAPH_CUT_ITER = 5

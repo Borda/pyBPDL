@@ -21,16 +21,16 @@ if os.environ.get('DISPLAY', '') == '' and matplotlib.rcParams['backend'] != 'ag
     # https://matplotlib.org/faq/usage_faq.html
     matplotlib.use('Agg')
 
+import matplotlib.pyplot as plt
 import nibabel
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+from imsegm.utilities.data_io import io_imread, io_imsave
+# from PIL import Image
+from imsegm.utilities.experiments import WrapExecuteSequence
 from scipy import ndimage
 # from scipy.spatial import distance
 from skimage import draw, transform
-# from PIL import Image
-from imsegm.utilities.experiments import WrapExecuteSequence
-from imsegm.utilities.data_io import io_imread, io_imsave
 
 from bpdl.utilities import create_clean_folder
 

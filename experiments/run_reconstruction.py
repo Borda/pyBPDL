@@ -11,28 +11,29 @@ EXAMPLE:
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import os
-import sys
-import time
 import argparse
 import gc
 import glob
 import logging
 import multiprocessing as mproc
+import os
+import sys
+import time
 from functools import partial
 
 import matplotlib
+
 if os.environ.get('DISPLAY', '') == '':
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
-import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import skimage.segmentation as sk_segm
-from imsegm.utilities.experiments import WrapExecuteSequence, string_dict, load_config_yaml
+import tqdm
 from imsegm.utilities.data_io import io_imread, update_path
+from imsegm.utilities.experiments import load_config_yaml, string_dict, WrapExecuteSequence
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import dataset_load_images, export_image

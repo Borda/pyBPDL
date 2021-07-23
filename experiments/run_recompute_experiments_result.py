@@ -8,30 +8,31 @@ EXAMPLES:
 Copyright (C) 2015-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import os
-import sys
+import gc
 import glob
 import logging
-import gc
-import time
 import multiprocessing as mproc
+import os
+import sys
+import time
 from functools import partial
 
 import matplotlib
+
 if os.environ.get('DISPLAY', '') == '':
     print('No display found. Using non-interactive Agg backend.')
     matplotlib.use('Agg')
 
+import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pylab as plt
+from imsegm.utilities.experiments import load_config_yaml, string_dict, try_decorator, WrapExecuteSequence
 from PIL import Image
 from skimage.segmentation import relabel_sequential
-from imsegm.utilities.experiments import (WrapExecuteSequence, try_decorator, string_dict, load_config_yaml)
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.data_utils import DIR_NAME_DICTIONARY, dataset_compose_atlas, export_image
-from bpdl.metric_similarity import relabel_max_overlap_unique, compute_classif_metrics
+from bpdl.data_utils import dataset_compose_atlas, DIR_NAME_DICTIONARY, export_image
+from bpdl.metric_similarity import compute_classif_metrics, relabel_max_overlap_unique
 from experiments.run_dataset_generate import NAME_CONFIG
 from experiments.run_parse_experiments_result import parse_arg_params
 

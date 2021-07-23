@@ -4,27 +4,35 @@ experiments with Stat-of-the-Art methods
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
+import logging
 import os
 import sys
-import logging
 from functools import partial
 
-import numpy as np
 import nibabel as nib
-from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
-from sklearn.cluster import SpectralClustering
+import numpy as np
+from imsegm.utilities.experiments import string_dict
 from nilearn.decomposition import CanICA, DictLearning
 from skimage import segmentation
-from imsegm.utilities.experiments import string_dict
+from sklearn.cluster import SpectralClustering
+from sklearn.decomposition import DictionaryLearning, FastICA, NMF, SparsePCA
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import relabel_boundary_background
+from bpdl.dictionary_learning import bpdl_pipeline, reset_atlas_background
 from bpdl.pattern_atlas import (
-    init_atlas_grid, init_atlas_mosaic, init_atlas_random, init_atlas_gauss_watershed_2d, init_atlas_otsu_watershed_2d,
-    init_atlas_nmf, init_atlas_fast_ica, init_atlas_sparse_pca, init_atlas_dict_learn, init_atlas_deform_original,
-    reconstruct_samples
+    init_atlas_deform_original,
+    init_atlas_dict_learn,
+    init_atlas_fast_ica,
+    init_atlas_gauss_watershed_2d,
+    init_atlas_grid,
+    init_atlas_mosaic,
+    init_atlas_nmf,
+    init_atlas_otsu_watershed_2d,
+    init_atlas_random,
+    init_atlas_sparse_pca,
+    reconstruct_samples,
 )
-from bpdl.dictionary_learning import reset_atlas_background, bpdl_pipeline
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
 from bpdl.registration import warp2d_images_deformations
 from experiments.experiment_general import Experiment

@@ -9,22 +9,22 @@ EXAMPLES:
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-import os
-import sys
+import argparse
 import glob
 import json
-import argparse
 import logging
 import multiprocessing as mproc
+import os
+import sys
 from functools import partial
 
 import numpy as np
-from scipy.ndimage import filters
 from imsegm.utilities.data_io import update_path
 from imsegm.utilities.experiments import WrapExecuteSequence
+from scipy.ndimage import filters
 
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
-from bpdl.data_utils import load_image, export_image
+from bpdl.data_utils import export_image, load_image
 from bpdl.utilities import estimate_rolling_ball
 
 NB_WORKERS = int(mproc.cpu_count() * .75)
