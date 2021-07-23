@@ -27,10 +27,10 @@ from skimage import filters
 from gco import cut_general_graph, cut_grid_graph_simple
 
 from bpdl.pattern_atlas import (
-    compute_positive_cost_images_weights, edges_in_image2d_plane, init_atlas_mosaic,
-    atlas_split_indep_ptn, reinit_atlas_likely_patterns, compute_relative_penalty_images_weights)
-from bpdl.pattern_weights import (
-    weights_image_atlas_overlap_major, weights_image_atlas_overlap_partial)
+    compute_positive_cost_images_weights, edges_in_image2d_plane, init_atlas_mosaic, atlas_split_indep_ptn,
+    reinit_atlas_likely_patterns, compute_relative_penalty_images_weights
+)
+from bpdl.pattern_weights import (weights_image_atlas_overlap_major, weights_image_atlas_overlap_partial)
 from bpdl.metric_similarity import compare_atlas_adjusted_rand
 from bpdl.data_utils import export_image
 from bpdl.registration import register_images_to_atlas_demons
@@ -41,7 +41,7 @@ LIST_BPDL_STEPS = [
     'weights update',
     'reinit. atlas',
     'atlas update',
-    'deform images'
+    'deform images',
 ]
 
 # TRY: init: spatial clustering
@@ -83,16 +83,14 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
 
     labeling_sum = compute_positive_cost_images_weights(imgs, ptn_weights)
     unary_cost = np.array(-1 * labeling_sum, dtype=np.int32)
-    logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape,
-                  list(zip(np.histogram(unary_cost, bins=10))))
+    logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape, list(zip(np.histogram(unary_cost, bins=10))))
     # original and the right way..
     pairwise = (1 - np.eye(labeling_sum.shape[-1])) * coef
     pairwise_cost = np.array(pairwise, dtype=np.int32)
     logging.debug('graph pairwise coefs %r', pairwise_cost.shape)
     # run GraphCut
     try:
-        labels = cut_grid_graph_simple(unary_cost, pairwise_cost,
-                                       algorithm='expansion')
+        labels = cut_grid_graph_simple(unary_cost, pairwise_cost, algorithm='expansion')
     except Exception:
         logging.exception('cut_grid_graph_simple')
         labels = np.argmin(unary_cost, axis=1)
@@ -102,8 +100,7 @@ def estimate_atlas_graphcut_simple(imgs, ptn_weights, coef=1.):
     return labels
 
 
-def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
-                                    connect_diag=False):
+def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None, connect_diag=False):
     """ run the graphcut on the unary costs with specific pairwise cost
     source: https://github.com/yujiali/pyGCO
 
@@ -142,8 +139,7 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
     # u_cost = 1. / (labelingSum +1)
     unary_cost = np.array(u_cost, dtype=np.float64)
     unary_cost = unary_cost.reshape(-1, u_cost.shape[-1])
-    logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape,
-                  list(zip(np.histogram(unary_cost, bins=10))))
+    logging.debug('graph unaries potentials %r: \n %r', unary_cost.shape, list(zip(np.histogram(unary_cost, bins=10))))
 
     edges, edge_weights = edges_in_image2d_plane(u_cost.shape[:-1], connect_diag)
 
@@ -160,21 +156,25 @@ def estimate_atlas_graphcut_general(imgs, ptn_weights, coef=0., init_atlas=None,
 
     # run GraphCut
     try:
-        labels = cut_general_graph(edges, edge_weights, unary_cost, pairwise_cost,
-                                   algorithm='expansion', init_labels=init_labels,
-                                   n_iter=NB_GRAPH_CUT_ITER)
+        labels = cut_general_graph(
+            edges,
+            edge_weights,
+            unary_cost,
+            pairwise_cost,
+            algorithm='expansion',
+            init_labels=init_labels,
+            n_iter=NB_GRAPH_CUT_ITER
+        )
     except Exception:
         logging.exception('cut_general_graph')
         labels = np.argmin(unary_cost, axis=1)
     # reshape labels
     labels = labels.reshape(u_cost.shape[:2])
-    logging.debug('resulting labelling %r of %r', labels.shape,
-                  np.unique(labels).tolist())
+    logging.debug('resulting labelling %r of %r', labels.shape, np.unique(labels).tolist())
     return labels
 
 
-def export_visualization_image(img, idx, out_dir, prefix='debug', name='',
-                               ration=None, labels=('', '')):
+def export_visualization_image(img, idx, out_dir, prefix='debug', name='', ration=None, labels=('', '')):
     """ export visualisation as an image with some special desc.
 
     :param ndarray img: np.array<height, width>
@@ -235,8 +235,7 @@ def export_visual_atlas(i, out_dir, atlas=None, prefix='debug'):
     #                                'auto', ['patterns', 'images'])
 
 
-def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
-                        rand_seed=None):
+def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix, rand_seed=None):
     """ more complex initialisation depending on inputs
 
     :param list(ndarray) imgs: list of np.array<height, width>
@@ -301,8 +300,7 @@ def bpdl_initialisation(imgs, init_atlas, init_weights, out_dir, out_prefix,
     atlas = init_atlas
     w_bins = init_weights
     if len(np.unique(atlas)) == 1:
-        logging.error('the init. atlas does not contain any label... %r',
-                      np.unique(atlas))
+        logging.error('the init. atlas does not contain any label... %r', np.unique(atlas))
     export_visual_atlas(0, out_dir, atlas, out_prefix)
     return atlas, w_bins
 
@@ -343,16 +341,14 @@ def bpdl_update_weights(imgs, atlas, overlap_major=False):
     """
     # update w_bins
     logging.debug('... perform pattern weights')
-    fn_weights_ = weights_image_atlas_overlap_major if overlap_major \
-        else weights_image_atlas_overlap_partial
+    fn_weights_ = weights_image_atlas_overlap_major if overlap_major else weights_image_atlas_overlap_partial
     w_bins = [fn_weights_(img, atlas) for img in imgs]
     # add once for patterns that are not used at all
     # w_bins = ptn_weight.fill_empty_patterns(np.array(w_bins))
     return np.array(w_bins)
 
 
-def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
-                      ptn_compact, connect_diag=False):
+def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit, ptn_compact, connect_diag=False):
     """ single iteration of the block coordinate descent algo
 
     :param list(ndarray) imgs: list of images np.array<height, width>
@@ -387,11 +383,9 @@ def bpdl_update_atlas(imgs, atlas, w_bins, label_max, gc_coef, gc_reinit,
 
     logging.debug('... perform Atlas estimation')
     if gc_reinit:
-        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef, atlas,
-                                                    connect_diag=connect_diag)
+        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef, atlas, connect_diag=connect_diag)
     else:
-        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef,
-                                                    connect_diag=connect_diag)
+        atlas_new = estimate_atlas_graphcut_general(imgs, w_bins, gc_coef, connect_diag=connect_diag)
 
     if ptn_compact:
         atlas_new = atlas_split_indep_ptn(atlas_new, label_max)
@@ -405,17 +399,26 @@ def bpdl_deform_images(images, atlas, weights, deform_coef, inverse=False):
         return images, None
     # coef = deform_coef * np.sqrt(np.product(images.shape))
     smooth_coef = deform_coef * min(images[0].shape)
-    logging.debug('... perform register images onto atlas with smooth_coef: %f',
-                  smooth_coef)
-    images_warped, deforms = register_images_to_atlas_demons(images, atlas, weights,
-                                                             smooth_coef, inverse=inverse)
+    logging.debug('... perform register images onto atlas with smooth_coef: %f', smooth_coef)
+    images_warped, deforms = register_images_to_atlas_demons(images, atlas, weights, smooth_coef, inverse=inverse)
     return images_warped, deforms
 
 
-def bpdl_pipeline(images, init_atlas=None, init_weights=None,
-                  gc_regul=0.0, tol=1e-3, max_iter=25, gc_reinit=True,
-                  ptn_compact=True, overlap_major=False, connect_diag=False,
-                  deform_coef=None, out_prefix='debug', out_dir=''):
+def bpdl_pipeline(
+    images,
+    init_atlas=None,
+    init_weights=None,
+    gc_regul=0.0,
+    tol=1e-3,
+    max_iter=25,
+    gc_reinit=True,
+    ptn_compact=True,
+    overlap_major=False,
+    connect_diag=False,
+    deform_coef=None,
+    out_prefix='debug',
+    out_dir=''
+):
     """ the experiments_synthetic pipeline for block coordinate descent
     algo with graphcut...
 
@@ -498,8 +501,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     label_max = np.max(init_atlas)
     assert label_max > 0, 'at least some patterns should be searched'
     logging.debug('max nb labels set: %i', label_max)
-    atlas, w_bins = bpdl_initialisation(images, init_atlas, init_weights,
-                                        out_dir, out_prefix)
+    atlas, w_bins = bpdl_initialisation(images, init_atlas, init_weights, out_dir, out_prefix)
     list_diff = []
     list_times = []
     imgs_warped = images
@@ -508,25 +510,22 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
 
     for it in range(max_iter):
         if len(np.unique(atlas)) == 1:
-            logging.warning('.. iter: %i, no labels in the atlas %r', it,
-                            np.unique(atlas).tolist())
+            logging.warning('.. iter: %i, no labels in the atlas %r', it, np.unique(atlas).tolist())
         times = [time.time()]
         # 1: update WEIGHTS
         w_bins = bpdl_update_weights(imgs_warped, atlas, overlap_major)
         times.append(time.time())
         # 2: reinitialise empty patterns
-        atlas_reinit, w_bins = reinit_atlas_likely_patterns(imgs_warped, w_bins, atlas,
-                                                            label_max, ptn_compact)
+        atlas_reinit, w_bins = reinit_atlas_likely_patterns(imgs_warped, w_bins, atlas, label_max, ptn_compact)
         times.append(time.time())
         # 3: update the ATLAS
-        atlas_new = bpdl_update_atlas(imgs_warped, atlas_reinit, w_bins,
-                                      label_max, gc_regul, gc_reinit, ptn_compact,
-                                      connect_diag)
+        atlas_new = bpdl_update_atlas(
+            imgs_warped, atlas_reinit, w_bins, label_max, gc_regul, gc_reinit, ptn_compact, connect_diag
+        )
         times.append(time.time())
         # 4: optional deformations
         if it > 0:
-            imgs_warped, deforms = bpdl_deform_images(images, atlas_new,
-                                                      w_bins, deform_coef)
+            imgs_warped, deforms = bpdl_deform_images(images, atlas_new, w_bins, deform_coef)
             times.append(time.time())
 
         times = [times[i] - times[i - 1] for i in range(1, len(times))]
@@ -542,8 +541,7 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
 
         # STOPPING criterion
         if step_diff <= tol and len(np.unique(atlas)) > 1:
-            logging.debug('>> exit while the atlas diff %f is smaller then %f',
-                          step_diff, tol)
+            logging.debug('>> exit while the atlas diff %f is smaller then %f', step_diff, tol)
             break
 
     # TODO: force set background for to small components
@@ -551,8 +549,9 @@ def bpdl_pipeline(images, init_atlas=None, init_weights=None,
     imgs_warped, deforms = bpdl_deform_images(images, atlas, w_bins, deform_coef)
     w_bins = [weights_image_atlas_overlap_major(img, atlas) for img in imgs_warped]
 
-    logging.debug('BPDL: terminated with iter %i / %i and step diff %f <? %f',
-                  len(list_diff), max_iter, list_diff[-1], tol)
+    logging.debug(
+        'BPDL: terminated with iter %i / %i and step diff %f <? %f', len(list_diff), max_iter, list_diff[-1], tol
+    )
     logging.debug('criterion evolved:\n %r', list_diff)
     df_time = pd.DataFrame(list_times)
     logging.debug('measured time: \n%r', df_time)
@@ -641,8 +640,7 @@ def show_simple_case(atlas, imgs, ws):
     # logging.debug(ws)
     for i in range(uc.shape[2]):
         axarr[1, i].set_title('cost lb #{}'.format(i))
-        im = axarr[1, i].imshow(uc[:, :, i], vmin=0, vmax=1,
-                                interpolation='nearest')
+        im = axarr[1, i].imshow(uc[:, :, i], vmin=0, vmax=1, interpolation='nearest')
         fig.colorbar(im, ax=axarr[1, i])
     # logging.debug(uc)
     return res, fig

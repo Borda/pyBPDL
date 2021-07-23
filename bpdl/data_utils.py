@@ -51,7 +51,6 @@ DEFAULT_NAME_DATASET = 'datasetBinary_raw'
 COLUMN_NAME = 'ptn_{:02d}'
 GAUSS_NOISE = (0.2, 0.15, 0.125, 0.1, 0.075, 0.05, 0.025, 0.01, 0.005, 0.001)
 
-
 # def io_image_decorate(func):
 #     """ costume decorator to suppers debug messages from the PIL function
 #     to suppress PIl debug logging
@@ -128,8 +127,7 @@ def create_elastic_deform_2d(im_size, coef=0.5, grid_size=(20, 20), rand_seed=No
     <class 'skimage.transform._geometric.PiecewiseAffineTransform'>
     """
     np.random.seed(rand_seed)
-    rows, cols = np.meshgrid(np.linspace(0, im_size[0], grid_size[0]),
-                             np.linspace(0, im_size[1], grid_size[1]))
+    rows, cols = np.meshgrid(np.linspace(0, im_size[0], grid_size[0]), np.linspace(0, im_size[1], grid_size[1]))
     mesh_src = np.dstack([cols.flat, rows.flat])[0]
     # logging.debug(src)
     mesh_dst = mesh_src.copy()
@@ -189,12 +187,12 @@ def image_deform_elastic(im, coef=0.5, grid_size=(20, 20), rand_seed=None):
     tform = create_elastic_deform_2d(im_size, coef, grid_size, rand_seed)
     bg = frequent_boundary_label(im)
     if im.ndim == 2:
-        img = transform.warp(im.astype(float), tform, output_shape=im_size,
-                             order=0, cval=bg)
+        img = transform.warp(im.astype(float), tform, output_shape=im_size, order=0, cval=bg)
     elif im.ndim == 3:
-        im_stack = [transform.warp(im[i].astype(float), tform,
-                                   output_shape=im_size, order=0, cval=bg)
-                    for i in range(im.shape[0])]
+        im_stack = [
+            transform.warp(im[i].astype(float), tform, output_shape=im_size, order=0, cval=bg)
+            for i in range(im.shape[0])
+        ]
         img = np.array(im_stack)
     else:
         logging.error('not supported image dimension - %r' % im.shape)
@@ -222,17 +220,14 @@ def frequent_boundary_label(image):
     if image.ndim == 1:
         labels = np.array([image[0], image[-1]])
     elif image.ndim == 2:
-        labels = np.hstack([image[0, :], image[:, 0],
-                            image[:, -1], image[-1, :]])
+        labels = np.hstack([image[0, :], image[:, 0], image[:, -1], image[-1, :]])
     elif image.ndim == 3:
-        slices = [image[0, :, 0], image[:, 0, 0], image[0, 0, :],
-                  image[-1, :, -1], image[:, -1, -1], image[-1, -1, :]]
+        slices = [image[0, :, 0], image[:, 0, 0], image[0, 0, :], image[-1, :, -1], image[:, -1, -1], image[-1, -1, :]]
         labels = np.hstack([sl.ravel() for sl in slices])
     else:
         labels = np.array([0])
         logging.warning('wrong image dimension - %r', image.shape)
-    bg = np.argmax(np.bincount(labels)) \
-        if np.issubdtype(image.dtype, np.integer) else np.median(labels)
+    bg = np.argmax(np.bincount(labels)) if np.issubdtype(image.dtype, np.integer) else np.median(labels)
     return bg
 
 
@@ -287,10 +282,8 @@ def generate_rand_center_radius(img, ratio, rand_seed=None):
     center, radius = [0] * img.ndim, [0] * img.ndim
     for i in range(img.ndim):
         size = img.shape[i]
-        center[i] = np.random.randint(int(1.5 * ratio * size),
-                                      int((1. - 1.5 * ratio) * size) + 1)
-        radius[i] = np.random.randint(int(0.25 * ratio * size),
-                                      int(1. * ratio * size) + 1)
+        center[i] = np.random.randint(int(1.5 * ratio * size), int((1. - 1.5 * ratio) * size) + 1)
+        radius[i] = np.random.randint(int(0.25 * ratio * size), int(1. * ratio * size) + 1)
         radius[i] += 0.03 * size
     return center, radius
 
@@ -353,7 +346,7 @@ def draw_rand_ellipsoid(img, ratio=0.1, clr=255, rand_seed=None):
     vec_dims = [np.arange(0, img.shape[i]) - center[i] for i in range(img.ndim)]
     mesh_z, mesh_x, mesh_y = np.meshgrid(*vec_dims, indexing='ij')
     a, b, c = radius
-    dist = (mesh_z ** 2 / a ** 2) + (mesh_x ** 2 / b ** 2) + (mesh_y ** 2 / c ** 2)
+    dist = (mesh_z**2 / a**2) + (mesh_x**2 / b**2) + (mesh_y**2 / c**2)
     img[dist < 1.] = clr
     return img
 
@@ -426,8 +419,7 @@ def atlas_filter_larges_components(atlas):
            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0]], dtype=uint8)
     """
     # export to dictionary
-    logging.info('... post-processing over generated patterns: %r',
-                 np.unique(atlas).tolist())
+    logging.info('... post-processing over generated patterns: %r', np.unique(atlas).tolist())
     atlas_new = np.zeros(atlas.shape, dtype=np.uint8)
     imgs_patterns = []
     for i, idx in enumerate(np.unique(atlas)[1:]):
@@ -444,10 +436,13 @@ def atlas_filter_larges_components(atlas):
     return atlas_new, imgs_patterns
 
 
-def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
-                              nb_patterns=NB_BIN_PATTERNS,
-                              im_size=IMAGE_SIZE_2D,
-                              temp_img_name=IMAGE_PATTERN):
+def dictionary_generate_atlas(
+    path_out,
+    dir_name=DIR_NAME_DICTIONARY,
+    nb_patterns=NB_BIN_PATTERNS,
+    im_size=IMAGE_SIZE_2D,
+    temp_img_name=IMAGE_PATTERN
+):
     """ generate pattern dictionary as atlas, no overlapping
 
     :param str path_out: path to the results directory
@@ -464,8 +459,7 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     >>> import shutil
     >>> shutil.rmtree(path_dir, ignore_errors=True)
     """
-    logging.info('generate Atlas composed from %i patterns and image size %r',
-                 nb_patterns, im_size)
+    logging.info('generate Atlas composed from %i patterns and image size %r', nb_patterns, im_size)
     out_dir = os.path.join(path_out, dir_name)
     create_clean_folder(out_dir)
     atlas = np.zeros(im_size, dtype=np.uint8)
@@ -482,25 +476,25 @@ def dictionary_generate_atlas(path_out, dir_name=DIR_NAME_DICTIONARY,
     # in case run in DEBUG show atlas and wait till close
     if logging.getLogger().getEffectiveLevel() == logging.DEBUG:
         logging.debug('labels: %r', np.unique(atlas_def))
-        atlas_show = atlas_def if atlas_def.ndim == 2 \
-            else atlas_def[int(atlas_def.shape[0] / 2)]
+        atlas_show = atlas_def if atlas_def.ndim == 2 else atlas_def[int(atlas_def.shape[0] / 2)]
         plt.imshow(atlas_show)
         plt.show()
     atlas_new, imgs_patterns = atlas_filter_larges_components(atlas_def)
-    plt.imsave(os.path.join(path_out, 'atlas_rgb.png'), atlas_new,
-               cmap=plt.cm.jet)
+    plt.imsave(os.path.join(path_out, 'atlas_rgb.png'), atlas_new, cmap=plt.cm.jet)
     export_image(out_dir, atlas_new, 'atlas', stretch_range=False)
     for i, img in enumerate(imgs_patterns):
         export_image(out_dir, img, i, temp_img_name)
     return imgs_patterns
 
 
-def dictionary_generate_rnd_pattern(path_out=None,
-                                    dir_name=DIR_NAME_DICTIONARY,
-                                    nb_patterns=NB_BIN_PATTERNS,
-                                    im_size=IMAGE_SIZE_2D,
-                                    temp_img_name=IMAGE_PATTERN,
-                                    rand_seed=None):
+def dictionary_generate_rnd_pattern(
+    path_out=None,
+    dir_name=DIR_NAME_DICTIONARY,
+    nb_patterns=NB_BIN_PATTERNS,
+    im_size=IMAGE_SIZE_2D,
+    temp_img_name=IMAGE_PATTERN,
+    rand_seed=None
+):
     """ generate pattern dictionary and allow overlapping
 
     :param str path_out: path to the results directory
@@ -531,8 +525,7 @@ def dictionary_generate_rnd_pattern(path_out=None,
     >>> import shutil
     >>> shutil.rmtree(p_dir, ignore_errors=True)
     """
-    logging.info('generate Dict. composed from %i patterns and img. size %r',
-                 nb_patterns, im_size)
+    logging.info('generate Dict. composed from %i patterns and img. size %r', nb_patterns, im_size)
     if path_out is not None:
         path_out = os.path.join(path_out, dir_name)
         create_clean_folder(path_out)
@@ -546,9 +539,7 @@ def dictionary_generate_rnd_pattern(path_out=None,
     return list_imgs
 
 
-def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
-                                     ptn_ration=RND_PATTERN_OCCLUSION,
-                                     rand_seed=None):
+def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None, ptn_ration=RND_PATTERN_OCCLUSION, rand_seed=None):
     """ generate the new sample from list of pattern with specific ration
 
     :param int idx: index
@@ -596,9 +587,14 @@ def generate_rand_patterns_occlusion(idx, im_ptns, out_dir=None,
     return idx, im, im_name, ptn_weights
 
 
-def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES,
-                                    ptn_ration=RND_PATTERN_OCCLUSION,
-                                    nb_workers=NB_WORKERS, rand_seed=None):
+def dataset_binary_combine_patterns(
+    im_ptns,
+    out_dir=None,
+    nb_samples=NB_SAMPLES,
+    ptn_ration=RND_PATTERN_OCCLUSION,
+    nb_workers=NB_WORKERS,
+    rand_seed=None
+):
     """ generate a Binary dataset composed from N samples and given ration
     of pattern occlusion
 
@@ -635,19 +631,19 @@ def dataset_binary_combine_patterns(im_ptns, out_dir=None, nb_samples=NB_SAMPLES
     sample_00003       0       1
     sample_00004       0       1
     """
-    logging.info('generate a Binary dataset composed from %i samples  '
-                 'and ration pattern occlusion %f', nb_samples, ptn_ration)
+    logging.info(
+        'generate a Binary dataset composed from %i samples and ration pattern occlusion %f', nb_samples, ptn_ration
+    )
     if out_dir is not None:
         create_clean_folder(out_dir)
     im_spls = [None] * nb_samples
     im_names = [None] * nb_samples
     im_weights = [None] * nb_samples
     logging.debug('running in %i threads...', nb_workers)
-    _wrapper_generate = partial(generate_rand_patterns_occlusion,
-                                im_ptns=im_ptns, out_dir=out_dir,
-                                ptn_ration=ptn_ration, rand_seed=rand_seed)
-    for idx, im, im_name, ptn_weights in WrapExecuteSequence(
-            _wrapper_generate, range(nb_samples), nb_workers):
+    _wrapper_generate = partial(
+        generate_rand_patterns_occlusion, im_ptns=im_ptns, out_dir=out_dir, ptn_ration=ptn_ration, rand_seed=rand_seed
+    )
+    for idx, im, im_name, ptn_weights in WrapExecuteSequence(_wrapper_generate, range(nb_samples), nb_workers):
         im_spls[idx] = im
         im_names[idx] = im_name
         im_weights[idx] = ptn_weights
@@ -672,10 +668,8 @@ def format_table_weights(list_names, list_weights, index_name='image', col_name=
     bbb         1       0
     """
     nb = min(len(list_names), len(list_weights))
-    df = pd.DataFrame(data=list_weights[:nb],
-                      index=list_names[:nb])
-    df.columns = [col_name.format(i + 1)
-                  for i in range(len(df.columns))]
+    df = pd.DataFrame(data=list_weights[:nb], index=list_names[:nb])
+    df.columns = [col_name.format(i + 1) for i in range(len(df.columns))]
     df.index.name = index_name
     df.sort_index(inplace=True)
     return df
@@ -710,8 +704,7 @@ def add_image_binary_noise(im, ration=0.1, rand_seed=None):
     return np.array(im_noise, dtype=np.int16)
 
 
-def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
-                 stretch_range=True, nifti=False):
+def export_image(path_out, img, im_name, name_template=SEGM_PATTERN, stretch_range=True, nifti=False):
     """ export an image with given path and optional pattern for image name
 
     :param str path_out: path to the results directory
@@ -780,8 +773,7 @@ def export_image(path_out, img, im_name, name_template=SEGM_PATTERN,
     if not isinstance(im_name, str):
         im_name = name_template.format(im_name)
     path_img = os.path.join(path_out, im_name)
-    logging.debug(' .. saving image of size %r type %r to "%s"',
-                  img.shape, img.dtype, path_img)
+    logging.debug(' .. saving image of size %r type %r to "%s"', img.shape, img.dtype, path_img)
     if stretch_range and img.max() > 0:
         img = img / float(img.max()) * 255
     if nifti:
@@ -846,8 +838,7 @@ def dataset_apply_image_function(imgs, out_dir, func, coef=0.5, nb_workers=NB_WO
     >>> import shutil
     >>> shutil.rmtree(dir_name, ignore_errors=True)
     """
-    logging.info('apply costume function "%s" on %i samples with coef. %f',
-                 func.__name__, len(imgs), coef)
+    logging.info('apply costume function "%s" on %i samples with coef. %f', func.__name__, len(imgs), coef)
     create_clean_folder(out_dir)
 
     imgs_new = [None] * len(imgs)
@@ -974,8 +965,7 @@ def find_images(path_dir, im_pattern='*', img_extensions=IMAGE_EXTENSIONS):
     ['./testing-image.png']
     >>> os.remove(path_img)
     """
-    logging.debug('searching in folder (%s) <- "%s"',
-                  os.path.exists(path_dir), path_dir)
+    logging.debug('searching in folder (%s) <- "%s"', os.path.exists(path_dir), path_dir)
     paths_img_most = []
     for im_suffix in img_extensions:
         path_search = os.path.join(path_dir, im_pattern + im_suffix)
@@ -1002,11 +992,12 @@ def dataset_load_images(img_paths, nb_spls=None, nb_workers=1):
         nb_load_blocks = len(img_paths) / float(BLOCK_NB_LOAD_IMAGES)
         nb_load_blocks = int(np.ceil(nb_load_blocks))
         logging.debug('estimated %i loading blocks', nb_load_blocks)
-        block_paths_img = (img_paths[i::nb_load_blocks]
-                           for i in range(nb_load_blocks))
-        list_names_imgs = list(WrapExecuteSequence(
-            wrapper_load_images, block_paths_img, nb_workers=nb_workers,
-            desc='loading images by blocks'))
+        block_paths_img = (img_paths[i::nb_load_blocks] for i in range(nb_load_blocks))
+        list_names_imgs = list(
+            WrapExecuteSequence(
+                wrapper_load_images, block_paths_img, nb_workers=nb_workers, desc='loading images by blocks'
+            )
+        )
 
         logging.debug('transforming the parallel results')
         names_imgs = sorted(itertools.chain(*list_names_imgs))
@@ -1097,7 +1088,7 @@ def load_image(path_img, fuzzy_val=True):
     if fuzzy_val and img.max() > 0:
         # set particular level of max value depending on leaded image
         max_val = 255 if img.max() > 1 else 1
-        max_val = (256 ** 2) - 1 if img.max() > 255 else max_val
+        max_val = (256**2) - 1 if img.max() > 255 else max_val
         img = (img / float(max_val)).astype(np.float16)
     elif img.dtype == int:
         img = img.astype(np.int16)

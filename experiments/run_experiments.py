@@ -36,15 +36,15 @@ from imsegm.utilities.experiments import string_dict
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.utilities import is_list_like, is_iterable
 from bpdl.data_utils import (
-    DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET,
-    dataset_compose_atlas, find_images, dataset_load_images)
+    DIR_NAME_DICTIONARY, DEFAULT_NAME_DATASET, dataset_compose_atlas, find_images, dataset_load_images
+)
 from bpdl.dictionary_learning import bpdl_pipeline
 from bpdl.pattern_atlas import init_atlas_mosaic
-from experiments.experiment_general import (
-    SYNTH_PARAMS, REAL_PARAMS, SYNTH_PATH_APD, parse_params)
+from experiments.experiment_general import (SYNTH_PARAMS, REAL_PARAMS, SYNTH_PATH_APD, parse_params)
 from experiments.experiment_methods import (
-    ExperimentSparsePCA, ExperimentFastICA, ExperimentDictLearn, ExperimentNMF,
-    ExperimentSpectClust, ExperimentCanICA, ExperimentMSDL, ExperimentBPDL, DICT_ATLAS_INIT)
+    ExperimentSparsePCA, ExperimentFastICA, ExperimentDictLearn, ExperimentNMF, ExperimentSpectClust, ExperimentCanICA,
+    ExperimentMSDL, ExperimentBPDL, DICT_ATLAS_INIT
+)
 
 # standard multiprocessing version
 METHODS = {
@@ -100,9 +100,9 @@ def experiment_pipeline_alpe_showcase(path_out):
     # init_encode_rnd = ptn_weigth.initialise_weights_random(len(imgs),
     #                                                        np.max(atlas))
 
-    atlas, weights, _ = bpdl_pipeline(imgs, out_prefix='mosaic',
-                                      init_atlas=init_atlas_msc,
-                                      max_iter=9, out_dir=path_out)
+    atlas, weights, _ = bpdl_pipeline(
+        imgs, out_prefix='mosaic', init_atlas=init_atlas_msc, max_iter=9, out_dir=path_out
+    )
     return atlas, weights
 
 
@@ -111,8 +111,7 @@ def experiment_iterate(params, iter_params, user_gt):
         params['dataset'] = [params['dataset']]
 
     # tqdm_bar = tqdm.tqdm(total=len(l_params))
-    for method, data in [(m, d) for m in params['method']
-                         for d in params['dataset']]:
+    for method, data in [(m, d) for m in params['method'] for d in params['dataset']]:
         params['dataset'] = data
         params['method'] = method
         cls_expt = METHODS.get(method, None)
@@ -127,8 +126,7 @@ def experiment_iterate(params, iter_params, user_gt):
 
 def filter_iterable_params(params):
     _any_special = lambda k: any(x in k for x in SPECIAL_EXPT_PARAMS)
-    d_iter = {k: params[k] for k in params
-              if is_iterable(params[k]) and not _any_special(k)}
+    d_iter = {k: params[k] for k in params if is_iterable(params[k]) and not _any_special(k)}
     return d_iter
 
 

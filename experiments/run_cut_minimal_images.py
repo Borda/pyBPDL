@@ -44,18 +44,31 @@ def args_parse_params(params):
     :return obj: object argparse<...>
     """
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--path_in', type=str, required=True,
-                        default=params['path_in'],
-                        help='path to the folder with input image dataset')
-    parser.add_argument('-o', '--path_out', type=str, required=True,
-                        default=params['path_out'],
-                        help='path to the output with experiment results')
-    parser.add_argument('-t', '--threshold', type=float, required=False,
-                        default=0.001, help='threshold for image information')
-    parser.add_argument('-m', '--thr_method', type=str, required=False,
-                        default='', choices=METHODS, help='used methods')
-    parser.add_argument('--nb_workers', type=int, required=False,
-                        default=NB_WORKERS, help='number of parallel processes')
+    parser.add_argument(
+        '-i',
+        '--path_in',
+        type=str,
+        required=True,
+        default=params['path_in'],
+        help='path to the folder with input image dataset'
+    )
+    parser.add_argument(
+        '-o',
+        '--path_out',
+        type=str,
+        required=True,
+        default=params['path_out'],
+        help='path to the output with experiment results'
+    )
+    parser.add_argument(
+        '-t', '--threshold', type=float, required=False, default=0.001, help='threshold for image information'
+    )
+    parser.add_argument(
+        '-m', '--thr_method', type=str, required=False, default='', choices=METHODS, help='used methods'
+    )
+    parser.add_argument(
+        '--nb_workers', type=int, required=False, default=NB_WORKERS, help='number of parallel processes'
+    )
 
     args = vars(parser.parse_args())
     for k in (k for k in args if k.startswith('path_')):
@@ -82,8 +95,7 @@ def check_bounding_box(bbox, img_size):
     for i in range(2):
         # if left cut is over right cut reset it
         if bbox[i] > (img_size[i] - bbox[i + 2]):
-            logging.debug('reset BBox (%i, %i) for size %i',
-                          bbox[i], bbox[i + 2], img_size[i])
+            logging.debug('reset BBox (%i, %i) for size %i', bbox[i], bbox[i + 2], img_size[i])
             bbox[i] = 0
             bbox[i + 2] = 0
     return bbox
@@ -144,16 +156,13 @@ def export_bbox_json(path_dir, bbox, name=NAME_JSON_BBOX):
 
 def export_cut_image(path_img, d_bbox, path_out):
     name, im = load_image(path_img)
-    im_cut = im[d_bbox['top']:-d_bbox['bottom'],
-                d_bbox['left']:-d_bbox['right']]
+    im_cut = im[d_bbox['top']:-d_bbox['bottom'], d_bbox['left']:-d_bbox['right']]
     export_image(path_out, im_cut, name)
 
 
 def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
-    assert os.path.isdir(os.path.dirname(path_pattern_in)), \
-        'missing: %s' % path_pattern_in
-    assert os.path.isdir(os.path.dirname(path_out)), \
-        'missing: %s' % os.path.dirname(path_out)
+    assert os.path.isdir(os.path.dirname(path_pattern_in)), 'missing: %s' % path_pattern_in
+    assert os.path.isdir(os.path.dirname(path_out)), 'missing: %s' % os.path.dirname(path_out)
 
     if not os.path.isdir(path_out):
         logging.info('create dir: %s', path_out)
@@ -163,13 +172,13 @@ def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
     logging.info('found images: %i', len(list_img_paths))
 
     # create partial subset with image pathes
-    list_img_paths_partial = [list_img_paths[i::nb_workers * LOAD_SUBSET_COEF]
-                              for i in range(nb_workers * LOAD_SUBSET_COEF)]
+    list_img_paths_partial = [
+        list_img_paths[i::nb_workers * LOAD_SUBSET_COEF] for i in range(nb_workers * LOAD_SUBSET_COEF)
+    ]
     list_img_paths_partial = [ls for ls in list_img_paths_partial if ls]
-    mean_imgs = list(WrapExecuteSequence(load_mean_image,
-                                         list_img_paths_partial,
-                                         nb_workers=nb_workers,
-                                         desc='loading mean images'))
+    mean_imgs = list(
+        WrapExecuteSequence(load_mean_image, list_img_paths_partial, nb_workers=nb_workers, desc='loading mean images')
+    )
     # imgs, im_names = tl_data.dataset_load_images(list_img_paths, nb_workers=1)
     img_mean = np.mean(np.asarray(mean_imgs), axis=0)
     export_image(path_out, img_mean, 'mean_image')
@@ -188,8 +197,7 @@ def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
     logging.info('found BBox: %r', d_bbox)
 
     _cut_export = partial(export_cut_image, d_bbox=d_bbox, path_out=path_out)
-    list(WrapExecuteSequence(_cut_export, list_img_paths, nb_workers,
-                             desc='exporting cut images'))
+    list(WrapExecuteSequence(_cut_export, list_img_paths, nb_workers, desc='exporting cut images'))
 
 
 if __name__ == '__main__':
@@ -197,7 +205,6 @@ if __name__ == '__main__':
     logging.info('running...')
 
     params = args_parse_params(DEFAULT_PARAMS)
-    main(params['path_in'], params['path_out'],
-         nb_workers=params['nb_workers'])
+    main(params['path_in'], params['path_out'], nb_workers=params['nb_workers'])
 
     logging.info('DONE')

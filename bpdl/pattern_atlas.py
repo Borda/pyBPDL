@@ -13,8 +13,7 @@ from skimage import morphology, measure, segmentation, filters
 from sklearn.decomposition import SparsePCA, FastICA, DictionaryLearning, NMF
 
 from bpdl.data_utils import image_deform_elastic, extract_image_largest_element
-from bpdl.pattern_weights import (
-    weights_label_atlas_overlap_threshold, convert_weights_binary2indexes)
+from bpdl.pattern_weights import (weights_label_atlas_overlap_threshold, convert_weights_binary2indexes)
 
 REINIT_PATTERN_COMPACT = True
 UNARY_BACKGROUND = 1
@@ -126,15 +125,13 @@ def init_atlas_mosaic(im_size, nb_patterns, coef=1., rand_seed=None):
         row = np.hstack([block.copy() * vec[k] for k in range(max_label)])
         rows.append(row)
     mosaic = np.vstack(rows)
-    logging.debug('generated mosaic %r with labeling %r', mosaic.shape,
-                  np.unique(mosaic).tolist())
+    logging.debug('generated mosaic %r with labeling %r', mosaic.shape, np.unique(mosaic).tolist())
     img_init = mosaic[:im_size[0], :im_size[1]]
     img_init = np.remainder(img_init, nb_patterns) + 1
     return np.array(img_init, dtype=np.int)
 
 
-def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
-                                 bg_type='none'):
+def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5, bg_type='none'):
     """ do some simple operations to get better initialisation
     1] sum over all images, 2] Otsu thresholding, 3] watershed
 
@@ -169,8 +166,10 @@ def init_atlas_otsu_watershed_2d(imgs, nb_patterns=None, bg_threshold=0.5,
            [4, 5, 5, 5, 1, 5, 0, 0, 0, 0, 0, 0],
            [1, 1, 2, 3, 5, 3, 1, 4, 3, 3, 1, 2]])
     """
-    logging.debug('initialise atlas for %i labels from %i images of shape %r'
-                  ' with Otsu-Watershed', nb_patterns, len(imgs), imgs[0].shape)
+    logging.debug(
+        'initialise atlas for %i labels from %i images of shape %r with Otsu-Watershed', nb_patterns, len(imgs),
+        imgs[0].shape
+    )
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
     img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
     # http://scikit-image.org/docs/dev/auto_examples/plot_otsu.html
@@ -230,8 +229,7 @@ def detect_peaks(image, struct=(2, 2)):
     # a little technicality: we must erode the background in order to
     # successfully subtract it form local_max, otherwise a line will
     # appear along the background border (artifact of the local maximum filter)
-    eroded_background = ndi.morphology.binary_erosion(
-        background, structure=neighborhood, border_value=1)
+    eroded_background = ndi.morphology.binary_erosion(background, structure=neighborhood, border_value=1)
     # we obtain the final mask, containing only peaks,
     # by removing the background from the local_max mask (xor operation)
     detected_peaks = local_max ^ eroded_background
@@ -240,8 +238,7 @@ def detect_peaks(image, struct=(2, 2)):
     return labeled_peaks
 
 
-def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
-                                  bg_threshhold=0.5):
+def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None, bg_threshhold=0.5):
     """ do some simple operations to get better initialisation
     1] sum over all images, 2]watershed
 
@@ -265,8 +262,10 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
     """
-    logging.debug('initialise atlas for %i labels from %i images of shape %r'
-                  ' with Gauss-Watershed', nb_patterns, len(imgs), imgs[0].shape)
+    logging.debug(
+        'initialise atlas for %i labels from %i images of shape %r with Gauss-Watershed', nb_patterns, len(imgs),
+        imgs[0].shape
+    )
     img_sum = np.sum(np.asarray(imgs), axis=0) / float(len(imgs))
     img_gauss = filters.gaussian(img_sum.astype(np.float64), 1)
     seeds = detect_peaks(img_gauss)
@@ -278,8 +277,7 @@ def init_atlas_gauss_watershed_2d(imgs, nb_patterns=None,
     return labels.astype(np.int)
 
 
-def convert_lin_comb_patterns_2_atlas(atlas_components, used_components,
-                                      bg_threshold=0.01):
+def convert_lin_comb_patterns_2_atlas(atlas_components, used_components, bg_threshold=0.01):
     """ conver components rom linear decompostion into an atlass
 
     :param list(ndarray) atlas_components:
@@ -291,8 +289,7 @@ def convert_lin_comb_patterns_2_atlas(atlas_components, used_components,
     atlas_components = atlas_components[used_components, :]
     # take the maximal component
     atlas_mean = np.mean(atlas_components, axis=0)
-    component_sum = [np.sum(atlas_components[i, ...])
-                     for i in range(atlas_components.shape[0])]
+    component_sum = [np.sum(atlas_components[i, ...]) for i in range(atlas_components.shape[0])]
     idxs = np.argsort(component_sum)[::-1]
     atlas = np.argmax(atlas_components[idxs, ...], axis=0) + 1
     # filter small values
@@ -331,17 +328,14 @@ def init_atlas_nmf(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = NMF(n_components=nb_patterns + 1,
-                        max_iter=nb_iter,
-                        init='random')
+        estimator = NMF(n_components=nb_patterns + 1, max_iter=nb_iter, init='random')
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
 
         ptn_used = np.sum(np.abs(fit_result), axis=0) > 0
         atlas_ptns = components.reshape((-1, ) + imgs[0].shape)
 
-        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
-                                                  bg_threshold)
+        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used, bg_threshold)
     except Exception:
         logging.exception('CRASH: %s' % init_atlas_nmf.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
@@ -370,18 +364,14 @@ def init_atlas_fast_ica(imgs, nb_patterns, nb_iter=25, bg_threshold=0.1):
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = FastICA(n_components=nb_patterns + 1,
-                            max_iter=nb_iter,
-                            algorithm='deflation',
-                            whiten=True)
+        estimator = FastICA(n_components=nb_patterns + 1, max_iter=nb_iter, algorithm='deflation', whiten=True)
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.mixing_.T
 
         ptn_used = np.sum(np.abs(fit_result), axis=0) > 0
         atlas_ptns = components.reshape((-1, ) + imgs[0].shape)
 
-        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
-                                                  bg_threshold)
+        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used, bg_threshold)
     except Exception:
         logging.exception('CRASH: %s' % init_atlas_fast_ica.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
@@ -416,16 +406,14 @@ def init_atlas_sparse_pca(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = SparsePCA(n_components=nb_patterns + 1,
-                              max_iter=nb_iter)
+        estimator = SparsePCA(n_components=nb_patterns + 1, max_iter=nb_iter)
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
 
         ptn_used = np.sum(np.abs(fit_result), axis=0) > 0
         atlas_ptns = components.reshape((-1, ) + imgs[0].shape)
 
-        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
-                                                  bg_threshold)
+        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used, bg_threshold)
     except Exception:
         logging.exception('CRASH: %s' % init_atlas_sparse_pca.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
@@ -460,27 +448,27 @@ def init_atlas_dict_learn(imgs, nb_patterns, nb_iter=5, bg_threshold=0.1):
     imgs_vec = np.array([np.ravel(im) for im in imgs])
 
     try:
-        estimator = DictionaryLearning(n_components=nb_patterns + 1,
-                                       fit_algorithm='lars',
-                                       transform_algorithm='omp',
-                                       split_sign=False,
-                                       max_iter=nb_iter)
+        estimator = DictionaryLearning(
+            n_components=nb_patterns + 1,
+            fit_algorithm='lars',
+            transform_algorithm='omp',
+            split_sign=False,
+            max_iter=nb_iter
+        )
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
 
         ptn_used = np.sum(np.abs(fit_result), axis=0) > 0
         atlas_ptns = components.reshape((-1, ) + imgs[0].shape)
 
-        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used,
-                                                  bg_threshold)
+        atlas = convert_lin_comb_patterns_2_atlas(atlas_ptns, ptn_used, bg_threshold)
     except Exception:
         logging.exception('CRASH: %s', init_atlas_dict_learn.__name__)
         atlas = np.zeros(imgs[0].shape, dtype=int)
     return atlas
 
 
-def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20),
-                               rand_seed=None):
+def init_atlas_deform_original(atlas, coef=0.5, grid_size=(20, 20), rand_seed=None):
     """ take the orginal atlas and use geometrical deformation
     to generate new deformed atlas
 
@@ -552,9 +540,9 @@ def reconstruct_samples(atlas, w_bins):
     return imgs
 
 
-def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
-                          ptn_compact=REINIT_PATTERN_COMPACT, thr_fuzzy=0.5,
-                          ptn_method='WaterShade'):
+def prototype_new_pattern(
+    imgs, imgs_reconst, diffs, atlas, ptn_compact=REINIT_PATTERN_COMPACT, thr_fuzzy=0.5, ptn_method='WaterShade'
+):
     """ estimate new pattern that occurs in input images and is not cover
     by any label in actual atlas, remove collision with actual atlas
 
@@ -614,8 +602,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     id_max = np.argmax(diffs)
     # take just positive differences
     assert thr_fuzzy >= 0, 'threshold has to be a positive number'
-    im_diff = np.logical_and((imgs[id_max] - imgs_reconst[id_max]) > thr_fuzzy,
-                             atlas == 0)
+    im_diff = np.logical_and((imgs[id_max] - imgs_reconst[id_max]) > thr_fuzzy, atlas == 0)
     if not ptn_compact:
         return im_diff
     if ptn_method == 'WaterShade':  # WaterShade
@@ -644,8 +631,7 @@ def prototype_new_pattern(imgs, imgs_reconst, diffs, atlas,
     return img_ptn
 
 
-def insert_new_pattern(imgs, imgs_reconst, atlas, label,
-                       ptn_compact=REINIT_PATTERN_COMPACT):
+def insert_new_pattern(imgs, imgs_reconst, atlas, label, ptn_compact=REINIT_PATTERN_COMPACT):
     """ with respect to atlas empty spots inset new patterns
 
     :param list(ndarray) imgs: list of input images np.array<height, width>
@@ -684,8 +670,7 @@ def insert_new_pattern(imgs, imgs_reconst, atlas, label,
     return atlas
 
 
-def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
-                                 ptn_compact=REINIT_PATTERN_COMPACT):
+def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None, ptn_compact=REINIT_PATTERN_COMPACT):
     """ walk and find all all free labels and try to reinit them by new patterns
 
     :param list(ndarray) imgs: list of input images np.array<height, width>
@@ -737,22 +722,18 @@ def reinit_atlas_likely_patterns(imgs, w_bins, atlas, label_max=None,
     # add one while indexes does not cover 0 - bg
     logging.debug('total nb labels: %i', label_max)
     atlas_new = atlas.copy()
-    labels_empty = [lb for lb in range(1, label_max + 1)
-                    if np.sum(w_bins[:, lb - 1]) == 0]
+    labels_empty = [lb for lb in range(1, label_max + 1) if np.sum(w_bins[:, lb - 1]) == 0]
     logging.debug('reinit. following labels: %r', labels_empty)
     for label in labels_empty:
         w_index = label - 1
         imgs_reconst = reconstruct_samples(atlas_new, w_bins)
-        atlas_new = insert_new_pattern(imgs, imgs_reconst, atlas_new, label,
-                                       ptn_compact)
+        atlas_new = insert_new_pattern(imgs, imgs_reconst, atlas_new, label, ptn_compact)
         # logging.debug('w_bins before: %i', np.sum(w_bins[:, w_index]))
         # BE AWARE OF THIS CONSTANT, it can caused that there are weight even
         # they should not be which lead to have high unary for atlas estimation
         lim_repopulate = 1. / label_max
-        w_bins[:, w_index] = weights_label_atlas_overlap_threshold(imgs, atlas_new, label,
-                                                                   lim_repopulate)
-        logging.debug('reinit. label: %i with w_bins after: %i',
-                      label, np.sum(w_bins[:, w_index]))
+        w_bins[:, w_index] = weights_label_atlas_overlap_threshold(imgs, atlas_new, label, lim_repopulate)
+        logging.debug('reinit. label: %i with w_bins after: %i', label, np.sum(w_bins[:, w_index]))
     return atlas_new, w_bins
 
 
@@ -884,21 +865,18 @@ def compute_relative_penalty_images_weights(imgs, weights):
     # weightsIdx = ptn_weight.convert_weights_binary2indexes(weights)
     nb_lbs = weights.shape[1] + 1
     assert len(imgs) == weights.shape[0], \
-        'not matching nb images (%i) and nb weights (%i)' \
-        % (len(imgs), weights.shape[0])
-    pott_sum = np.zeros(imgs[0].shape + (nb_lbs,))
+        'not matching nb images (%i) and nb weights (%i)' % (len(imgs), weights.shape[0])
+    pott_sum = np.zeros(imgs[0].shape + (nb_lbs, ))
     # extenf the weights by background value 0
     weights_ext = np.append(np.zeros((weights.shape[0], 1)), weights, axis=1)
     # logging.debug(weights_ext)
     imgs = np.array(imgs)
-    logging.debug('DIMS potts: %r, imgs %r, w_bin: %r',
-                  pott_sum.shape, imgs.shape, weights_ext.shape)
+    logging.debug('DIMS potts: %r, imgs %r, w_bin: %r', pott_sum.shape, imgs.shape, weights_ext.shape)
     logging.debug('... walk over all pixels in each image')
     for i in range(pott_sum.shape[0]):
         for j in range(pott_sum.shape[1]):
             # make it as matrix ops
-            img_vals = np.repeat(imgs[:, i, j, np.newaxis],
-                                 weights_ext.shape[1], axis=1)
+            img_vals = np.repeat(imgs[:, i, j, np.newaxis], weights_ext.shape[1], axis=1)
             pott_sum[i, j] = np.sum(np.abs(weights_ext - img_vals), axis=0)
     pott_sum_norm = pott_sum / float(len(imgs))
     return pott_sum_norm
@@ -950,9 +928,8 @@ def compute_positive_cost_images_weights(imgs, ptn_weights):
     logging.debug('compute unary cost from images and related ptn_weights')
     w_idx = convert_weights_binary2indexes(ptn_weights)
     nb_lbs = ptn_weights.shape[1] + 1
-    assert len(imgs) == len(w_idx), 'nb of images (%i) and weights (%i) ' \
-                                    'do not match' % (len(imgs), len(w_idx))
-    pott_sum = np.zeros(imgs[0].shape + (nb_lbs,))
+    assert len(imgs) == len(w_idx), 'nb of images (%i) and weights (%i) do not match' % (len(imgs), len(w_idx))
+    pott_sum = np.zeros(imgs[0].shape + (nb_lbs, ))
     # walk over all pixels in image
     logging.debug('... walk over all pixels in each image')
     for i in range(pott_sum.shape[0]):

@@ -24,14 +24,8 @@ SYNTH_DATASET = 'syntheticDataset_vX'
 # PATH_DATA_SYNTH = '/mnt/30C0201EC01FE8BC/TEMP'
 #  = 'atomicPatternDictionary_v0'
 DEFAULT_PATH = os.path.join(PATH_DATA_SYNTH, SYNTH_DATASET)
-SYNTH_DATASETS_BINARY = ['datasetBinary_raw',
-                         'datasetBinary_deform',
-                         'datasetBinary_noise',
-                         'datasetBinary_defNoise']
-SYNTH_DATASETS_FUZZY = ['datasetFuzzy_raw',
-                        'datasetFuzzy_deform',
-                        'datasetFuzzy_noise',
-                        'datasetFuzzy_defNoise']
+SYNTH_DATASETS_BINARY = ['datasetBinary_raw', 'datasetBinary_deform', 'datasetBinary_noise', 'datasetBinary_defNoise']
+SYNTH_DATASETS_FUZZY = ['datasetFuzzy_raw', 'datasetFuzzy_deform', 'datasetFuzzy_noise', 'datasetFuzzy_defNoise']
 DEFAULT_IMG_POSIX = '.png'
 TEMP_ATLAS_NAME = 'APDL_expt_msc_atlas_iter_'
 DEFAULT_APDL_GRAPHS = ('atlas_ARS', 'reconstruct_diff', 'time')
@@ -118,12 +112,9 @@ def bpdl_interact_results_iter_samples(df_data, dist_vars, tp):
     from IPython.html.widgets import IntSliderWidget as w_is
     from IPython.html.widgets import DropdownWidget as w_s
 
-    w_source = {n: w_s(options=dist_vars[n], description=n, )
-                for n in ['dataset', 'sub_dataset']}
-    w_param = {n: w_tb(options=dist_vars[n], description=n)
-               for n in ['gc_reinit', 'init_tp', 'gc_regul']}
-    w_range = {n: w_is(min=0, max=0, description=n)
-               for n in ['nb_lbs', 'samples']}
+    w_source = {n: w_s(options=dist_vars[n], description=n) for n in ['dataset', 'sub_dataset']}
+    w_param = {n: w_tb(options=dist_vars[n], description=n) for n in ['gc_reinit', 'init_tp', 'gc_regul']}
+    w_range = {n: w_is(min=0, max=0, description=n) for n in ['nb_lbs', 'samples']}
 
     def colect_params():
         params = {n: w_source[n].value for n in w_source}
@@ -180,17 +171,16 @@ def bpdl_show_results(df_sel, path_imgs, idx=0, tp='gt', fig_size=(10, 5)):
 
 
 def filter_df_unique(df_data, dict_filter, var_unique):
-    q = ' and '.join(['({} == "{}")'.format(n, dict_filter[n]) for n in dict_filter
-                      if n in df_data.columns and n not in var_unique])
+    q = ' and '.join([
+        '({} == "{}")'.format(n, dict_filter[n]) for n in dict_filter if n in df_data.columns and n not in var_unique
+    ])
     df_filter = df_data.query(q, engine='python')
-    dict_vars = {n: np.unique(df_filter[n]).tolist()
-                 for n in var_unique if n in df_data.columns}
+    dict_vars = {n: np.unique(df_filter[n]).tolist() for n in var_unique if n in df_data.columns}
     return dict_vars
 
 
 def find_experiment(df_data, params):
-    q = ' and '.join(['({} == "{}")'.format(n, params[n])
-                      for n in params if n in df_data.columns])
+    q = ' and '.join(['({} == "{}")'.format(n, params[n]) for n in params if n in df_data.columns])
     df_filter = df_data.query(q, engine='python')
     path_atlas = []
     if df_filter.empty:
@@ -211,8 +201,7 @@ def find_experiment(df_data, params):
 
 def extend_df(df_encode, df_main):
     if 'gene_id' not in df_encode.columns:
-        df_encode = df_encode.merge(df_main, left_index=True, right_on='image',
-                                    how='inner')
+        df_encode = df_encode.merge(df_main, left_index=True, right_on='image', how='inner')
     return df_encode
 
 
@@ -230,12 +219,12 @@ def aggregate_encoding(df_encode, column='gene_id', func=np.mean):
     return df_result
 
 
-def plot_bpdl_graph_results(df_res, n_group, n_curve, iter_var='nb_labels',
-                            l_graphs=DEFAULT_APDL_GRAPHS, figsize=(8, 3)):
+def plot_bpdl_graph_results(
+    df_res, n_group, n_curve, iter_var='nb_labels', l_graphs=DEFAULT_APDL_GRAPHS, figsize=(8, 3)
+):
     for v, df_group in df_res.groupby(n_group):
         clrs = plt.cm.jet(np.linspace(0, 1, len(df_group)))
-        fig, axarr = plt.subplots(len(l_graphs), 1,
-                                  figsize=(figsize[0], figsize[1] * len(l_graphs)))
+        fig, axarr = plt.subplots(len(l_graphs), 1, figsize=(figsize[0], figsize[1] * len(l_graphs)))
         fig.suptitle('{}'.format(v), fontsize=16)
         for i, col in enumerate(l_graphs):
             for j, (_, row) in enumerate(df_group.iterrows()):
@@ -249,9 +238,9 @@ def plot_bpdl_graph_results(df_res, n_group, n_curve, iter_var='nb_labels',
             axarr[i].grid()
 
 
-def filter_df_results_4_plotting(df_select, iter_var='nb_labels',
-                                 n_group='version', n_class='init_tp',
-                                 cols=DEFAULT_APDL_GRAPHS):
+def filter_df_results_4_plotting(
+    df_select, iter_var='nb_labels', n_group='version', n_class='init_tp', cols=DEFAULT_APDL_GRAPHS
+):
     dict_samples = {}
     logging.info('number of selected: %i', len(df_select))
     df_res = pd.DataFrame()
@@ -273,8 +262,7 @@ def filter_df_results_4_plotting(df_select, iter_var='nb_labels',
             dict_samples[v][v1] = nb_samples
             df_res = df_res.append(d, ignore_index=True)
     # df_res = df_res.set_index('class')
-    logging.info('number of rows: %i columns: %r', len(df_res),
-                 df_res.columns.tolist())
+    logging.info('number of rows: %i columns: %r', len(df_res), df_res.columns.tolist())
     logging.info('over samples: %r', dict_samples)
     return df_res, dict_samples
 
@@ -316,13 +304,11 @@ def show_registered_overlap(img_warped, img_target, img_initial):
     plt.imshow(img_warped)
     plt.subplot(1, 3, 2)
     plt.title('W -> goal (gr.)')
-    im_overlap = np.rollaxis(np.array([img_warped, img_target,
-                                       np.zeros(img_target.shape)]), 0, 3)
+    im_overlap = np.rollaxis(np.array([img_warped, img_target, np.zeros(img_target.shape)]), 0, 3)
     plt.imshow(im_overlap)
     plt.subplot(1, 3, 3)
     plt.title('W <- init. (red)')
-    im_overlap = np.rollaxis(np.array([img_initial, img_warped,
-                                       np.zeros(img_target.shape)]), 0, 3)
+    im_overlap = np.rollaxis(np.array([img_initial, img_warped, np.zeros(img_target.shape)]), 0, 3)
     plt.imshow(im_overlap)
 
 

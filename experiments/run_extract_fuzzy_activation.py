@@ -9,7 +9,6 @@ Extracting the gene activation in case it is separate image channel
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-
 import os
 import sys
 import glob
@@ -76,10 +75,8 @@ def extract_activation(path_img, path_out):
 
 
 def main(path_pattern_in, path_out, nb_workers=NB_WORKERS):
-    assert os.path.isdir(os.path.dirname(path_pattern_in)), \
-        'missing: %s' % path_pattern_in
-    assert os.path.isdir(os.path.dirname(path_out)), \
-        'missing: %s' % os.path.dirname(path_out)
+    assert os.path.isdir(os.path.dirname(path_pattern_in)), 'missing: %s' % path_pattern_in
+    assert os.path.isdir(os.path.dirname(path_out)), 'missing: %s' % os.path.dirname(path_out)
 
     if not os.path.isdir(path_out):
         logging.info('create dir: %s', path_out)
@@ -97,7 +94,6 @@ if __name__ == '__main__':
     logging.info('running...')
 
     params = args_parse_params(PARAMS)
-    main(params['path_in'], params['path_out'],
-         nb_workers=params['nb_workers'])
+    main(params['path_in'], params['path_out'], nb_workers=params['nb_workers'])
 
     logging.info('DONE')

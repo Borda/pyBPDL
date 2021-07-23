@@ -20,9 +20,10 @@ from imsegm.utilities.experiments import string_dict
 sys.path += [os.path.abspath('.'), os.path.abspath('..')]  # Add path to root
 from bpdl.data_utils import relabel_boundary_background
 from bpdl.pattern_atlas import (
-    init_atlas_grid, init_atlas_mosaic, init_atlas_random, init_atlas_gauss_watershed_2d,
-    init_atlas_otsu_watershed_2d, init_atlas_nmf, init_atlas_fast_ica, init_atlas_sparse_pca,
-    init_atlas_dict_learn, init_atlas_deform_original, reconstruct_samples)
+    init_atlas_grid, init_atlas_mosaic, init_atlas_random, init_atlas_gauss_watershed_2d, init_atlas_otsu_watershed_2d,
+    init_atlas_nmf, init_atlas_fast_ica, init_atlas_sparse_pca, init_atlas_dict_learn, init_atlas_deform_original,
+    reconstruct_samples
+)
 from bpdl.dictionary_learning import reset_atlas_background, bpdl_pipeline
 from bpdl.pattern_weights import weights_image_atlas_overlap_major
 from bpdl.registration import warp2d_images_deformations
@@ -31,8 +32,7 @@ from experiments.experiment_general import Experiment
 NAME_DEFORMS = 'deformations{}.npz'
 
 
-def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False,
-                          max_bg_ration=0.9):
+def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False, max_bg_ration=0.9):
     """ take pattern index with max value and suppress some background
 
     :param list(ndarray) atlas_components:
@@ -53,8 +53,7 @@ def estim_atlas_as_argmax(atlas_components, fit_results, force_bg=False,
         atlas = reset_atlas_background(atlas, atlas_mean, max_bg_ration)
 
     assert atlas.shape == atlas_components[0].shape, \
-        'dimension mix - atlas: %s atlas_patterns: %s' \
-        % (atlas.shape, atlas_components.shape)
+        'dimension mix - atlas: %s atlas_patterns: %s' % (atlas.shape, atlas_components.shape)
 
     return atlas
 
@@ -93,12 +92,14 @@ class ExperimentSpectClust(Experiment):
         imgs_vec = np.nan_to_num(np.array([np.ravel(im) for im in images]))
         bg_offset = 1 if params.get('force_bg', False) else 1
 
-        sc = SpectralClustering(n_clusters=params.get('nb_labels') - bg_offset,
-                                affinity='nearest_neighbors',
-                                eigen_tol=params.get('tol'),
-                                # assign_labels='discretize',
-                                degree=0,
-                                n_jobs=1)
+        sc = SpectralClustering(
+            n_clusters=params.get('nb_labels') - bg_offset,
+            affinity='nearest_neighbors',
+            eigen_tol=params.get('tol'),
+            # assign_labels='discretize',
+            degree=0,
+            n_jobs=1
+        )
         sc.fit(imgs_vec.T)
         atlas = sc.labels_.reshape(images[0].shape)
 
@@ -117,8 +118,7 @@ def convert_images_nifti(images):
         images = [np.expand_dims(img, axis=0) for img in images]
         mask = np.expand_dims(mask, axis=0)
 
-    nii_images = [nib.Nifti1Image(img.astype(np.float32), affine=np.eye(4))
-                  for img in images]
+    nii_images = [nib.Nifti1Image(img.astype(np.float32), affine=np.eye(4)) for img in images]
     nii_mask = nib.Nifti1Image(mask, affine=np.eye(4))
     return nii_images, nii_mask
 
@@ -133,13 +133,15 @@ class ExperimentCanICA(Experiment):
         nii_images, nii_mask = convert_images_nifti(images)
         bg_offset = 1 if params.get('force_bg', False) else 1
 
-        canica = CanICA(mask=nii_mask,
-                        n_components=params.get('nb_labels') - bg_offset,  # - 1
-                        mask_strategy='background',
-                        threshold='auto',
-                        n_init=5,
-                        n_jobs=1,
-                        verbose=0)
+        canica = CanICA(
+            mask=nii_mask,
+            n_components=params.get('nb_labels') - bg_offset,  # - 1
+            mask_strategy='background',
+            threshold='auto',
+            n_init=5,
+            n_jobs=1,
+            verbose=0
+        )
         canica.fit(nii_images)
         components = np.argmax(canica.components_, axis=0) + bg_offset  # + 1
         atlas = components.reshape(images[0].shape)
@@ -162,13 +164,15 @@ class ExperimentMSDL(Experiment):
         nii_images, nii_mask = convert_images_nifti(images)
         bg_offset = 1 if params.get('force_bg', False) else 1
 
-        dict_learn = DictLearning(mask=nii_mask,
-                                  n_components=params.get('nb_labels') - bg_offset,
-                                  mask_strategy='background',
-                                  # method='lars',
-                                  n_epochs=10,
-                                  n_jobs=1,
-                                  verbose=0)
+        dict_learn = DictLearning(
+            mask=nii_mask,
+            n_components=params.get('nb_labels') - bg_offset,
+            mask_strategy='background',
+            # method='lars',
+            n_epochs=10,
+            n_jobs=1,
+            verbose=0
+        )
         dict_learn.fit(nii_images)
         components = np.argmax(dict_learn.components_, axis=0) + bg_offset
         atlas = components.reshape(images[0].shape)
@@ -207,14 +211,12 @@ class ExperimentLinearCombineBase(Experiment):
             atlas_ptns = components.reshape((-1, ) + self._images[0].shape)
             # rct_vec = np.dot(fit_result, components)
         except Exception:
-            logging.exception('CRASH in "__perform_linear_combination" in %s',
-                              self.__class__.__name__)
+            logging.exception('CRASH in "__perform_linear_combination" in %s', self.__class__.__name__)
             atlas_ptns = np.array([np.zeros(self._images[0].shape)])
             fit_result = np.zeros((len(imgs_vec), 1))
             # rct_vec = np.zeros(imgs_vec.shape)
 
-        atlas = estim_atlas_as_argmax(atlas_ptns, fit_result,
-                                      force_bg=params.get('force_bg', False))
+        atlas = estim_atlas_as_argmax(atlas_ptns, fit_result, force_bg=params.get('force_bg', False))
         return atlas
 
     def _estimate_atlas_weights(self, images, params):
@@ -238,11 +240,13 @@ class ExperimentFastICA(ExperimentLinearCombineBase):
 
     @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
-        estimator = FastICA(n_components=params.get('nb_labels'),
-                            max_iter=params.get('max_iter'),
-                            algorithm='deflation',
-                            tol=params.get('tol'),
-                            whiten=True)
+        estimator = FastICA(
+            n_components=params.get('nb_labels'),
+            max_iter=params.get('max_iter'),
+            algorithm='deflation',
+            tol=params.get('tol'),
+            whiten=True
+        )
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.mixing_.T
         return estimator, components, fit_result
@@ -255,10 +259,9 @@ class ExperimentSparsePCA(ExperimentLinearCombineBase):
 
     @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
-        estimator = SparsePCA(n_components=params.get('nb_labels'),
-                              max_iter=params.get('max_iter'),
-                              tol=params.get('tol'),
-                              n_jobs=1)
+        estimator = SparsePCA(
+            n_components=params.get('nb_labels'), max_iter=params.get('max_iter'), tol=params.get('tol'), n_jobs=1
+        )
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
         return estimator, components, fit_result
@@ -271,13 +274,15 @@ class ExperimentDictLearn(ExperimentLinearCombineBase):
 
     @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
-        estimator = DictionaryLearning(n_components=params.get('nb_labels'),
-                                       max_iter=params.get('max_iter'),
-                                       fit_algorithm='lars',
-                                       transform_algorithm='omp',
-                                       split_sign=False,
-                                       tol=params.get('tol'),
-                                       n_jobs=1)
+        estimator = DictionaryLearning(
+            n_components=params.get('nb_labels'),
+            max_iter=params.get('max_iter'),
+            fit_algorithm='lars',
+            transform_algorithm='omp',
+            split_sign=False,
+            tol=params.get('tol'),
+            n_jobs=1
+        )
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
         return estimator, components, fit_result
@@ -290,10 +295,9 @@ class ExperimentNMF(ExperimentLinearCombineBase):
 
     @classmethod
     def _estimate_linear_combination(self, imgs_vec, params):
-        estimator = NMF(n_components=params.get('nb_labels'),
-                        max_iter=params.get('max_iter'),
-                        tol=params.get('tol'),
-                        init='random')
+        estimator = NMF(
+            n_components=params.get('nb_labels'), max_iter=params.get('max_iter'), tol=params.get('tol'), init='random'
+        )
         fit_result = estimator.fit_transform(imgs_vec)
         components = estimator.components_
         return estimator, components, fit_result
@@ -320,8 +324,7 @@ DICT_ATLAS_INIT = {
     'soa-tune-PCA': partial(init_atlas_sparse_pca, nb_iter=150),
     'soa-tune-DL': partial(init_atlas_dict_learn, nb_iter=150),
 }
-LIST_BPDL_PARAMS = ['tol', 'gc_reinit', 'gc_regul', 'max_iter',
-                    'ptn_compact', 'overlap_major']
+LIST_BPDL_PARAMS = ['tol', 'gc_reinit', 'gc_regul', 'max_iter', 'ptn_compact', 'overlap_major']
 
 
 class ExperimentBPDL(Experiment):
@@ -336,8 +339,7 @@ class ExperimentBPDL(Experiment):
         :return ndarray: np.array<w, h>
         """
         im_size = self._images[0].shape
-        logging.debug('INIT atlas - nb labels: %s and type: %s',
-                      nb_patterns, init_type)
+        logging.debug('INIT atlas - nb labels: %s and type: %s', nb_patterns, init_type)
         if init_type.startswith('greedy'):
             assert init_type in DICT_ATLAS_INIT
             fn_init_atlas = DICT_ATLAS_INIT[init_type]
@@ -361,14 +363,11 @@ class ExperimentBPDL(Experiment):
             raise NotImplementedError()
 
         assert np.max(init_atlas) <= nb_patterns, \
-            'init. atlas max=%i and nb labels=%i' % \
-            (int(np.max(init_atlas)), nb_patterns)
-        assert init_atlas.shape == im_size, \
-            'init atlas: %r & img size: %r' % (init_atlas.shape, im_size)
+            'init. atlas max=%i and nb labels=%i' % (int(np.max(init_atlas)), nb_patterns)
+        assert init_atlas.shape == im_size, 'init atlas: %r & img size: %r' % (init_atlas.shape, im_size)
         assert init_atlas.dtype == np.int, 'type: %s' % init_atlas.dtype
         if len(np.unique(init_atlas)) == 1:
-            logging.warning('atlas init type "%s" failed '
-                            'to estimate an atlas', init_type)
+            logging.warning('atlas init type "%s" failed to estimate an atlas', init_type)
         # just to secure the maximal number of patters
         init_atlas[0, 0, ...] = nb_patterns
         return init_atlas
@@ -382,21 +381,15 @@ class ExperimentBPDL(Experiment):
         """
         logging.debug(' -> estimate atlas...')
         logging.debug(string_dict(params, desc='PARAMETERS'))
-        init_atlas = self._init_atlas(params['nb_labels'] - 1,
-                                      params['init_tp'], self._images)
+        init_atlas = self._init_atlas(params['nb_labels'] - 1, params['init_tp'], self._images)
         # prefix = 'expt_{}'.format(p['init_tp'])
-        path_out = os.path.join(params['path_exp'],
-                                'debug' + params['name_suffix'])
+        path_out = os.path.join(params['path_exp'], 'debug' + params['name_suffix'])
 
         bpdl_params = {k: params[k] for k in params if k in LIST_BPDL_PARAMS}
         bpdl_params['deform_coef'] = params.get('deform_coef', None)
-        atlas, weights, deforms = bpdl_pipeline(images,
-                                                init_atlas=init_atlas,
-                                                out_dir=path_out,
-                                                **bpdl_params)
+        atlas, weights, deforms = bpdl_pipeline(images, init_atlas=init_atlas, out_dir=path_out, **bpdl_params)
 
-        assert atlas.max() == weights.shape[1], \
-            'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
+        assert atlas.max() == weights.shape[1], 'atlas max=%i and dict=%i' % (int(atlas.max()), weights.shape[1])
         extras = {'deforms': deforms}
 
         return atlas, weights, extras
@@ -409,10 +402,8 @@ class ExperimentBPDL(Experiment):
         if extras is None:  # in case that there are no extras...
             return
         if extras.get('deforms', None) is not None:
-            dict_deforms = dict(zip(self._image_names[:len(extras['deforms'])],
-                                    extras['deforms']))
-            path_npz = os.path.join(self.params.get('path_exp'),
-                                    NAME_DEFORMS.format(suffix))
+            dict_deforms = dict(zip(self._image_names[:len(extras['deforms'])], extras['deforms']))
+            path_npz = os.path.join(self.params.get('path_exp'), NAME_DEFORMS.format(suffix))
             logging.debug('exporting deformations: %s', path_npz)
             # np.savez(open(path_npz, 'w'), **dict_deforms)
             np.savez_compressed(open(path_npz, 'wb'), **dict_deforms)
@@ -433,11 +424,9 @@ class ExperimentBPDL(Experiment):
             images_rct = reconstruct_samples(atlas, weights)
             # images = self._images[:len(weights)]
             assert len(images_rct) == len(deforms), \
-                'nb reconst. images (%i) and deformations (%i) should match' \
-                % (len(images_rct), len(deforms))
+                'nb reconst. images (%i) and deformations (%i) should match' % (len(images_rct), len(deforms))
             # apply the estimated deformation
-            images_rct = warp2d_images_deformations(images_rct, deforms,
-                                                    method='nearest', inverse=True)
+            images_rct = warp2d_images_deformations(images_rct, deforms, method='nearest', inverse=True)
             tag, diff = self._evaluate_reconstruct(images_rct, im_type='input')
             stat['reconst. diff %s deform' % tag] = diff
         return stat

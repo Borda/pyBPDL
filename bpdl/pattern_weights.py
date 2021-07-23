@@ -26,8 +26,7 @@ def initialise_weights_random(nb_imgs, nb_patterns, ratio_select=0.2, rand_seed=
            [ 0.,  0.,  1.,  1.],
            [ 1.,  0.,  0.,  0.]])
     """
-    logging.debug('initialise weights for %i images and %i labels '
-                  'as random selection', nb_imgs, nb_patterns)
+    logging.debug('initialise weights for %i images and %i labels as random selection', nb_imgs, nb_patterns)
     np.random.seed(rand_seed)
     fuzzy = np.random.random((nb_imgs, nb_patterns + 1))
     weights = np.zeros_like(fuzzy)

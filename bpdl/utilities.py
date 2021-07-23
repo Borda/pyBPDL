@@ -16,40 +16,6 @@ from scipy import stats
 from scipy.spatial import distance
 
 
-# import multiprocessing.pool
-# import multiprocessing as mproc
-# from functools import wraps
-
-
-# def update_path(path_file, lim_depth=5, absolute=True):
-#     """ bubble in the folder tree up intil it found desired file
-#     otherwise return original one
-#
-#     :param str path_file: path
-#     :param int lim_depth: length of bubble attempted
-#     :param bool absolute: absolute path
-#     :return str:
-#
-#     >>> path = 'sample_file.test'
-#     >>> f = open(path, 'w')
-#     >>> update_path(path, absolute=False)
-#     'sample_file.test'
-#     >>> os.remove(path)
-#     """
-#     if path_file.startswith('/'):
-#         return path_file
-#     elif path_file.startswith('~'):
-#         path_file = os.path.expanduser(path_file)
-#     else:
-#         for _ in range(lim_depth):
-#             if os.path.exists(path_file):
-#                 break
-#             path_file = os.path.join('..', path_file)
-#     if absolute:
-#         path_file = os.path.abspath(path_file)
-#     return path_file
-
-
 def convert_numerical(s):
     """ try to convert a string tu numerical
 
@@ -129,7 +95,7 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
            [ 0.  ,  0.02,  0.06,  0.08,  0.06,  0.02,  0.  ,  0.  ],
            [ 0.  ,  0.  ,  0.01,  0.02,  0.01,  0.  ,  0.  ,  0.  ]])
     """
-    covar = np.array(std) ** 2
+    covar = np.array(std)**2
     if im_size is None:
         im_size = np.array(mean) + covar.diagonal() * 3
 
@@ -141,78 +107,6 @@ def generate_gauss_2d(mean, std, im_size=None, norm=None):
     if norm is not None:
         pdf *= norm / np.max(pdf)
     return pdf
-
-
-# class NonDaemonPool(multiprocessing.pool.Pool):
-#     """ We sub-class multiprocessing.pool.Pool instead of multiprocessing.Pool
-#     because the latter is only a wrapper function, not a proper class.
-#
-#     See: https://github.com/nipy/nipype/pull/2754
-#
-#     >>> pool = NonDaemonPool(1)
-#     """
-#     def Process(self, *args, **kwds):
-#         proc = super(NonDaemonPool, self).Process(*args, **kwds)
-#
-#         class NonDaemonProcess(proc.__class__):
-#             """Monkey-patch process to ensure it is never daemonized"""
-#             @property
-#             def daemon(self):
-#                 return False
-#
-#             @daemon.setter
-#             def daemon(self, val):
-#                 pass
-#
-#         proc.__class__ = NonDaemonProcess
-#         return proc
-
-
-# def wrap_execute_sequence(wrap_func, iterate_vals, nb_workers=NB_WORKERS,
-#                           desc='', ordered=False):
-#     """ wrapper for execution parallel of single thread as for...
-#
-#     :param wrap_func: function which will be excited in the iterations
-#     :param list iterate_vals: list or iterator which will ide in iterations
-#     :param int nb_workers: number og jobs running in parallel
-#     :param str desc: description for the bar,
-#         if it is set None, bar is suppressed
-#     :param bool ordered: whether enforce ordering in the parallelism
-#
-#     >>> [o for o in wrap_execute_sequence(lambda x: x ** 2, range(5),
-#     ...                                   nb_workers=1, ordered=True)]
-#     [0, 1, 4, 9, 16]
-#     >>> [o for o in wrap_execute_sequence(sum, [[0, 1]] * 5,
-#     ...                                   nb_workers=2, desc=None)]
-#     [1, 1, 1, 1, 1]
-#     """
-#     iterate_vals = list(iterate_vals)
-#
-#     tqdm_bar = None
-#     if desc is not None:
-#         desc = '%r @%i-threads' % (desc, nb_workers)
-#         desc = str(desc.encode('utf-8').decode())
-#         tqdm_bar = tqdm.tqdm(total=len(iterate_vals), desc=desc)
-#
-#     if nb_workers > 1:
-#         logging.debug('perform sequential in %i threads', nb_workers)
-#         # Standard mproc.Pool created a demon processes which can be called
-#         # inside its children, cascade or multiprocessing
-#         # https://stackoverflow.com/questions/6974695/python-process-pool-non-daemonic
-#         pool = NonDaemonPool(nb_workers)
-#         pooling = pool.imap if ordered else pool.imap_unordered
-#
-#         for out in pooling(wrap_func, iterate_vals):
-#             tqdm_bar.update() if tqdm_bar is not None else None
-#             yield out
-#         pool.close()
-#         pool.join()
-#     else:
-#         for out in map(wrap_func, iterate_vals):
-#             tqdm_bar.update() if tqdm_bar is not None else None
-#             yield out
-#
-#     tqdm_bar.close() if tqdm_bar is not None else None
 
 
 def estimate_rolling_ball(points, tangent_smooth=1, max_diam=1e6, step_tol=1e-3):
@@ -236,15 +130,14 @@ def estimate_rolling_ball(points, tangent_smooth=1, max_diam=1e6, step_tol=1e-3)
     # points = np.array(sorted(points, key=lambda p: p[0]))
     dir_diams = []
     for d in [1., -1]:
-        diams = [estimate_point_max_circle(i, points, tangent_smooth, d,
-                                           max_diam, step_tol)
-                 for i in range(len(points))]
+        diams = [
+            estimate_point_max_circle(i, points, tangent_smooth, d, max_diam, step_tol) for i in range(len(points))
+        ]
         dir_diams.append(diams)
     return dir_diams
 
 
-def estimate_point_max_circle(idx, points, tangent_smooth=1, orient=1.,
-                              max_diam=1e6, step_tol=1e-3):
+def estimate_point_max_circle(idx, points, tangent_smooth=1, orient=1., max_diam=1e6, step_tol=1e-3):
     """ estimate maximal circle from a particular point on curve
 
     :param int idx: index or point on curve
@@ -278,7 +171,7 @@ def estimate_point_max_circle(idx, points, tangent_smooth=1, orient=1.,
     # set positive or negative direction
     direction = direction * orient
     # normalisation
-    direction = direction / np.sqrt(np.sum(direction ** 2))
+    direction = direction / np.sqrt(np.sum(direction**2))
 
     diam = estimate_max_circle(points[idx], direction, points, max_diam, step_tol)
     return diam
@@ -356,11 +249,9 @@ def is_list_like(var):
     True
     """
     try:  # for python 3
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, range, np.ndarray, types.GeneratorType)]
+        is_iter = [isinstance(var, tp) for tp in (list, tuple, range, np.ndarray, types.GeneratorType)]
     except Exception:  # for python 2
-        is_iter = [isinstance(var, tp) for tp
-                   in (list, tuple, np.ndarray, types.GeneratorType)]
+        is_iter = [isinstance(var, tp) for tp in (list, tuple, np.ndarray, types.GeneratorType)]
     return any(is_iter)
 
 
@@ -381,48 +272,3 @@ def is_iterable(var):
     """
     res = (hasattr(var, '__iter__') and not isinstance(var, str))
     return res
-
-
-# def string_dict(d, desc='DICTIONARY:', offset=30):
-#     """ transform dictionary to a formatted string
-#
-#     :param dict d: dictionary with parameters
-#     :param int offset: length between name and value
-#     :param str desc: dictionary title
-#     :return str:
-#
-#     >>> string_dict({'abc': 123})  #doctest: +NORMALIZE_WHITESPACE
-#     \'DICTIONARY:\\n"abc": 123\'
-#     """
-#     s = desc + '\n'
-#     tmp_name = '{:' + str(offset) + 's} {}'
-#     rows = [tmp_name.format('"{}":'.format(n), repr(d[n])) for n in sorted(d)]
-#     s += '\n'.join(rows)
-#     return str(s)
-
-
-# def load_config_yaml(path_config):
-#     """ loading the
-#
-#     :param str path_config:
-#     :return dict:
-#
-#     >>> p_conf = './testing-congif.yaml'
-#     >>> save_config_yaml(p_conf, {'a': 2})
-#     >>> load_config_yaml(p_conf)
-#     {'a': 2}
-#     >>> os.remove(p_conf)
-#     """
-#     with open(path_config, 'r') as fp:
-#         config = yaml.load(fp)
-#     return config
-#
-#
-# def save_config_yaml(path_config, config):
-#     """ exporting configuration as YAML file
-#
-#     :param str path_config:
-#     :param dict config:
-#     """
-#     with open(path_config, 'w') as fp:
-#         yaml.dump(config, fp, default_flow_style=False)
