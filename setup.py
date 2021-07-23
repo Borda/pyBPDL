@@ -39,16 +39,13 @@ setup(
     author_email=bpdl.__author_email__,
     url=bpdl.__homepage__,
     license=bpdl.__license__,
-
     description='Binary Pattern Dictionary Learning',
     packages=["bpdl"],
     cmdclass={'build_ext': build_ext},
     install_requires=install_reqs,
-
     long_description=bpdl.__doc__,
     long_description_content_type='text/markdown',
     keywords='image segmentation decomposition atlas encoding benchmark',
-
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: Console",

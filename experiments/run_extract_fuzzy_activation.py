@@ -9,7 +9,6 @@ Extracting the gene activation in case it is separate image channel
 Copyright (C) 2017-2018 Jiri Borovec <jiri.borovec@fel.cvut.cz>
 """
 
-
 import os
 import sys
 import glob
@@ -97,7 +96,6 @@ if __name__ == '__main__':
     logging.info('running...')
 
     params = args_parse_params(PARAMS)
-    main(params['path_in'], params['path_out'],
-         nb_workers=params['nb_workers'])
+    main(params['path_in'], params['path_out'], nb_workers=params['nb_workers'])
 
     logging.info('DONE')
